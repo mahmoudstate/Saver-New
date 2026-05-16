@@ -307,7 +307,7 @@ function Dashboard({ txns, bills, banks, groups, expCats, savings, filterMonth, 
             <div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Net Balance</div>
             <div style={{color:C.text,fontSize:30,fontWeight:800,letterSpacing:-1}}>{hideTotal?"••••••":fmt(totalBalance)}</div>
           </div>
-          <button onClick={()=>setHideTotal(v=>!v)} style={{background:C.border,border:"none",color:C.muted,width:36,height:36,borderRadius:99,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}	}>{hideTotal?"🙈":"🐵"}</button>
+          <button onClick={()=>setHideTotal(v=>!v)} style={{background:C.border,border:"none",color:C.muted,width:36,height:36,borderRadius:99,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>{hideTotal?"🙈":"🐵"}</button>
         </div>
       </Card>
       
@@ -387,7 +387,9 @@ function AddTransaction({ banks, expCats, incCats, savings, currency, onAdd, onS
   const [note, setNote] = useState("");
   const [savingId, setSavingId] = useState(savings[0]?.id||"");
   const cats=type==="expense"?expCats:type==="income"?incCats:[];
+
   useEffect(()=>{if(type==="expense"&&expCats.length)setCatId(expCats[0].id);if(type==="income"&&incCats.length)setCatId(incCats[0].id);if(type==="saving"&&savings.length)setSavingId(savings[0].id);},[type]);
+
   const handleSubmit=async()=>{
     if(!amount||isNaN(+amount)||+amount<=0) return;
     const bank=banks.find(b=>b.id===bankId);
@@ -405,6 +407,7 @@ function AddTransaction({ banks, expCats, incCats, savings, currency, onAdd, onS
     }
     setAmount(""); setNote(""); setDate(today()); onDone();
   };
+
   return (
     <div style={{padding:"24px 16px 0"}}>
       <div style={{color:C.text,fontSize:22,fontWeight:800,marginBottom:20}}>New Transaction</div>
@@ -727,3 +730,51 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
         <button onClick={()=>onEdit(item)} style={{background:C.surface,border:`1px solid ${C.border}`,color:C.muted,cursor:"pointer",fontSize:14,width:32,height:32,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center"}}>✎</button>
         <button onClick={()=>{if(!canDel){alert(cantDelMsg);return;}requestDelete(type,item);}} style={{background:canDel?C.redDim:"transparent",border:`1px solid ${canDel?C.red+"33":C.faint+"33"}`,color:canDel?C.red:C.faint,cursor:canDel?"pointer":"not-allowed",fontSize:14,width:32,height:32,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center"}}>🗑</button>
       </div>
+    </div>
+  );
+
+  return (
+    <div style={{padding:"24px 16px 0"}}>
+      <div style={{color:C.text,fontSize:22,fontWeight:800,marginBottom:16}}>Settings</div>
+      <div style={{display:"flex",gap:8,marginBottom:20,overflowX:"auto",paddingBottom:4}}>
+        {[{id:"profile",label:"👤 Profile"},{id:"backup",label:"💾 Backup"},{id:"currency",label:"💱 Currency"},{id:"banks",label:"🏦 Accounts"},{id:"expCats",label:"📤 Exp. Cat."},{id:"incCats",label:"📥 Inc. Cat."},{id:"groups",label:"📊 Groups"}].map(s=>(
+          <button key={s.id} onClick={()=>setSection(s.id)} style={{whiteSpace:"nowrap",padding:"8px 14px",borderRadius:10,border:`1px solid ${section===s.id?C.accent:C.border}`,background:section===s.id?C.accentDim:"transparent",color:section===s.id?C.accent:C.muted,fontWeight:700,fontSize:12,cursor:"pointer"}}>{s.label}</button>
+        ))}
+      </div>
+
+      {section==="profile"&&(
+        <div>
+          <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Features</div>
+          <div onClick={onOpenSavings} style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",cursor:"pointer",marginBottom:20,transition:"background 0.2s"}} onMouseOver={e=>e.currentTarget.style.background="#22222f"} onMouseOut={e=>e.currentTarget.style.background=C.card}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:18,color:C.yellow}}>◎</span><span style={{color:C.text,fontWeight:600,fontSize:14}}>Savings Goals</span></div>
+            <span style={{color:C.muted,fontSize:14}}>❯</span>
+          </div>
+
+          <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:14}}>Your Name</div>
+          <Card style={{marginBottom:16}}><div style={{color:C.muted,fontSize:12,marginBottom:10}}>This name appears as a greeting on the Dashboard</div><input value={nameInput} onChange={e=>setNameInput(e.target.value)} placeholder="Enter your name..." style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:15,outline:"none",boxSizing:"border-box",marginBottom:12}}/><Btn full onClick={()=>onUsername(nameInput.trim())}>Save Name</Btn></Card>{username&&<div style={{background:C.accentDim,border:`1px solid ${C.accent}33`,borderRadius:12,padding:"14px 16px",textAlign:"center"}}><div style={{color:C.muted,fontSize:12,marginBottom:4}}>Preview</div><div style={{color:C.muted,fontSize:13}}>☀️ Good morning,</div><div style={{color:C.text,fontSize:20,fontWeight:800}}>{username} 💰</div></div>}
+        </div>
+      )}
+
+      {section==="backup"&&(<div><Card style={{marginBottom:16}}><div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}><span style={{fontSize:24}}>💾</span><div><div style={{color:C.text,fontWeight:700,fontSize:15}}>Last Backup</div><div style={{color:lastBackup?C.accent:C.red,fontSize:13,marginTop:2}}>{lastBackup?fmtDate(lastBackup.split("T")[0]):"Never backed up"}</div></div></div><div style={{color:C.muted,fontSize:12,lineHeight:1.6,marginBottom:14}}>A backup saves all your data into a JSON file. You'll get a reminder every 3 days.</div><Btn full onClick={onExport}>⬇ Download Backup</Btn></Card><Card><div style={{color:C.text,fontWeight:700,fontSize:15,marginBottom:6}}>🔄 Restore from Backup</div><div style={{color:C.muted,fontSize:12,lineHeight:1.6,marginBottom:14}}>Select a backup file to restore all your data. This will overwrite current data.</div><label style={{display:"block",background:C.bg,border:`1.5px dashed ${C.border}`,borderRadius:10,padding:"14px 16px",textAlign:"center",cursor:"pointer"}}><input type="file" accept=".json" onChange={onImport} style={{display:"none"}}/><div style={{fontSize:24,marginBottom:6}}>📂</div><div style={{color:C.muted,fontSize:13,fontWeight:600}}>Tap to choose backup file</div></label></Card></div>)}
+
+      {section==="currency"&&(<div><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:14}}>Select Currency</div><div style={{display:"flex",flexDirection:"column",gap:10}}>{CURRENCIES.map(cur=>(<button key={cur.code} onClick={()=>onCurrency(cur.code)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:currency===cur.code?C.accentDim:C.card,border:`1.5px solid ${currency===cur.code?C.accent:C.border}`,borderRadius:12,padding:"14px 16px",cursor:"pointer",textAlign:"left"}}><div><div style={{color:currency===cur.code?C.accent:C.text,fontWeight:700,fontSize:15}}>{cur.code}</div><div style={{color:C.muted,fontSize:12,marginTop:2}}>{cur.name}</div></div>{currency===cur.code&&<span style={{color:C.accent,fontSize:20}}>✓</span>}</button>))}</div></div>)}
+
+      {section==="banks"&&(<><div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:14}}>{banks.map(b=><SettingRow key={b.id} item={b} type="bank" onEdit={i=>openAdd("bank",i)} canDel={canDelBank(b)} cantDelMsg={`Cannot delete "${b.name}" — balance is ${fmt(bankBalance(b.id))}. Clear the balance first.`}/>)}</div><Btn outline full onClick={()=>openAdd("bank")}>+ Add Account</Btn></>)}
+      {section==="expCats"&&(<><div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:14}}>{expCats.map(c=><SettingRow key={c.id} item={c} type="expCat" onEdit={i=>openAdd("expCat",i)}/>)}</div><Btn outline full onClick={()=>openAdd("expCat")}>+ Add Category</Btn></>)}
+      {section==="incCats"&&(<><div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:14}}>{incCats.map(c=><SettingRow key={c.id} item={c} type="incCat" onEdit={i=>openAdd("incCat",i)}/>)}</div><Btn outline full onClick={()=>openAdd("incCat")}>+ Add Category</Btn></>)}
+      {section==="groups"&&(<><div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:14}}>{groups.map(g=>(<div key={g.id} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 16px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}><div style={{display:"flex",gap:10,alignItems:"center"}}><div style={{width:10,height:10,borderRadius:99,background:g.color}}/><span style={{color:C.text,fontWeight:700}}>{g.name}</span></div><div style={{display:"flex",gap:10}}><button onClick={()=>openAdd("group",g)} style={{background:C.surface,border:`1px solid ${C.border}`,color:C.muted,cursor:"pointer",fontSize:14,width:32,height:32,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center"}}>✎</button><button onClick={()=>requestDelete("group",g)} style={{background:C.redDim,border:`1px solid ${C.red}33`,color:C.red,cursor:"pointer",fontSize:14,width:32,height:32,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center"}}>🗑</button></div></div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{g.cats.map(cid=>{const cat=expCats.find(c=>c.id===cid);return cat?<Pill key={cid} color={g.color}>{cat.name}</Pill>:null;})}</div></div>))}</div><Btn outline full onClick={()=>openAdd("group")}>+ Add Group</Btn></>)}
+
+      {modal&&(
+        <Modal title={`${modal.item?"Edit":"Add"} ${modal.type==="bank"?"Account":modal.type==="expCat"?"Expense Category":modal.type==="incCat"?"Income Category":"Dashboard Group"}`} onClose={()=>setModal(null)}>
+          <Input label="Name" value={inputName} onChange={e=>setInputName(e.target.value)}/>
+          {(modal.type==="bank"||modal.type==="group")&&(<div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:"uppercase"}}>Color</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{[C.accent,C.red,C.blue,C.yellow,C.purple,"#fb923c","#34d399","#f472b6"].map(col=>(<button key={col} onClick={()=>setInputColor(col)} style={{width:28,height:28,borderRadius:99,background:col,border:inputColor===col?"3px solid white":"3px solid transparent",cursor:"pointer"}}/>))}</div></div>)}
+          {(modal.type==="expCat"||modal.type==="incCat")&&(<div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:"uppercase"}}>Icon</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{iconKeys.map(k=><button key={k} onClick={()=>setInputIcon(k)} style={{width:36,height:36,borderRadius:8,background:inputIcon===k?C.accentDim:C.bg,border:`1px solid ${inputIcon===k?C.accent:C.border}`,cursor:"pointer",fontSize:18}}>{ICONS[k]}</button>)}</div></div>)}
+          {modal.type==="expCat"&&(<Select label="Group Tag" value={inputGroup} onChange={e=>setInputGroup(e.target.value)}>{["daily","fixed","lifestyle","growth","other"].map(g=><option key={g} value={g}>{g}</option>)}</Select>)}
+          {modal.type==="group"&&(<div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Expense Categories</div><div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:200,overflow:"auto"}}>{expCats.map(c=>{const checked=groupCats.includes(c.id);return(<label key={c.id} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"6px 0"}}><div onClick={()=>setGroupCats(checked?groupCats.filter(x=>x!==c.id):[...groupCats,c.id])} style={{width:18,height:18,borderRadius:4,border:`2px solid ${checked?C.accent:C.faint}`,background:checked?C.accentDim:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{checked&&<span style={{color:C.accent,fontSize:12}}>✓</span>}</div><span style={{color:C.text,fontSize:14}}>{ICONS[c.icon]||"📌"} {c.name}</span></label>);})}</div></div>)}
+          <Btn full onClick={handleSave} style={{marginTop:8}}>{modal.item?"Save Changes":"Add"}</Btn>
+        </Modal>
+      )}
+      {confirmDel&&(<ConfirmModal title={`Delete ${confirmDel.type==="bank"?"Account":confirmDel.type==="group"?"Group":"Category"}?`} message={`Are you sure you want to delete "${confirmDel.item.name}"? This cannot be undone.`} onClose={()=>setConfirmDel(null)} onConfirm={doDelete}/>)}
+    </div>
+  );
+}
