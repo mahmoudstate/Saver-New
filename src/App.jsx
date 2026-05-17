@@ -20,7 +20,6 @@ const CURRENCIES = [
 let _currency = "EGP";
 const setCurrency = (c) => { _currency = c; };
 
-// Formatting with EXACT floating points without rigid rounding, forced 1 or 2 decimals if fraction exists
 const fmt = (n) => {
   const rounded = Math.round(n * 100) / 100;
   return new Intl.NumberFormat("en-US", { 
@@ -59,7 +58,6 @@ const DEFAULT_GROUPS = [
   { id:"lifestyle", name:"Lifestyle", color:C.purple, cats:["shopping","entertainment"] }
 ];
 
-// ─── Storage Helpers ──────────────────────────────────────────────────────────
 const KEYS = { txns:"et_txns", banks:"et_banks", expCats:"et_expCats", incCats:"et_incCats", groups:"et_groups", savings:"et_savings", currency:"et_currency", username:"et_username", lastBackup:"et_lastBackup", bills:"et_bills", budgets:"et_budgets", q_coffee:"et_q_coffee", q_ride:"et_q_ride" };
 async function load(key, fallback) { try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; } catch { return fallback; } }
 async function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
@@ -68,11 +66,15 @@ async function save(key, val) { try { localStorage.setItem(key, JSON.stringify(v
 function Pill({ color, children, style }) { return <span style={{ background:color+"22", color, border:`1px solid ${color}44`, borderRadius:99, padding:"2px 10px", fontSize:11, fontWeight:700, letterSpacing:0.5, ...style }}>{children}</span>; }
 function Card({ children, style }) { return <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:16, ...style }}>{children}</div>; }
 
-function Modal({ title, onClose, children }) {
+// Dynamic Modal Component Supporting both Bottom Sheet and Centered pop-up placements
+function Modal({ title, onClose, children, center }) {
   return (
-    <div style={{ position:"fixed", inset:0, background:"#000a", zIndex:100, display:"flex", alignItems:"flex-end", justifyContent:"center" }} onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:520, maxHeight:"85vh", overflow:"auto", padding:24, animation:"slideUp 0.3s ease-out" }}>
-        <style>{`@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
+    <div style={{ position:"fixed", inset:0, background:"#000a", zIndex:100, display:"flex", alignItems:center?"center":"flex-end", justifyContent:"center", padding:center?"0 20px":"0" }} onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:center?"20px":"20px 20px 0 0", width:"100%", maxWidth:520, maxHeight:"85vh", overflow:"auto", padding:24, animation:center?"popCenter 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)":"slideUp 0.3s ease-out" }}>
+        <style>{`
+          @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+          @keyframes popCenter { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        `}</style>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
           <span style={{ color:C.text, fontWeight:700, fontSize:17 }}>{title}</span>
           <button onClick={onClose} style={{ background:C.border, border:"none", color:C.muted, width:30, height:30, borderRadius:99, cursor:"pointer", fontSize:14 }}>✕</button>
@@ -83,13 +85,26 @@ function Modal({ title, onClose, children }) {
   );
 }
 
+// Bottom-aligned Confirm Modal (Consistent style matching native inputs)
 function ConfirmModal({ title, message, onConfirm, onClose, confirmColor }) {
   return (
-    <Modal title={title} onClose={onClose}>
-      <p style={{ color:C.muted, marginBottom:20, lineHeight:1.6 }}>{message}</p>
+    <Modal title={title} onClose={onClose} center={false}>
+      <p style={{ color:C.muted, marginBottom:20, lineHeight:1.6, fontSize:14 }}>{message}</p>
       <div style={{ display:"flex", gap:10 }}>
         <Btn outline color={C.muted} full onClick={onClose}>Cancel</Btn>
         <Btn color={confirmColor||C.red} full onClick={onConfirm}>Confirm</Btn>
+      </div>
+    </Modal>
+  );
+}
+
+// Center-aligned System Alert Modal (Strict layout override for notifications)
+function AlertModal({ title, message, onClose, btnColor=C.accent }) {
+  return (
+    <Modal title={title} onClose={onClose} center={true}>
+      <p style={{ color:C.text, marginBottom:20, lineHeight:1.6, fontSize:14 }}>{message}</p>
+      <div style={{ display:"flex", justifyContent:"flex-end" }}>
+        <Btn color={btnColor} onClick={onClose} style={{ minWidth:100 }}>Close</Btn>
       </div>
     </Modal>
   );
@@ -104,7 +119,6 @@ function Input({ label, ...props }) {
   );
 }
 
-// ─── Unified Styled Dropdown Selection ──────────────────────────────────────────
 function MonthSelect({ value, onChange, availMonths }) {
   const options = availMonths.length > 0 ? availMonths : [new Date().toISOString().slice(0,7)];
   return (
@@ -141,7 +155,7 @@ function ProgressBar({ value, max, color }) {
   return <div style={{ height:6, background:C.border, borderRadius:99, overflow:"hidden" }}><div style={{ height:"100%", width:`${pct}%`, background:color||C.accent, borderRadius:99, transition:"width .4s" }} /></div>;
 }
 
-// ─── Swipeable Row (Highly Fluid Micro-interactions with Center Lock) ─────────
+// ─── Swipeable Row (With Magnetic Center Lock) ─────────────────────────
 function SwipeRow({ onEdit, onDelete, children }) {
   const [slide, setSlide] = useState(0);
   const startX = useRef(null);
@@ -154,13 +168,11 @@ function SwipeRow({ onEdit, onDelete, children }) {
     const diff = e.touches[0].clientX - startX.current;
     let target = currentX.current + diff;
 
-    // Center lock/Dead-zone magnet mechanism when crossing center boundaries
     if (currentX.current > 0 && target < 15) target = 0;
     if (currentX.current < 0 && target > -15) target = 0;
 
-    // Boundaries constraints
-    if (target < 0) setSlide(Math.max(target, -85)); // Swipe left reveals delete
-    else if (target > 0) setSlide(Math.min(target, 85)); // Swipe right reveals edit
+    if (target < 0) setSlide(Math.max(target, -85)); 
+    else if (target > 0) setSlide(Math.min(target, 85)); 
     else setSlide(0);
   };
   
@@ -185,7 +197,6 @@ function SwipeRow({ onEdit, onDelete, children }) {
   );
 }
 
-// ─── Empty State (Muted, Minimalist iOS Style) ───────────────────────────────
 function EmptyState({ icon, message }) {
   return (
     <div style={{ textAlign:"center", padding:"70px 20px", opacity:0.45 }}>
@@ -196,7 +207,7 @@ function EmptyState({ icon, message }) {
   );
 }
 
-// ─── Main Application Logic ───────────────────────────────────────────────────
+// ─── Main Application Component ───────────────────────────────────────────────
 export default function App() {
   const [tab, setTab] = useState("dashboard");
   const [txns, setTxns] = useState([]);
@@ -212,6 +223,9 @@ export default function App() {
   const [currency, setCurrencyState] = useState("EGP");
   const [username, setUsernameState] = useState("");
   const [lastBackup, setLastBackup] = useState(null);
+  
+  // Custom Global Alert Modal State
+  const [appAlert, setAppAlert] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -240,7 +254,7 @@ export default function App() {
     if (t.type === "expense" || t.type === "saving") {
       const currentBal = bankBalance(t.bankId);
       if (currentBal < t.amount) {
-        alert("⚠️ Sorry, this account balance is insufficient for this transaction!");
+        setAppAlert({ title: "Insufficient Balance", message: "⚠️ Sorry, this account balance is insufficient for this transaction!", color: C.red });
         return false;
       }
     }
@@ -257,7 +271,7 @@ export default function App() {
     if(data.amount && (original.type === "expense" || original.type === "saving")) {
       const netBalWithoutThis = bankBalance(data.bankId) + original.amount;
       if (netBalWithoutThis < data.amount) {
-        alert("⚠️ Sorry, this account balance is insufficient for this modifications!");
+        setAppAlert({ title: "Insufficient Balance", message: "⚠️ Sorry, this account balance is insufficient for this modifications!", color: C.red });
         return false;
       }
     }
@@ -277,12 +291,34 @@ export default function App() {
   const saveCurrencyHandler = async (c) => { setCurrencyState(c); setCurrency(c); await persist(KEYS.currency,c); };
   const saveUsernameHandler = async (n) => { setUsernameState(n); await persist(KEYS.username,n); };
 
+  // Core implementation of direct import engine
+  const handleRestorePayload = async (importedData) => {
+    try {
+      if(importedData.txns) { setTxns(importedData.txns); await persist(KEYS.txns, importedData.txns); }
+      if(importedData.banks) { setBanks(importedData.banks); await persist(KEYS.banks, importedData.banks); }
+      if(importedData.expCats) { setExpCats(importedData.expCats); await persist(KEYS.expCats, importedData.expCats); }
+      if(importedData.incCats) { setIncCats(importedData.incCats); await persist(KEYS.incCats, importedData.incCats); }
+      if(importedData.groups) { setGroups(importedData.groups); await persist(KEYS.groups, importedData.groups); }
+      if(importedData.savings) { setSavings(importedData.savings); await persist(KEYS.savings, importedData.savings); }
+      if(importedData.bills) { setBills(importedData.bills); await persist(KEYS.bills, importedData.bills); }
+      if(importedData.budgets) { setBudgets(importedData.budgets); await persist(KEYS.budgets, importedData.budgets); }
+      if(importedData.currency) { setCurrencyState(importedData.currency); setCurrency(importedData.currency); await persist(KEYS.currency, importedData.currency); }
+      if(importedData.username) { setUsernameState(importedData.username); await persist(KEYS.username, importedData.username); }
+      
+      const now = Date.now();
+      await save(KEYS.lastBackup, now);
+      setLastBackup(now);
+      
+      setAppAlert({ title: "Restore Successful", message: "🔄 Vault ledger datasets synchronized and restored successfully!", color: C.accent });
+    } catch {
+      setAppAlert({ title: "Restore Failed", message: "❌ Invalid or corrupted backup file structure detected.", color: C.red });
+    }
+  };
+
   if (!ready) return <div style={{background:C.bg,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{color:C.accent,fontSize:28}}>◈</div></div>;
 
   const allCats=[...expCats,...incCats];
   const filteredTxns=filterMonth==="all"?txns:txns.filter(t=>t.date.startsWith(filterMonth));
-  
-  // Dynamic Month Filtering based exclusively on transaction records
   const availMonths=[...new Set(txns.map(t=>t.date.slice(0,7)))].sort().reverse();
   const showBackupAlert = lastBackup && (Date.now() - lastBackup > 3 * 24 * 60 * 60 * 1000);
 
@@ -292,8 +328,8 @@ export default function App() {
       
       {showBackupAlert && tab==="dashboard" && (
         <div style={{background:C.yellowDim, color:C.yellow, padding:"10px 16px", fontSize:12, fontWeight:700, display:"flex", justifyContent:"space-between", alignItems:"center"}}>
-          <span>⚠️ It has been over 3 days since your last local backup!</span>
-          <button onClick={()=>setTab("settings")} style={{background:"transparent", border:`1px solid ${C.yellow}`, color:C.yellow, borderRadius:8, padding:"4px 8px", fontSize:10}}>Backup Now</button>
+          <span>⚠️ It has been over 3 days since your last backup!</span>
+          <button onClick={()=>setTab("settings")} style={{background:"transparent", border:`1px solid ${C.yellow}`, color:C.yellow, borderRadius:8, padding:"4px 8px", fontSize:10, cursor:"pointer"}}>Backup Now</button>
         </div>
       )}
 
@@ -303,15 +339,18 @@ export default function App() {
       {tab==="savings" && <SavingsPage savings={savings} onSave={saveSavings} txns={txns} onBack={()=>setTab("settings")}/>}
       {tab==="budgets" && <BudgetsPage budgets={budgets} expCats={expCats} onSave={saveBudgets} onBack={()=>setTab("settings")} currency={currency}/>}
       {tab==="monthly" && <MonthlyBills bills={bills} onSave={saveBills} banks={banks} expCats={expCats} onAddTxn={addTxn} delTxn={delTxn} bankBalance={bankBalance} currency={currency}/>}
-      {tab==="settings" && <Settings banks={banks} expCats={expCats} incCats={incCats} groups={groups} onBanks={saveBanks} onExpCats={saveExpCats} onIncCats={saveIncCats} onGroups={saveGroups} currency={currency} onCurrency={saveCurrencyHandler} username={username} onUsername={saveUsernameHandler} bankBalance={bankBalance} onOpenSavings={()=>setTab("savings")} onOpenBudgets={()=>setTab("budgets")} setLastBackup={setLastBackup} txns={txns} bills={bills} savings={savings} budgets={budgets}/>}
+      {tab==="settings" && <Settings banks={banks} expCats={expCats} incCats={incCats} groups={groups} onBanks={saveBanks} onExpCats={saveExpCats} onIncCats={saveIncCats} onGroups={saveGroups} currency={currency} onCurrency={saveCurrencyHandler} username={username} onUsername={saveUsernameHandler} bankBalance={bankBalance} onOpenSavings={()=>setTab("savings")} onOpenBudgets={()=>setTab("budgets")} setLastBackup={setLastBackup} txns={txns} bills={bills} savings={savings} budgets={budgets} onRestore={handleRestorePayload} setAppAlert={setAppAlert}/>}
       
-      <BottomNav tab={tab} setTab={setTab} expCats={expCats} banks={banks} onAdd={addTxn} currency={currency} bankBalance={bankBalance} />
+      <BottomNav tab={tab} setTab={setTab} expCats={expCats} banks={banks} onAdd={addTxn} currency={currency} bankBalance={bankBalance} setAppAlert={setAppAlert} />
+      
+      {/* Centered Integrated Global System Alerts Modals */}
+      {appAlert && <AlertModal title={appAlert.title} message={appAlert.message} btnColor={appAlert.color} onClose={()=>setAppAlert(null)} />}
     </div>
   );
 }
 
 // ─── Custom Curved Bottom Nav & Smart Defaults ────────────────────────────────
-function BottomNav({ tab, setTab, expCats, banks, onAdd, currency, bankBalance }) {
+function BottomNav({ tab, setTab, expCats, banks, onAdd, currency, bankBalance, setAppAlert }) {
   const [showQuick, setShowQuick] = useState(false);
   const [quickForm, setQuickForm] = useState(null);
   const pressTimer = useRef(null);
@@ -321,7 +360,6 @@ function BottomNav({ tab, setTab, expCats, banks, onAdd, currency, bankBalance }
 
   const handleQuickSelect = async (catId) => {
     setShowQuick(false);
-    // Fetch last saved inputs from memory cache or configure standard fallback defaults
     const savedData = await load(catId === "coffee" ? KEYS.q_coffee : KEYS.q_ride, null);
     setQuickForm({
       catId,
@@ -346,7 +384,6 @@ function BottomNav({ tab, setTab, expCats, banks, onAdd, currency, bankBalance }
     });
 
     if (success !== false) {
-      // Memory persistence mapping for subsequent rapid insertions
       await save(quickForm.catId === "coffee" ? KEYS.q_coffee : KEYS.q_ride, { amount: parsedAmt, bankId: quickForm.bankId, note: quickForm.note });
       setQuickForm(null); 
       setTab("dashboard");
@@ -367,7 +404,6 @@ function BottomNav({ tab, setTab, expCats, banks, onAdd, currency, bankBalance }
           </div>
         </div>
 
-        {/* Centralised Integrated Cutout Cradle */}
         <div style={{ position:"absolute", left:"50%", transform:"translateX(-50%)", bottom:24, width:80, height:80, borderRadius:"50%", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center" }}>
           <button onTouchStart={handlePressStart} onTouchEnd={handlePressEnd} onMouseDown={handlePressStart} onMouseUp={handlePressEnd} onMouseLeave={()=>clearTimeout(pressTimer.current)} onContextMenu={e=>e.preventDefault()}
                   style={{ width:64, height:64, borderRadius:"50%", background:C.accent, color:C.bg, fontSize:34, border:`none`, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", transition:"transform 0.1s", userSelect:"none", WebkitUserSelect:"none", WebkitTouchCallout:"none" }}
@@ -376,7 +412,6 @@ function BottomNav({ tab, setTab, expCats, banks, onAdd, currency, bankBalance }
           </button>
         </div>
           
-        {/* Scoped Isolated Quick Action Panels */}
         {showQuick && (
           <div style={{ position:"absolute", bottom:114, left:"50%", transform:"translateX(-50%)", background:C.card, border:`1px solid ${C.border}`, borderRadius:20, padding:12, display:"flex", gap:12, boxShadow:"0 12px 30px rgba(0,0,0,0.6)", animation:"popIn 0.2s" }}>
             <style>{`@keyframes popIn { from{opacity:0; transform:translate(-50%, 12px) scale(0.95);} to{opacity:1; transform:translate(-50%, 0) scale(1);} }`}</style>
@@ -393,7 +428,7 @@ function BottomNav({ tab, setTab, expCats, banks, onAdd, currency, bankBalance }
       </nav>
 
       {quickForm && (
-        <Modal title="Quick Insertion" onClose={()=>setQuickForm(null)}>
+        <Modal title="Quick Insertion" onClose={()=>setQuickForm(null)} center={false}>
           <div style={{display:"flex", alignItems:"center", gap:12, marginBottom:20, padding:"12px", background:C.card, borderRadius:12, border:`1px solid ${C.border}`}}>
             <span style={{fontSize:28}}>{quickForm.catId === "coffee" ? "☕" : "🚗"}</span>
             <span style={{fontSize:16, fontWeight:700, color:C.text}}>{quickForm.catId === "coffee" ? "Coffee & Soft Drinks" : "Transport & Logistics"}</span>
@@ -443,7 +478,7 @@ function Dashboard({ txns, bills, budgets, banks, groups, expCats, savings, filt
     <div style={{padding:"24px 16px 0"}}>
       {username && (
         <div style={{marginBottom:18}}>
-          <div style={{color:C.muted,fontSize:13,fontWeight:500}}>{(()=>{const h=new Date().getHours();const e=h<12?"☀️":h<18?"👋":"🌙";const g=h<12?"Good morning":h<18?"Good afternoon":"Good evening";return <>{e} {g},</>;})()}</div>
+          <div style={{color:C.muted,fontSize:13,fontWeight:500}}>{(()=> {const h=new Date().getHours(); const e=h<12?"☀️":h<18?"👋":"🌙"; const g=h<12?"Good morning":h<18?"Good afternoon":"Good evening"; return <>{e} {g},</>;})()}</div>
           <div style={{color:C.text,fontSize:24,fontWeight:800,letterSpacing:-0.5}}>{username} 💰</div>
         </div>
       )}
@@ -480,7 +515,6 @@ function Dashboard({ txns, bills, budgets, banks, groups, expCats, savings, filt
         <Card style={{padding:"14px 14px 12px"}}><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Expenses</div><div style={{color:C.red,fontSize:20,fontWeight:800}}>{hideTotal?"••••":fmt(totalExp)}</div></Card>
       </div>
 
-      {/* Recurrent Month Bills Module View */}
       {bills.length > 0 && (
         <>
           <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Monthly Bills</div>
@@ -498,7 +532,6 @@ function Dashboard({ txns, bills, budgets, banks, groups, expCats, savings, filt
         </>
       )}
 
-      {/* Envelopes Budgets View Components */}
       {budgets.length > 0 && (
         <>
           <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Monthly Budgets</div>
@@ -538,7 +571,7 @@ function Dashboard({ txns, bills, budgets, banks, groups, expCats, savings, filt
         })()}
       </div>
 
-      {savings.length>0&&(<><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Savings Goals</div><div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:20}}>{savings.map(s=>{const saved=s.contributions?.reduce((a,c)=>a+c.amount,0)||0;const pct=s.goal?Math.min(100,Math.round((saved/s.goal)*100)):0;return(<Card key={s.id} style={{padding:"14px 14px 12px"}}><div style={{display:"space-between",alignItems:"center",marginBottom:6}}><span style={{color:C.text,fontWeight:700,fontSize:14}}>🎯 {s.name}</span><Pill color={C.yellow}>{pct}%</Pill></div><div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{color:C.yellow,fontSize:18,fontWeight:800}}>{hideTotal?"••••":fmt(saved)}</span><span style={{color:C.muted,fontSize:13}}>of {fmt(s.goal)}</span></div><ProgressBar value={saved} max={s.goal} color={C.yellow}/></Card>);})}</div></>)}
+      {savings.length>0&&(<><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Savings Goals</div><div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:20}}>{savings.map(s=>{const saved=s.contributions?.reduce((a,c)=>a+c.amount,0)||0;const pct=s.goal?Math.min(100,Math.round((saved/s.goal)*100)):0;return(<Card key={s.id} style={{padding:"14px 14px 12px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{color:C.text,fontWeight:700,fontSize:14}}>🎯 {s.name}</span><Pill color={C.yellow}>{pct}%</Pill></div><div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{color:C.yellow,fontSize:18,fontWeight:800}}>{hideTotal?"••••":fmt(saved)}</span><span style={{color:C.muted,fontSize:13}}>of {fmt(s.goal)}</span></div><ProgressBar value={saved} max={s.goal} color={C.yellow}/></Card>);})}</div></>)}
 
       {txns.length>0&&(<><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Recent Transactions</div><div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>{txns.slice(0,5).map(t=><TxnRow key={t.id} txn={t} hideTotal={hideTotal}/>)}</div></>)}
     </div>
@@ -653,7 +686,6 @@ function History({ txns, onDelete, onUpdate, banks, expCats, incCats, currency, 
   );
 }
 
-// ─── Edit Transaction Modal (FIXED & FULLY SYNTAX SAFE) ───────────────────────
 function EditTxnModal({ txn, banks, expCats, incCats, currency, onSave, onClose }) {
   const [amount, setAmount] = useState(String(txn.amount));
   const [date, setDate] = useState(txn.date);
@@ -670,7 +702,7 @@ function EditTxnModal({ txn, banks, expCats, incCats, currency, onSave, onClose 
   };
 
   return (
-    <Modal title="Edit Transaction" onClose={onClose}>
+    <Modal title="Edit Transaction" onClose={onClose} center={false}>
       <div style={{marginBottom:14}}>
         <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Amount ({currency})</div>
         <input type="number" step="any" value={amount} onChange={e=>setAmount(e.target.value)} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:15,outline:"none",boxSizing:"border-box"}}/>
@@ -729,7 +761,7 @@ function SavingsPage({ savings, onSave, txns, onBack }) {
           );
         })}
       </div>
-      {showAdd&&(<Modal title={editId?"Edit Goal":"New Saving Goal"} onClose={()=>{setShowAdd(false);setEditId(null);}}><Input label="Goal Name" placeholder="e.g. Travel Fund..." value={name} onChange={e=>setName(e.target.value)}/><Input label="Target Amount" type="number" step="any" value={goal} onChange={e=>setGoal(e.target.value)}/><Btn full onClick={handleAdd}>{editId?"Update Goal":"Create Goal"}</Btn></Modal>)}
+      {showAdd&&(<Modal title={editId?"Edit Goal":"New Saving Goal"} onClose={()=>{setShowAdd(false);setEditId(null);}} center={false}><Input label="Goal Name" placeholder="e.g. Travel Fund..." value={name} onChange={e=>setName(e.target.value)}/><Input label="Target Amount" type="number" step="any" value={goal} onChange={e=>setGoal(e.target.value)}/><Btn full onClick={handleAdd}>{editId?"Update Goal":"Create Goal"}</Btn></Modal>)}
       {confirmId&&<ConfirmModal title="Delete Goal?" message="This will permanently delete this saving goal." onClose={()=>setConfirmId(null)} onConfirm={async()=>{await onSave(savings.filter(s=>s.id!==confirmId));setConfirmId(null);}}/>}
     </div>
   );
@@ -780,7 +812,7 @@ function BudgetsPage({ budgets, expCats, onSave, onBack, currency }) {
         ))}
       </div>
 
-      {showAdd&&(<Modal title={editId?"Modify Allocation":"Configure Budget Allocation"} onClose={()=>{setShowAdd(false);setEditId(null);}}>
+      {showAdd&&(<Modal title={editId?"Modify Allocation":"Configure Budget Allocation"} onClose={()=>{setShowAdd(false);setEditId(null);}} center={false}>
         <Input label="Budget Descriptor" placeholder="e.g. Dining & Coffee Limits" value={name} onChange={e=>setName(e.target.value)}/>
         <Input label={`Monthly Ceiling Limit (${currency})`} type="number" step="any" value={amount} onChange={e=>setAmount(e.target.value)}/>
         <div style={{marginBottom:14}}>
@@ -906,7 +938,7 @@ function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currenc
         })}
       </div>
       
-      {showAdd&&(<Modal title={editItem?"Edit Bill":"New Monthly Bill"} onClose={()=>{setShowAdd(false);setEditItem(null);}}><Input label="Bill Name" value={name} onChange={e=>setName(e.target.value)}/><div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Amount ({currency})</div><input type="number" step="any" value={amount} onChange={e=>setAmount(e.target.value)} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:15,outline:"none",boxSizing:"border-box"}}/></div><Select label="Pay from Account" value={bankId} onChange={e=>setBankId(e.target.value)}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select><Select label="Category" value={catId} onChange={e=>setCatId(e.target.value)}>{expCats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]||"📌"} {c.name}</option>)}</Select><Btn full onClick={handleSave}>{editItem?"Update Bill":"Add Bill"}</Btn></Modal>)}
+      {showAdd&&(<Modal title={editItem?"Edit Bill":"New Monthly Bill"} onClose={()=>{setShowAdd(false);setEditItem(null);}} center={false}><Input label="Bill Name" value={name} onChange={e=>setName(e.target.value)}/><div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Amount ({currency})</div><input type="number" step="any" value={amount} onChange={e=>setAmount(e.target.value)} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:15,outline:"none",boxSizing:"border-box"}}/></div><Select label="Pay from Account" value={bankId} onChange={e=>setBankId(e.target.value)}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select><Select label="Category" value={catId} onChange={e=>setCatId(e.target.value)}>{expCats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]||"📌"} {c.name}</option>)}</Select><Btn full onClick={handleSave}>{editItem?"Update Bill":"Add Bill"}</Btn></Modal>)}
       {confirmDelete&&<ConfirmModal title="Delete Permanent Record?" message="Remove this from your monthly template cycle entirely?" onClose={()=>setConfirmDelete(null)} onConfirm={async()=>{await onSave(bills.filter(b=>b.id!==confirmDelete));setConfirmDelete(null);}}/>}
       {confirmUndo&&<ConfirmModal title="Revert Settlement status?" message={`This will flag "${confirmUndo.name}" as outstanding and automatically delete the ledger entry.`} confirmColor={C.yellow} onClose={()=>setConfirmUndo(null)} onConfirm={handleUndoConfirm}/>}
     </div>
@@ -914,7 +946,7 @@ function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currenc
 }
 
 // ─── Settings Screen ──────────────────────────────────────────────────────────
-function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCats, onGroups, currency, onCurrency, username, onUsername, bankBalance, onOpenSavings, onOpenBudgets, setLastBackup, txns, bills, savings, budgets }) {
+function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCats, onGroups, currency, onCurrency, username, onUsername, bankBalance, onOpenSavings, onOpenBudgets, setLastBackup, txns, bills, savings, budgets, onRestore, setAppAlert }) {
   const [section, setSection] = useState("profile");
   const [modal, setModal] = useState(null);
   const [inputName, setInputName] = useState("");
@@ -924,6 +956,8 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
   const [groupCats, setGroupCats] = useState([]);
   const [nameInput, setNameInput] = useState(username||"");
   const [confirmDel, setConfirmDel] = useState(null);
+  
+  const fileInputRef = useRef(null);
 
   const openAdd=(type,item=null)=>{setModal({type,item});setInputName(item?.name||"");setInputColor(item?.color||C.accent);setInputGroup(item?.group||"daily");setInputIcon(item?.icon||"others");setGroupCats(item?.cats||[]);};
   
@@ -951,12 +985,28 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "DeliveryDiary_Backup.json"; // Overwrite triggers prompt on matching names
+    a.download = "DeliveryDiary_Backup.json"; 
     a.click();
     const now = Date.now();
     await save(KEYS.lastBackup, now);
     setLastBackup(now);
-    alert("🔄 Backup transaction completed successfully.");
+    setAppAlert({ title: "Backup Complete", message: "🔄 Backup payload file saved! Check your Downloads folder.", color: C.accent });
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const parsed = JSON.parse(evt.target.result);
+        await onRestore(parsed);
+      } catch {
+        setAppAlert({ title: "Import Error", message: "❌ Failed parsing JSON file. Check payload validity.", color: C.red });
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ""; // Clear input node buffer
   };
 
   const canDelBank=(b)=>bankBalance(b.id)===0;
@@ -980,8 +1030,15 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
           
           <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Vault Ledger Backups</div>
           <Card style={{marginBottom:16}}>
-            <p style={{color:C.muted, fontSize:12, marginBottom:12, lineHeight:1.4}}>Download backup payload files locally. If prompted for overwrite, accept replace properties.</p>
-            <Btn full onClick={handleBackup} color={C.blue}>⬇️ Download Secure Backup</Btn>
+            <p style={{color:C.muted, fontSize:12, marginBottom:14, lineHeight:1.4}}>Download backup payload files locally or restore previous metrics ledger logs data directly.</p>
+            
+            {/* Split Symmetric Horizontal Layout Box Container for Action Triggers */}
+            <div style={{ display:"flex", gap:10, width:"100%" }}>
+              <Btn style={{ flex:1, whiteSpace:"nowrap", padding:"11px 5px" }} onClick={handleBackup} color={C.blue}>⬇️ Backup</Btn>
+              <Btn style={{ flex:1, whiteSpace:"nowrap", padding:"11px 5px" }} onClick={()=>fileInputRef.current.click()} color={C.purple} outline>⬆️ Restore</Btn>
+            </div>
+            
+            <input type="file" ref={fileInputRef} accept=".json" onChange={handleFileChange} style={{ display:"none" }} />
           </Card>
         </div>
       )}
@@ -999,7 +1056,7 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
       ))}</div><Btn outline full onClick={()=>openAdd("expCat")}>+ Add Expense Node</Btn></>)}
 
       {modal&&(
-        <Modal title={`${modal.item?"Modify":"Append"} ${modal.type}`} onClose={()=>setModal(null)}>
+        <Modal title={`${modal.item?"Modify":"Append"} ${modal.type}`} onClose={()=>setModal(null)} center={false}>
           <Input label="Label Name" value={inputName} onChange={e=>setInputName(e.target.value)}/>
           {modal.type==="bank"&&(<div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:"uppercase"}}>Hex Tone Color</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{[C.accent,C.red,C.blue,C.yellow,C.purple,"#fb923c","#34d399","#f472b6"].map(col=>(<button key={col} onClick={()=>setInputColor(col)} style={{width:28,height:28,borderRadius:99,background:col,border:inputColor===col?"3px solid white":"3px solid transparent",cursor:"pointer"}}/>))}</div></div>)}
           {modal.type==="expCat"&&(<div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:"uppercase"}}>System Glyphs Icon</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{iconKeys.map(k=><button key={k} onClick={()=>setInputIcon(k)} style={{width:36,height:36,borderRadius:8,background:inputIcon===k?C.accentDim:C.bg,border:`1px solid ${inputIcon===k?C.accent:C.border}`,cursor:"pointer",fontSize:18}}>{ICONS[k]}</button>)}</div></div>)}
