@@ -165,73 +165,126 @@ function ProgressBar({ value, max, color }) {
   return <div style={{ height:6, background:C.border, borderRadius:99, overflow:"hidden" }}><div style={{ height:"100%", width:`${pct}%`, background:color||C.accent, borderRadius:99, transition:"width .4s" }} /></div>;
 }
 
-// ─── Swipeable Row (With Unbreakable Strict Axis Lock) ────────────────────────
+// ─── Native Magnetic Swipe Engine (Universal - Replaces SwipeRow) ──────────────
+let globalActiveSwipeClose = null;
+
 function SwipeRow({ onEdit, onDelete, children }) {
   const [slide, setSlide] = useState(0);
-  const startX = useRef(null);
-  const startY = useRef(null);
+  const rowRef = useRef(null);
+  const startX = useRef(0);
+  const startY = useRef(0);
   const currentX = useRef(0);
   
-  // Two-Flag System for absolute axis separation
-  const isHorizontalSwipe = useRef(false);
-  const isVerticalScroll = useRef(false);
+  const isHorizontal = useRef(false);
+  const isVertical = useRef(false);
 
-  const handleTouchStart = (e) => { 
-    startX.current = e.touches[0].clientX; 
-    startY.current = e.touches[0].clientY; 
-    currentX.current = slide; 
-    isHorizontalSwipe.current = false;
-    isVerticalScroll.current = false;
-  };
-  
-  const handleTouchMove = (e) => {
-    if (startX.current === null) return;
-    
-    const touchX = e.touches[0].clientX;
-    const touchY = e.touches[0].clientY;
-    const diffX = touchX - startX.current;
-    const diffY = Math.abs(touchY - startY.current);
-
-    // 1. If we already established the user is scrolling vertically, ignore X completely
-    if (isVerticalScroll.current) return;
-
-    // 2. Decide the primary axis logic
-    if (!isHorizontalSwipe.current) {
-      if (diffY > Math.abs(diffX) && diffY > 3) {
-        // Strict Vertical Lock activated
-        isVerticalScroll.current = true;
-        return;
-      }
-      if (Math.abs(diffX) > 10 && Math.abs(diffX) > diffY) {
-        // Horizontal Swipe activated
-        isHorizontalSwipe.current = true;
-      }
+  const closeSwipe = useCallback(() => {
+    setSlide(0);
+    currentX.current = 0;
+    if (rowRef.current) {
+      rowRef.current.style.transform = `translateX(0px)`;
+      rowRef.current.style.transition = "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.15)";
     }
+    if (globalActiveSwipeClose === closeSwipe) globalActiveSwipeClose = null;
+  }, []);
 
-    // 3. Execute horizontal sliding if locked to X axis
-    if (isHorizontalSwipe.current) {
-      let target = currentX.current + diffX;
-      if (target < 0) setSlide(Math.max(target, -85)); 
-      else if (target > 0) setSlide(Math.min(target, 85)); 
-      else setSlide(0);
-    }
-  };
-  
-  const handleTouchEnd = () => {
-    startX.current = null;
-    if (slide < -45) setSlide(-85);
-    else if (slide > 45) setSlide(85);
-    else setSlide(0);
-  };
+  useEffect(() => {
+    const el = rowRef.current;
+    if (!el) return;
+
+    const handleTouchStart = (e) => {
+      // Auto-close any other open card magnetically
+      if (globalActiveSwipeClose && globalActiveSwipeClose !== closeSwipe) {
+        globalActiveSwipeClose();
+      }
+
+      startX.current = e.touches[0].clientX;
+      startY.current = e.touches[0].clientY;
+      currentX.current = slide;
+      
+      isHorizontal.current = false;
+      isVertical.current = false;
+      el.style.transition = "none"; // Remove animation during raw drag
+    };
+
+    const handleTouchMove = (e) => {
+      // 1. Strict Axis Lock: If scrolling vertically, X is dead
+      if (isVertical.current) return;
+
+      const touchX = e.touches[0].clientX;
+      const touchY = e.touches[0].clientY;
+      const diffX = touchX - startX.current;
+      const diffY = Math.abs(touchY - startY.current);
+
+      // 2. Determine Intent once per touch
+      if (!isHorizontal.current) {
+        if (diffY > Math.abs(diffX) && diffY > 3) {
+          isVertical.current = true;
+          return;
+        }
+        if (Math.abs(diffX) > 10 && Math.abs(diffX) > diffY) {
+          isHorizontal.current = true;
+        }
+      }
+
+      // 3. Horizontal Drag Execution + Scroll Kill
+      if (isHorizontal.current) {
+        e.preventDefault(); // NATIVE KILL: Destroys browser vertical scroll
+        let target = currentX.current + diffX;
+        
+        // Elastic resistance boundaries
+        if (target < -95) target = -95;
+        if (target > 95) target = 95;
+        
+        el.style.transform = `translateX(${target}px)`;
+        setSlide(target);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (isVertical.current) return;
+
+      el.style.transition = "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.15)"; // Magnetic Spring Effect
+
+      // Magnetic Anchor Points Threshold
+      if (slide < -35) {
+        setSlide(-85);
+        currentX.current = -85;
+        el.style.transform = `translateX(-85px)`;
+        globalActiveSwipeClose = closeSwipe;
+      } else if (slide > 35) {
+        setSlide(85);
+        currentX.current = 85;
+        el.style.transform = `translateX(85px)`;
+        globalActiveSwipeClose = closeSwipe;
+      } else {
+        setSlide(0);
+        currentX.current = 0;
+        el.style.transform = `translateX(0px)`;
+        if (globalActiveSwipeClose === closeSwipe) globalActiveSwipeClose = null;
+      }
+    };
+
+    // Passive: false is the core secret to locking scroll
+    el.addEventListener('touchstart', handleTouchStart, { passive: false });
+    el.addEventListener('touchmove', handleTouchMove, { passive: false });
+    el.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      el.removeEventListener('touchstart', handleTouchStart);
+      el.removeEventListener('touchmove', handleTouchMove);
+      el.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [slide, closeSwipe]);
 
   return (
     <div style={{ position:"relative", overflow:"hidden", borderRadius:12, marginBottom:8, userSelect:"none", WebkitUserSelect:"none" }}>
       <div style={{ position:"absolute", inset:0, display:"flex", justifyContent:"space-between", zIndex:0 }}>
-        <button onClick={()=>{setSlide(0); onEdit&&onEdit();}} style={{ width:85, background:C.blueDim, border:"none", color:C.blue, fontSize:14, fontWeight:700, cursor:"pointer" }}>✎ Edit</button>
-        <button onClick={()=>{setSlide(0); onDelete&&onDelete();}} style={{ width:85, background:C.redDim, border:"none", color:C.red, fontSize:14, fontWeight:700, cursor:"pointer" }}>🗑 Delete</button>
+        <button onClick={()=>{closeSwipe(); onEdit&&onEdit();}} style={{ width:85, background:C.blueDim, border:"none", color:C.blue, fontSize:14, fontWeight:700, cursor:"pointer" }}>✎ Edit</button>
+        <button onClick={()=>{closeSwipe(); onDelete&&onDelete();}} style={{ width:85, background:C.redDim, border:"none", color:C.red, fontSize:14, fontWeight:700, cursor:"pointer" }}>🗑 Delete</button>
       </div>
-      <div onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
-           style={{ transform:`translateX(${slide}px)`, transition:startX.current?"none":"transform 0.25s cubic-bezier(0.1, 0.8, 0.2, 1)", touchAction:"pan-y", background:C.card, border:`1px solid ${C.border}`, borderRadius:12, position:"relative", zIndex:1 }}>
+      <div ref={rowRef}
+           style={{ touchAction: slide !== 0 ? "none" : "pan-y", background:C.card, border:`1px solid ${C.border}`, borderRadius:12, position:"relative", zIndex:1, width:"100%", boxSizing:"border-box" }}>
         {children}
       </div>
     </div>
