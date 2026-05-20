@@ -324,6 +324,7 @@ export default function App() {
   
   const [appAlert, setAppAlert] = useState(null);
 
+  const [hideTotal, setHideTotal] = useState(true);
   const [ledgerBank, setLedgerBank] = useState(null);
   const [ledgerGroup, setLedgerGroup] = useState(null);
   const [ledgerSaving, setLedgerSaving] = useState(null);
@@ -445,7 +446,7 @@ export default function App() {
 
       {!ledgerBank && !ledgerGroup && !ledgerSaving && !ledgerBudget ? (
         <>
-          {tab==="dashboard" && <Dashboard txns={filteredTxns} bills={bills} budgets={budgets} banks={banks} groups={groups} expCats={expCats} savings={savings} filterMonth={filterMonth} setFilterMonth={setFilterMonth} availMonths={availMonths} username={username} bankBalance={bankBalance} txnsAll={txns} onDeleteTxn={delTxn} onUpdateTxn={updateTxn} onOpenBank={setLedgerBank} onOpenGroup={setLedgerGroup} onOpenSaving={setLedgerSaving} onOpenBudget={setLedgerBudget} />}
+          {tab==="dashboard" && <Dashboard txns={filteredTxns} bills={bills} budgets={budgets} banks={banks} groups={groups} expCats={expCats} savings={savings} filterMonth={filterMonth} setFilterMonth={setFilterMonth} availMonths={availMonths} username={username} bankBalance={bankBalance} txnsAll={txns} onDeleteTxn={delTxn} onUpdateTxn={updateTxn} onOpenBank={setLedgerBank} onOpenGroup={setLedgerGroup} onOpenSaving={setLedgerSaving} onOpenBudget={setLedgerBudget} hideTotal={hideTotal} setHideTotal={setHideTotal} />}
           {tab==="add" && <AddTransaction banks={banks} expCats={expCats} incCats={incCats} savings={savings} currency={currency} onAdd={addTxn} onSaveSavings={saveSavings} onDone={()=>setTab("dashboard")} bankBalance={bankBalance}/>}
           {tab==="history" && <History txns={txns} allCats={allCats} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} currency={currency} availMonths={availMonths}/>}
           
@@ -583,8 +584,7 @@ function NavBtn({ id, icon, label, tab, setTab }) {
 }
 
 // ─── Dashboard Screen ────────────────────────────────────────────────────────
-function Dashboard({ txns, bills, budgets, banks, groups, expCats, savings, filterMonth, setFilterMonth, availMonths, username, bankBalance, txnsAll, onDeleteTxn, onUpdateTxn, onOpenBank, onOpenGroup, onOpenSaving, onOpenBudget }) {
-  const [hideTotal, setHideTotal] = useState(true);
+function Dashboard({ txns, bills, budgets, banks, groups, expCats, savings, filterMonth, setFilterMonth, availMonths, username, bankBalance, txnsAll, onDeleteTxn, onUpdateTxn, onOpenBank, onOpenGroup, onOpenSaving, onOpenBudget, hideTotal, setHideTotal }) {
   const [recentFilter, setRecentFilter] = useState("all");
 
   const totalBalance = banks.reduce((s,b)=>s+bankBalance(b.id),0);
@@ -802,7 +802,10 @@ function DeepLedgerView({ title, subtitle, txns, onDelete, onUpdate, banks, expC
         <button onClick={onClose} style={{ background: C.card, border: `1px solid ${C.border}`, color: C.muted, width: 44, height: 44, borderRadius: 99, cursor: "pointer", fontSize: 20, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, padding: 0, margin: 0 }}>✕</button>
       </div>
       
-      <div style={{ color: C.accent, fontSize: 20, fontWeight: 800, marginBottom: 20 }}>{subtitle}</div>
+      <div style={{marginBottom:20}}>
+        <div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:4}}>Current Balance</div>
+        <div style={{color:C.accent,fontSize:22,fontWeight:800}}>{subtitle}</div>
+      </div>
 
       <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>
         {["all", "in", "out"].map(f => (
@@ -1255,33 +1258,35 @@ function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currenc
             <SwipeRow key={bill.id} onEdit={()=>openAdd(bill)} onDelete={()=>setConfirmDelete(bill.id)}>
               <div style={{padding:"12px 14px", background:C.card, display:"flex", flexDirection:"column", gap:10, boxSizing:"border-box"}}>
                 
-                <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%"}}>
-                  <div style={{minWidth: 0, flex: 1}}>
-                    <span style={{color:C.text, fontWeight:700, fontSize:15, display:"block", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{bill.name}</span>
-                    <div style={{color:C.muted, fontSize:11, fontWeight: 500, marginTop: 2}}>{bank?.name} · {cat?.name||"Bills"}</div>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  {/* Amount */}
+                  <div style={{flexShrink:0,minWidth:68,textAlign:"right"}}>
+                    <div style={{color:C.text,fontSize:15,fontWeight:800,lineHeight:1.2}}>{fmt(bill.amount)}</div>
                   </div>
-                  <div style={{flexShrink: 0, paddingLeft: 12}}>
-                    <span style={{color:C.text, fontSize:17, fontWeight:800}}>{fmt(bill.amount)}</span>
+                  {/* Divider */}
+                  <div style={{width:1,alignSelf:"stretch",background:C.border,flexShrink:0,margin:"2px 0"}}/>
+                  {/* Name + Bank */}
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{color:C.text,fontWeight:700,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{bill.name}</div>
+                    <div style={{color:C.muted,fontSize:11,marginTop:2}}>{bank?.name} · {cat?.name||"Bills"}</div>
                   </div>
-                </div>
-
-                <div style={{width:"100%",display:"flex",marginTop:0}}>
-                  {!paid ? (
-                    <button onClick={()=>handlePay(bill)}
-                            style={{background:C.accentDim, border:`1.5px solid ${C.accent}`, color:C.accent, borderRadius:10, width:"100%", height:44, fontWeight:800, fontSize:15, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6, letterSpacing:0.3}}>
-                      <span style={{fontSize:16}}>✓</span> Pay Bill
-                    </button>
-                  ) : (
-                    <div style={{display:"flex", width:"100%", gap:8, alignItems:"center"}}>
-                      <div style={{flex:1, background:C.accent, color:C.bg, borderRadius:10, height:44, fontSize:13, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center", gap:4}}>
-                        ✓ Paid {filterMonth.slice(5)}
-                      </div>
-                      <button onClick={()=>setConfirmUndo(bill)}
-                              style={{background:C.yellowDim, border:`1.5px solid ${C.yellow}`, color:C.yellow, borderRadius:10, height:44, padding:"0 14px", fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:4, whiteSpace:"nowrap"}}>
-                        ⟲ Undo
+                  {/* Action Buttons */}
+                  <div style={{flexShrink:0,display:"flex",gap:6}}>
+                    {!paid ? (
+                      <button onClick={()=>handlePay(bill)} style={{background:C.accentDim,border:`1.5px solid ${C.accent}`,color:C.accent,borderRadius:10,height:44,padding:"0 14px",fontWeight:800,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
+                        <span>✓</span> Pay
                       </button>
-                    </div>
-                  )}
+                    ) : (
+                      <>
+                        <div style={{background:C.accent,color:C.bg,borderRadius:10,height:44,padding:"0 10px",fontSize:12,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",whiteSpace:"nowrap"}}>
+                          ✓ {filterMonth.slice(5)}
+                        </div>
+                        <button onClick={()=>setConfirmUndo(bill)} style={{background:C.yellowDim,border:`1.5px solid ${C.yellow}`,color:C.yellow,borderRadius:10,height:44,padding:"0 12px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                          ⟲
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
 
               </div>
