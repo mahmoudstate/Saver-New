@@ -888,7 +888,7 @@ function AddTransaction({ banks, expCats, incCats, savings, currency, onAdd, onS
       </div>
       <div style={{marginBottom:14}}>
         <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Date</div>
-        <input type="date" value={date} onChange={e=>setDate(e.target.value)} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:15,outline:"none",boxSizing:"border-box",colorScheme:"dark"}}/>
+        <input type="date" value={date} onChange={e=>setDate(e.target.value)} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:15,outline:"none",boxSizing:"border-box",colorScheme:"dark",WebkitAppearance:"none",appearance:"none",display:"block"}}/>
       </div>
       <Select label="Account" value={bankId} onChange={e=>setBankId(e.target.value)}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select>
       {type==="saving"?(savings.length>0?<Select label="Saving Goal" value={savingId} onChange={e=>setSavingId(e.target.value)}>{savings.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</Select>:<div style={{color:C.muted,fontSize:13,marginBottom:14,padding:"10px 12px",background:C.card,borderRadius:10}}>No saving goals yet.</div>):(<Select label="Category" value={catId} onChange={e=>setCatId(e.target.value)}>{cats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]||"📌"} {c.name}</option>)}</Select>)}
@@ -1256,39 +1256,33 @@ function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currenc
           const bank=banks.find(b=>b.id===bill.bankId); const cat=expCats.find(c=>c.id===bill.catId);
           return (
             <SwipeRow key={bill.id} onEdit={()=>openAdd(bill)} onDelete={()=>setConfirmDelete(bill.id)}>
-              <div style={{padding:"12px 14px", background:C.card, display:"flex", flexDirection:"column", gap:10, boxSizing:"border-box"}}>
-                
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  {/* Amount */}
-                  <div style={{flexShrink:0,minWidth:68,textAlign:"right"}}>
-                    <div style={{color:C.text,fontSize:15,fontWeight:800,lineHeight:1.2}}>{fmt(bill.amount)}</div>
+              <div style={{padding:"10px 12px",background:C.card,boxSizing:"border-box"}}>
+                <div style={{display:"flex",alignItems:"center",gap:0}}>
+                  {/* Amount - no wasted space */}
+                  <div style={{flexShrink:0,width:80,paddingRight:10,borderRight:`1px solid ${C.border}`}}>
+                    <div style={{color:C.text,fontSize:18,fontWeight:800,lineHeight:1.15}}>{fmt(bill.amount)}</div>
                   </div>
-                  {/* Divider */}
-                  <div style={{width:1,alignSelf:"stretch",background:C.border,flexShrink:0,margin:"2px 0"}}/>
-                  {/* Name + Bank */}
-                  <div style={{flex:1,minWidth:0}}>
+                  {/* Name + Bank - flexible middle */}
+                  <div style={{flex:1,minWidth:0,paddingLeft:10,paddingRight:8}}>
                     <div style={{color:C.text,fontWeight:700,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{bill.name}</div>
                     <div style={{color:C.muted,fontSize:11,marginTop:2}}>{bank?.name} · {cat?.name||"Bills"}</div>
                   </div>
-                  {/* Action Buttons */}
-                  <div style={{flexShrink:0,display:"flex",gap:6}}>
-                    {!paid ? (
-                      <button onClick={()=>handlePay(bill)} style={{background:C.accentDim,border:`1.5px solid ${C.accent}`,color:C.accent,borderRadius:10,height:44,padding:"0 14px",fontWeight:800,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
-                        <span>✓</span> Pay
+                  {/* Action Buttons - full height, bigger */}
+                  {!paid ? (
+                    <button onClick={()=>handlePay(bill)} style={{flexShrink:0,background:C.accentDim,border:`1.5px solid ${C.accent}`,color:C.accent,borderRadius:10,height:48,padding:"0 16px",fontWeight:800,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",gap:5,whiteSpace:"nowrap"}}>
+                      <span style={{fontSize:15}}>✓</span> Pay
+                    </button>
+                  ) : (
+                    <div style={{flexShrink:0,display:"flex",gap:6}}>
+                      <div style={{background:C.accent,color:C.bg,borderRadius:10,height:48,padding:"0 12px",fontSize:13,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",whiteSpace:"nowrap"}}>
+                        ✓ {filterMonth.slice(5)}
+                      </div>
+                      <button onClick={()=>setConfirmUndo(bill)} style={{background:C.yellowDim,border:`1.5px solid ${C.yellow}`,color:C.yellow,borderRadius:10,height:48,padding:"0 14px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        ⟲
                       </button>
-                    ) : (
-                      <>
-                        <div style={{background:C.accent,color:C.bg,borderRadius:10,height:44,padding:"0 10px",fontSize:12,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",whiteSpace:"nowrap"}}>
-                          ✓ {filterMonth.slice(5)}
-                        </div>
-                        <button onClick={()=>setConfirmUndo(bill)} style={{background:C.yellowDim,border:`1.5px solid ${C.yellow}`,color:C.yellow,borderRadius:10,height:44,padding:"0 12px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                          ⟲
-                        </button>
-                      </>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
-
               </div>
             </SwipeRow>
           );
