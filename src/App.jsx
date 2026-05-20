@@ -1250,37 +1250,43 @@ function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currenc
       
       {bills.length===0&&<EmptyState icon="📋" message="No recurrent fixed monthly bill items configured yet." />}
       
-      <div style={{display:"flex",flexDirection:"column", gap: 8}}>
-        {bills.map(bill=>{
+      <div style={{display:"flex",flexDirection:"column",gap:0,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
+        {bills.map((bill,idx)=>{
           const paid=isPaid(bill);
           const bank=banks.find(b=>b.id===bill.bankId); const cat=expCats.find(c=>c.id===bill.catId);
+          const isLast=idx===bills.length-1;
           return (
             <SwipeRow key={bill.id} onEdit={()=>openAdd(bill)} onDelete={()=>setConfirmDelete(bill.id)}>
-              <div style={{padding:"10px 12px",background:C.card,boxSizing:"border-box"}}>
-                <div style={{display:"flex",alignItems:"center",gap:0}}>
-                  {/* Amount - no wasted space */}
-                  <div style={{flexShrink:0,width:80,paddingRight:10,borderRight:`1px solid ${C.border}`}}>
-                    <div style={{color:C.text,fontSize:18,fontWeight:800,lineHeight:1.15}}>{fmt(bill.amount)}</div>
+              <div style={{background:paid?C.accentDim+"55":C.card,boxSizing:"border-box",borderBottom:isLast?"none":`1px solid ${C.border}`}}>
+                {/* Row 1: icon + name + amount */}
+                <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px 6px"}}>
+                  {/* Category icon circle */}
+                  <div style={{width:36,height:36,borderRadius:99,background:paid?C.accentDim:C.border+"88",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
+                    {ICONS[cat?.icon]||"⚡"}
                   </div>
-                  {/* Name + Bank - flexible middle */}
-                  <div style={{flex:1,minWidth:0,paddingLeft:10,paddingRight:8}}>
+                  {/* Name + bank */}
+                  <div style={{flex:1,minWidth:0}}>
                     <div style={{color:C.text,fontWeight:700,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{bill.name}</div>
-                    <div style={{color:C.muted,fontSize:11,marginTop:2}}>{bank?.name} · {cat?.name||"Bills"}</div>
+                    <div style={{color:C.muted,fontSize:11,marginTop:1}}>{bank?.name} · {cat?.name||"Bills"}</div>
                   </div>
-                  {/* Action Buttons - full height, bigger */}
+                  {/* Amount */}
+                  <div style={{color:paid?C.accent:C.red,fontSize:17,fontWeight:800,flexShrink:0}}>{fmt(bill.amount)}</div>
+                </div>
+                {/* Row 2: action buttons full width */}
+                <div style={{padding:"0 14px 12px",display:"flex",gap:8}}>
                   {!paid ? (
-                    <button onClick={()=>handlePay(bill)} style={{flexShrink:0,background:C.accentDim,border:`1.5px solid ${C.accent}`,color:C.accent,borderRadius:10,height:48,padding:"0 16px",fontWeight:800,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",gap:5,whiteSpace:"nowrap"}}>
-                      <span style={{fontSize:15}}>✓</span> Pay
+                    <button onClick={()=>handlePay(bill)} style={{flex:1,background:C.accentDim,border:`1.5px solid ${C.accent}`,color:C.accent,borderRadius:10,height:44,fontWeight:800,fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                      <span>✓</span> Mark as Paid
                     </button>
                   ) : (
-                    <div style={{flexShrink:0,display:"flex",gap:6}}>
-                      <div style={{background:C.accent,color:C.bg,borderRadius:10,height:48,padding:"0 12px",fontSize:13,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",whiteSpace:"nowrap"}}>
-                        ✓ {filterMonth.slice(5)}
+                    <>
+                      <div style={{flex:1,background:C.accent,color:C.bg,borderRadius:10,height:44,fontSize:14,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                        ✓ Paid {filterMonth.slice(5)}
                       </div>
-                      <button onClick={()=>setConfirmUndo(bill)} style={{background:C.yellowDim,border:`1.5px solid ${C.yellow}`,color:C.yellow,borderRadius:10,height:48,padding:"0 14px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        ⟲
+                      <button onClick={()=>setConfirmUndo(bill)} style={{flexShrink:0,background:C.yellowDim,border:`1.5px solid ${C.yellow}`,color:C.yellow,borderRadius:10,height:44,padding:"0 18px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+                        ⟲ Undo
                       </button>
-                    </div>
+                    </>
                   )}
                 </div>
               </div>
