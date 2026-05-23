@@ -82,7 +82,7 @@ async function save(key, val) { try { localStorage.setItem(key, JSON.stringify(v
 function Pill({ color, children, style }) { return <span style={{ background:color+"22", color, border:`1px solid ${color}44`, borderRadius:99, padding:"2px 10px", fontSize:11, fontWeight:700, letterSpacing:0.5, ...style }}>{children}</span>; }
 function Card({ children, style, ...props }) { return <div {...props} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:16, ...style }}>{children}</div>; }
 
-function Modal({ title, onClose, children, center }) {
+function Modal({ title, onClose, children, center = false }) {
   const alignVal = center ? "center" : "flex-end";
   const radiusVal = center ? "20px" : "20px 20px 0 0";
   const animVal = center ? "popCenter 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)" : "slideUp 0.3s ease-out";
@@ -171,7 +171,7 @@ function ProgressBar({ value, max, color }) {
   return <div style={{ height:6, background:C.border, borderRadius:99, overflow:"hidden" }}><div style={{ height:"100%", width:`${pct}%`, background:color||C.accent, borderRadius:99, transition:"width .4s" }} /></div>;
 }
 
-// ─── Native Magnetic Swipe Engine (Universal - Replaces SwipeRow) ──────────────
+// ─── Native Magnetic Swipe Engine ──────────────────────────────────────────────
 let globalActiveSwipeClose = null;
 
 function SwipeRow({ onEdit, onDelete, children }) {
@@ -199,7 +199,6 @@ function SwipeRow({ onEdit, onDelete, children }) {
     if (!el) return;
 
     const handleTouchStart = (e) => {
-      // Auto-close any other open card magnetically
       if (globalActiveSwipeClose && globalActiveSwipeClose !== closeSwipe) {
         globalActiveSwipeClose();
       }
@@ -210,11 +209,10 @@ function SwipeRow({ onEdit, onDelete, children }) {
       
       isHorizontal.current = false;
       isVertical.current = false;
-      el.style.transition = "none"; // Remove animation during raw drag
+      el.style.transition = "none";
     };
 
     const handleTouchMove = (e) => {
-      // 1. Strict Axis Lock: If scrolling vertically, X is dead
       if (isVertical.current) return;
 
       const touchX = e.touches[0].clientX;
@@ -222,7 +220,6 @@ function SwipeRow({ onEdit, onDelete, children }) {
       const diffX = touchX - startX.current;
       const diffY = Math.abs(touchY - startY.current);
 
-      // 2. Determine Intent once per touch
       if (!isHorizontal.current) {
         if (diffY > Math.abs(diffX) && diffY > 3) {
           isVertical.current = true;
@@ -233,12 +230,9 @@ function SwipeRow({ onEdit, onDelete, children }) {
         }
       }
 
-      // 3. Horizontal Drag Execution + Scroll Kill
       if (isHorizontal.current) {
-        e.preventDefault(); // NATIVE KILL: Destroys browser vertical scroll
+        e.preventDefault(); 
         let target = currentX.current + diffX;
-        
-        // Elastic resistance boundaries
         if (target < -95) target = -95;
         if (target > 95) target = 95;
         
@@ -250,9 +244,8 @@ function SwipeRow({ onEdit, onDelete, children }) {
     const handleTouchEnd = () => {
       if (isVertical.current) return;
 
-      el.style.transition = "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.15)"; // Magnetic Spring Effect
+      el.style.transition = "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.15)";
 
-      // Magnetic Anchor Points Threshold
       if (slide < -35) {
         setSlide(-85);
         currentX.current = -85;
@@ -271,7 +264,6 @@ function SwipeRow({ onEdit, onDelete, children }) {
       }
     };
 
-    // Passive: false is the core secret to locking scroll
     el.addEventListener('touchstart', handleTouchStart, { passive: false });
     el.addEventListener('touchmove', handleTouchMove, { passive: false });
     el.addEventListener('touchend', handleTouchEnd);
@@ -307,44 +299,48 @@ function EmptyState({ icon, message }) {
   );
 }
 
-// ─── Splash Screen ────────────────────────────────────────────────────────────
+// ─── Modern Custom Splash Screen (Matches Provided Logo) ──────────────────────
 function SplashScreen() {
   const [phase, setPhase] = useState(0);
   useEffect(() => {
     const t1 = setTimeout(() => setPhase(1), 600);
-    const t2 = setTimeout(() => setPhase(2), 2000);
+    const t2 = setTimeout(() => setPhase(2), 2200);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
+  
   return (
-    <div style={{position:"fixed",inset:0,zIndex:999,background:"#1c1f26",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",opacity:phase===2?0:1,transition:phase===2?"opacity 0.7s ease":"none",userSelect:"none"}}>
+    <div style={{position:"fixed",inset:0,zIndex:999,background:"#1c1f26",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",opacity:phase===2?0:1,transition:phase===2?"opacity 0.6s ease":"none",userSelect:"none"}}>
       <style>{`
-        @keyframes logoIn{0%{transform:scale(0.3) rotate(-10deg);opacity:0}65%{transform:scale(1.08) rotate(2deg);opacity:1}100%{transform:scale(1) rotate(0deg);opacity:1}}
-        @keyframes arrowIn{0%{opacity:0;transform:translate(-6px,6px)}100%{opacity:1;transform:translate(0,0)}}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:0.25}40%{transform:translateY(-7px);opacity:1}}
+        @keyframes popS { 0% { transform: scale(0.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes arrowShoot { 0% { transform: translate(-20px, 20px) scale(0.5); opacity: 0; } 100% { transform: translate(0, 0) scale(1); opacity: 1; } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
-      {/* Logo */}
-      <div style={{animation:"logoIn 0.9s cubic-bezier(0.175,0.885,0.32,1.275) both",marginBottom:28}}>
-        <svg width={120} height={120} viewBox="0 0 120 120">
-          <rect width={120} height={120} rx={26} fill="#252830"/>
-          {/* S letter */}
-          <text x={22} y={88} fontFamily="Georgia,serif" fontSize={82} fontWeight="900" fill="#e8e8f0" letterSpacing={-2}>S</text>
-          {/* Arrow */}
-          <g style={{animation:"arrowIn 0.5s ease 0.8s both"}}>
-            <line x1={62} y1={62} x2={88} y2={34} stroke="url(#ag)" strokeWidth={5} strokeLinecap="round"/>
-            <polygon points="88,34 74,34 88,48" fill="#3d9e5f"/>
-            <defs><linearGradient id="ag" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stopColor="#2d7a48"/><stop offset="100%" stopColor="#4ade80"/></linearGradient></defs>
+      
+      <div style={{ marginBottom: 28 }}>
+        <svg width={150} height={150} viewBox="0 0 140 140">
+          <rect width={140} height={140} rx={32} fill="#242730" />
+          
+          {/* Arrow (Renders behind the S slightly) */}
+          <g style={{ animation: "arrowShoot 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s both" }}>
+            <line x1={55} y1={85} x2={100} y2={40} stroke="url(#greenGrad)" strokeWidth={12} strokeLinecap="round" />
+            <polygon points="106,36 86,38 102,54" fill="#6ee7b7" />
           </g>
+
+          {/* Letter S */}
+          <text x={34} y={104} fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" fontSize={100} fontWeight="800" fill="#ffffff" style={{ animation: "popS 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both" }}>S</text>
+          
+          <defs>
+            <linearGradient id="greenGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#6ee7b7" stopOpacity="0"/>
+              <stop offset="30%" stopColor="#6ee7b7" stopOpacity="0.4"/>
+              <stop offset="100%" stopColor="#6ee7b7" stopOpacity="1"/>
+            </linearGradient>
+          </defs>
         </svg>
       </div>
-      {/* App name */}
-      <div style={{color:"#e8e8f0",fontSize:34,fontWeight:800,letterSpacing:8,textTransform:"uppercase",marginBottom:8,animation:"logoIn 0.9s 0.1s both"}}>SAVER</div>
-      {/* Tagline */}
-      <div style={{color:"#8888a8",fontSize:13,fontWeight:400,letterSpacing:2,fontStyle:"italic",opacity:phase>=1?1:0,animation:phase>=1?"fadeUp 0.6s ease forwards":"none",marginBottom:70}}>Easy come, easy go.</div>
-      {/* Dots */}
-      <div style={{display:"flex",gap:7,position:"absolute",bottom:54}}>
-        {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:99,background:"#6ee7b7",animation:`bounce 1.3s ease ${i*0.22}s infinite`}}/>)}
-      </div>
+      
+      <div style={{color:"#ffffff",fontSize:32,fontWeight:800,letterSpacing:8,textTransform:"uppercase",marginBottom:8,animation:"popS 0.8s 0.1s both"}}>SAVER</div>
+      <div style={{color:"#8888a8",fontSize:13,fontWeight:400,letterSpacing:2,fontStyle:"italic",opacity:phase>=1?1:0,animation:phase>=1?"fadeUp 0.6s ease forwards":"none"}}>Easy come, easy go.</div>
     </div>
   );
 }
@@ -392,7 +388,7 @@ export default function App() {
       const hasCurMonth = t.some(tx => tx.date.startsWith(curMonth));
       setFilterMonth(hasCurMonth ? curMonth : "all");
       setReady(true);
-      setTimeout(() => setShowSplash(false), 2700);
+      setTimeout(() => setShowSplash(false), 2800);
     })();
   }, []);
 
@@ -526,7 +522,6 @@ function BottomNav({ tab, setTab, expCats, banks, onAdd, currency, bankBalance, 
   const [showQuick, setShowQuick] = useState(false);
   const [quickForm, setQuickForm] = useState(null);
   const pressTimer = useRef(null);
-  // Remember last used amount & bank per shortcut
   const lastUsed = useRef({});
 
   const activeShortcuts = quickActions.filter(q => q.catId);
@@ -536,7 +531,6 @@ function BottomNav({ tab, setTab, expCats, banks, onAdd, currency, bankBalance, 
 
   const handleQuickSelect = (shortcut) => {
     setShowQuick(false);
-    // Use last used values if available, else use shortcut defaults
     const prev = lastUsed.current[shortcut.id] || {};
     setQuickForm({
       catId: shortcut.catId,
@@ -563,7 +557,6 @@ function BottomNav({ tab, setTab, expCats, banks, onAdd, currency, bankBalance, 
     });
 
     if (success !== false) {
-      // Save last used values for next time
       if (quickForm.shortcutId) {
         lastUsed.current[quickForm.shortcutId] = { amount: quickForm.amount, bankId: quickForm.bankId };
       }
@@ -621,9 +614,9 @@ function BottomNav({ tab, setTab, expCats, banks, onAdd, currency, bankBalance, 
             <span style={{fontSize:16, fontWeight:700, color:C.text}}>{expCats.find(c=>c.id===quickForm.catId)?.name}</span>
           </div>
           <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>Amount ({currency})</div><input type="number" step="any" value={quickForm.amount} onChange={e=>setQuickForm({...quickForm, amount:e.target.value})} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:15,outline:"none",boxSizing:"border-box"}}/></div>
-          <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>Account</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{banks.map(b=><button key={b.id} onClick={()=>setQuickForm({...quickForm, bankId:b.id})} style={{padding:"8px 14px", borderRadius:10, border:`1px solid ${quickForm.bankId===b.id?C.accent:C.border}`, background:quickForm.bankId===b.id?C.accentDim:"transparent", color:quickForm.bankId===b.id?C.accent:C.text, fontWeight:600, fontSize:13, cursor:"pointer"}}>{b.name}</button>)}</div></div>
-          <Input label="Note" placeholder="Add a note..." value={quickForm.note} onChange={e=>setQuickForm({...quickForm, note:e.target.value})}/>
-          <Btn full onClick={handleQuickSave}>Save</Btn>
+          <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>Source Ledger</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{banks.map(b=><button key={b.id} onClick={()=>setQuickForm({...quickForm, bankId:b.id})} style={{padding:"8px 14px", borderRadius:10, border:`1px solid ${quickForm.bankId===b.id?C.accent:C.border}`, background:quickForm.bankId===b.id?C.accentDim:"transparent", color:quickForm.bankId===b.id?C.accent:C.text, fontWeight:600, fontSize:13, cursor:"pointer"}}>{b.name}</button>)}</div></div>
+          <Input label="Annotation / Note" placeholder="Add annotation..." value={quickForm.note} onChange={e=>setQuickForm({...quickForm, note:e.target.value})}/>
+          <Btn full onClick={handleQuickSave}>Confirm Settlement</Btn>
         </Modal>
       )}
       {showQuick && <div onClick={()=>setShowQuick(false)} style={{position:"fixed", inset:0, zIndex:40}} />}
@@ -649,17 +642,17 @@ function Dashboard({ txns, bills, budgets, banks, groups, expCats, savings, filt
   const totalIncome = txns.filter(t=>t.type==="income").reduce((a,t)=>a+t.amount,0);
   const totalExp = txns.filter(t=>t.type==="expense").reduce((a,t)=>a+t.amount,0);
 
-  // Month-over-month comparison
   const currentMonthStr = new Date().toISOString().slice(0,7);
   const getPrevMonth = (m) => { const [y,mo]=m.split("-"); const d=new Date(+y,+mo-2,1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; };
   const prevMonth = filterMonth==="all" ? null : getPrevMonth(filterMonth);
   const prevTxns = prevMonth ? txnsAll.filter(t=>t.date.startsWith(prevMonth)) : [];
   const prevIncome = prevTxns.filter(t=>t.type==="income").reduce((a,t)=>a+t.amount,0);
   const prevExp = prevTxns.filter(t=>t.type==="expense").reduce((a,t)=>a+t.amount,0);
+  
   const incomeDiff = prevIncome>0 ? Math.round(((totalIncome-prevIncome)/prevIncome)*100) : null;
   const expDiff = prevExp>0 ? Math.round(((totalExp-prevExp)/prevExp)*100) : null;
-  const isCurrentMonth = filterMonth === currentMonthStr || filterMonth === "all";
   
+  const isCurrentMonth = filterMonth === currentMonthStr || filterMonth === "all";
   const billsForMonth = isCurrentMonth ? currentMonthStr : filterMonth;
   const paidBillsCount = bills.filter(b=>b.payments?.some(p=>p.month===billsForMonth)).length;
   const totalBillsCount = bills.length;
@@ -774,16 +767,13 @@ function Dashboard({ txns, bills, budgets, banks, groups, expCats, savings, filt
               const barColor = pct >= 90 ? C.red : pct >= 70 ? C.yellow : C.accent;
               return (
                 <Card key={bdg.id} onClick={()=>onOpenBudget(bdg)} className="interactive-card" style={{padding:"14px", cursor:"pointer", transition:"transform 0.1s ease"}}>
-                  {/* Title + % pill */}
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                     <span style={{color:C.text,fontSize:14,fontWeight:700}}>{bdg.name}</span>
                     <Pill color={barColor}>{pct}%</Pill>
                   </div>
-                  {/* Spent of budget */}
                   <div style={{color:C.muted,fontSize:11,marginBottom:6}}>
                     Spent <span style={{color:C.text,fontWeight:700}}>{hideTotal?"••••":fmt(spent)}</span> of {hideTotal?"••••":fmt(bdg.amount)}
                   </div>
-                  {/* Remaining + safe daily */}
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                     <span style={{color:remaining===0?C.red:C.accent,fontSize:18,fontWeight:800}}>{hideTotal?"••••":fmt(remaining)} left</span>
                     <span style={{color:C.muted,fontSize:11}}>Daily Budget: {fmt(safeDaily)}</span>
@@ -859,11 +849,10 @@ function Dashboard({ txns, bills, budgets, banks, groups, expCats, savings, filt
   );
 }
 
-// ─── Clean Deep History View (No Swipe Back, Big X Perfectly Aligned) ─────────
+// ─── Clean Deep History View ──────────────────────────────────────────────────
 function LedgerHeader({ type, data }) {
   if (!type || !data) return null;
 
-  // BANK: big balance, green/red by value
   if (type === "bank") {
     const neg = data.balance < 0;
     return (
@@ -874,7 +863,6 @@ function LedgerHeader({ type, data }) {
     );
   }
 
-  // GROUP: total spent, muted label
   if (type === "group") {
     return (
       <div style={{ marginBottom: 20, padding: "16px 18px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 16 }}>
@@ -884,47 +872,35 @@ function LedgerHeader({ type, data }) {
     );
   }
 
-  // SAVING: saved big green, goal muted, progress bar
   if (type === "saving") {
     const pct = data.goal > 0 ? Math.min(100, Math.round((data.saved / data.goal) * 100)) : 0;
     const left = Math.max(0, data.goal - data.saved);
     return (
       <div style={{ marginBottom: 20, padding: "16px 18px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-          <div>
-            <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 6 }}>Saved</div>
-            <div style={{ color: C.yellow, fontSize: 28, fontWeight: 800, letterSpacing: -0.5 }}>{fmt(data.saved)}</div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ color: C.faint, fontSize: 11, marginBottom: 4 }}>of {fmt(data.goal)}</div>
-            <div style={{ color: C.muted, fontSize: 12, fontWeight: 600 }}>{fmt(left)} left</div>
-          </div>
+        <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 6 }}>Saved of {fmt(data.goal)}</div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 10 }}>
+          <div style={{ color: C.yellow, fontSize: 32, fontWeight: 800, letterSpacing: -1, lineHeight: 1 }}>{fmt(data.saved)}</div>
+          <div style={{ color: C.muted, fontSize: 14, fontWeight: 600 }}>({fmt(left)} left)</div>
         </div>
         <ProgressBar value={data.saved} max={data.goal} color={C.yellow} />
-        <div style={{ color: C.faint, fontSize: 10, fontWeight: 700, marginTop: 5, textAlign: "right" }}>{pct}% complete</div>
+        <div style={{ color: C.faint, fontSize: 10, fontWeight: 700, marginTop: 6 }}>{pct}% complete</div>
       </div>
     );
   }
 
-  // BUDGET: spent red, remaining green, progress
   if (type === "budget") {
     const rem = Math.max(0, data.limit - data.spent);
     const pct = data.limit > 0 ? Math.min(100, Math.round((data.spent / data.limit) * 100)) : 0;
     const barColor = pct >= 90 ? C.red : pct >= 70 ? C.yellow : C.accent;
     return (
       <div style={{ marginBottom: 20, padding: "16px 18px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 10 }}>
-          <div>
-            <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 6 }}>Spent</div>
-            <div style={{ color: C.red, fontSize: 28, fontWeight: 800, letterSpacing: -0.5 }}>{fmt(data.spent)}</div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ color: C.faint, fontSize: 11, marginBottom: 4 }}>of {fmt(data.limit)}</div>
-            <div style={{ color: rem === 0 ? C.red : C.accent, fontSize: 15, fontWeight: 700 }}>{fmt(rem)} left</div>
-          </div>
+        <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 6 }}>Spent of {fmt(data.limit)}</div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 10 }}>
+          <div style={{ color: C.red, fontSize: 32, fontWeight: 800, letterSpacing: -1, lineHeight: 1 }}>{fmt(data.spent)}</div>
+          <div style={{ color: rem === 0 ? C.red : C.accent, fontSize: 14, fontWeight: 700 }}>({fmt(rem)} left)</div>
         </div>
         <ProgressBar value={data.spent} max={data.limit} color={barColor} />
-        <div style={{ color: C.faint, fontSize: 10, fontWeight: 700, marginTop: 5, textAlign: "right" }}>{pct}% of budget used</div>
+        <div style={{ color: C.faint, fontSize: 10, fontWeight: 700, marginTop: 6 }}>{pct}% of budget used</div>
       </div>
     );
   }
@@ -981,9 +957,9 @@ function TxnRow({ txn, hideTotal }) {
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px", background: C.card}}>
       <div style={{display:"flex",gap:10,alignItems:"center"}}>
         <div style={{width:36,height:36,borderRadius:10,background:isExp?C.redDim:isInc?C.accentDim:C.yellowDim,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>{txn.type==="saving"?ICONS.saving:ICONS[txn.catIcon]||"📌"}</div>
-        <div><div style={{color:C.text,fontWeight:600,fontSize:14}}>{txn.catName||txn.type}</div><div style={{color:C.muted,fontSize:11}}>{txn.bankName} · {fmtDate(txn.date)}</div></div>
+        <div style={{minWidth: 0}}><div style={{color:C.text,fontWeight:600,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{txn.catName||txn.type}</div><div style={{color:C.muted,fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{txn.bankName} · {fmtDate(txn.date)}</div></div>
       </div>
-      <div style={{color:isExp?C.red:isInc?C.accent:C.yellow,fontWeight:800,fontSize:15}}>{isExp?"−":"+"}{hideTotal?"••••":fmt(txn.amount)}</div>
+      <div style={{color:isExp?C.red:isInc?C.accent:C.yellow,fontWeight:800,fontSize:15,flexShrink:0}}>{isExp?"−":"+"}{hideTotal?"••••":fmt(txn.amount)}</div>
     </div>
   );
 }
@@ -1073,7 +1049,7 @@ function History({ txns, onDelete, onUpdate, banks, expCats, incCats, currency, 
       </div>
 
       <div style={{display:"flex",flexDirection:"column"}}>
-        {filtered.length===0&&<EmptyState icon="💸" message="No transactions found." />}
+        {filtered.length===0&&<EmptyState icon="📭" message="No transactions found." />}
         {filtered.map(t=>(
           <SwipeRow key={t.id} onEdit={()=>setEditTxn(t)} onDelete={()=>setConfirmId(t.id)}>
             <TxnRow txn={t} hideTotal={false} />
@@ -1311,7 +1287,7 @@ function QuickActionsSetup({ quickActions, expCats, banks, onSave, onBack }) {
             {expCats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]} {c.name}</option>)}
           </Select>
           <Input label="Default Fixed Amount" type="number" step="any" value={amount} onChange={e=>setAmount(e.target.value)} />
-          <Select label="Default Account Account" value={bankId} onChange={e=>setBankId(e.target.value)}>
+          <Select label="Default Source Account" value={bankId} onChange={e=>setBankId(e.target.value)}>
             {banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
           </Select>
           <Btn full onClick={handleCommitShortcut} style={{marginTop:8}}>Commit Shortcut Slot</Btn>
@@ -1366,11 +1342,19 @@ function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currenc
     const bank=banks.find(b=>b.id===bill.bankId); const cat=expCats.find(c=>c.id===bill.catId);
     const dateStr=today();
     
+    // Formatting the specific month selected
+    let monthLabel = "All Time";
+    if (filterMonth !== "all") {
+      const year = filterMonth.slice(0,4);
+      const mIndex = parseInt(filterMonth.slice(5,7)) - 1;
+      monthLabel = `${MONTHS[mIndex]} ${year}`;
+    }
+    
     const txnIdToken = await onAddTxn({
       type:"expense",amount:bill.amount,date:dateStr,
       bankId:bill.bankId,bankName:bank?.name,
       catId:bill.catId,catName:cat?.name||bill.name,catIcon:cat?.icon||"bills",
-      note: `Monthly Bill: ${bill.name}`
+      note: `Monthly Bill: ${bill.name} (${monthLabel})` // Contextual Note Addition
     });
 
     if (txnIdToken !== false) {
@@ -1422,13 +1406,10 @@ function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currenc
           return (
             <SwipeRow key={bill.id} onEdit={()=>openAdd(bill)} onDelete={()=>setConfirmDelete(bill.id)}>
               <div style={{background:paid?C.accentDim+"55":C.card,boxSizing:"border-box",borderBottom:isLast?"none":`1px solid ${C.border}`}}>
-                {/* Row 1: icon + name + amount */}
                 <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px 6px"}}>
-                  {/* Category icon circle */}
                   <div style={{width:36,height:36,borderRadius:99,background:paid?C.accentDim:C.border+"88",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
                     {ICONS[cat?.icon]||"⚡"}
                   </div>
-                  {/* Name + bank */}
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{color:C.text,fontWeight:700,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{bill.name}</div>
                     <div style={{color:C.muted,fontSize:11,marginTop:1}}>
@@ -1437,10 +1418,8 @@ function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currenc
                     </div>
                     {(()=>{const r=getReminderStatus(bill);return r?<div style={{color:r.overdue?C.red:C.yellow,fontSize:10,fontWeight:700,marginTop:3}}>{r.overdue?"🔴 Overdue by "+r.days+" day"+(r.days!==1?"s":""):"🟡 Due in "+r.days+" day"+(r.days!==1?"s":"")}</div>:null;})()}
                   </div>
-                  {/* Amount */}
                   <div style={{color:paid?C.accent:C.red,fontSize:17,fontWeight:800,flexShrink:0}}>{fmt(bill.amount)}</div>
                 </div>
-                {/* Row 2: action buttons full width */}
                 <div style={{padding:"0 14px 12px",display:"flex",gap:8}}>
                   {!paid ? (
                     <button onClick={()=>handlePay(bill)} style={{flex:1,background:C.accentDim,border:`1.5px solid ${C.accent}`,color:C.accent,borderRadius:10,height:44,fontWeight:800,fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
@@ -1451,7 +1430,8 @@ function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currenc
                       <div style={{flex:1,background:C.accent,color:C.bg,borderRadius:10,height:44,fontSize:14,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
                         ✓ Paid {filterMonth.slice(5)}
                       </div>
-                      <button onClick={()=>setConfirmUndo(bill)} style={{flexShrink:0,background:C.yellowDim,border:`1.5px solid ${C.yellow}`,color:C.yellow,borderRadius:10,height:44,padding:"0 18px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+                      {/* FIXED Undo Button */}
+                      <button onClick={()=>setConfirmUndo(bill)} style={{flexShrink:0,background:C.surface,border:`1px solid ${C.border}`,color:C.text,borderRadius:10,height:44,width:85,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
                         ⟲ Undo
                       </button>
                     </>
