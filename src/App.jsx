@@ -250,7 +250,7 @@ function SortableItem({ id, children }) {
   );
 }
 
-function SortableList({ items, onReorder, renderItem, grid }) {
+function SortableList({ items, onReorder, renderItem, grid, gap = 10 }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
@@ -268,7 +268,7 @@ function SortableList({ items, onReorder, renderItem, grid }) {
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={items.map(i => String(i.id))} strategy={grid ? rectSortingStrategy : verticalListSortingStrategy}>
-        <div style={{ display: grid ? "grid" : "flex", gridTemplateColumns: grid ? "1fr 1fr" : "none", flexDirection: grid ? "row" : "column", gap: 10 }}>
+        <div style={{ display: grid ? "grid" : "flex", gridTemplateColumns: grid ? "1fr 1fr" : "none", flexDirection: grid ? "row" : "column", gap }}>
           {items.map((item, idx) => (
             <SortableItem key={item.id} id={item.id}>
               {renderItem(item, idx)}
@@ -1079,8 +1079,8 @@ function SavingsPage({ savings, onSave, txns, onBack }) {
         <Btn small onClick={()=>{setEditId(null);setName("");setGoal("");setShowAdd(true);}}>+ New Goal</Btn>
       </div>
       {savings.length===0&&<EmptyState icon="◎" message="No saving goals configured yet." />}
-      <div style={{display:"flex",flexDirection:"column"}}>
-        {savings.map(s=>{
+      <div style={{marginBottom:20}}>
+        <SortableList items={savings} onReorder={onSave} renderItem={(s) => {
           const saved=s.contributions?.reduce((a,c)=>a+c.amount,0)||0;
           const pct=s.goal?Math.min(100,Math.round((saved/s.goal)*100)):0;
           return (
@@ -1095,7 +1095,7 @@ function SavingsPage({ savings, onSave, txns, onBack }) {
               </div>
             </SwipeRow>
           );
-        })}
+        }} />
       </div>
       {showAdd&&(<Modal title={editId?"Edit Goal":"New Saving Goal"} onClose={()=>{setShowAdd(false);setEditId(null);}} center={false}><Input label="Goal Name" placeholder="e.g. Travel Fund..." value={name} onChange={e=>setName(e.target.value)}/><Input label="Target Amount" type="number" step="any" value={goal} onChange={e=>setGoal(e.target.value)}/><Btn full onClick={handleAdd}>{editId?"Update Goal":"Create Goal"}</Btn></Modal>)}
       {confirmId&&<ConfirmModal title="Delete Goal?" message="This will permanently delete this saving goal." onClose={()=>setConfirmId(null)} onConfirm={async()=>{await onSave(savings.filter(s=>s.id!==confirmId));setConfirmId(null);}}/>}
@@ -1134,8 +1134,8 @@ function BudgetsPage({ budgets, expCats, onSave, onBack, currency }) {
       </div>
       {budgets.length===0&&<EmptyState icon="📊" message="Set custom budgeting categories for precise monthly guardrails." />}
       
-      <div style={{display:"flex",flexDirection:"column"}}>
-        {budgets.map(b=>(
+      <div style={{marginBottom:20}}>
+        <SortableList items={budgets} onReorder={onSave} renderItem={(b) => (
           <SwipeRow key={b.id} onEdit={()=>startEdit(b)} onDelete={()=>setConfirmId(b.id)}>
             <div style={{padding:16}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
@@ -1146,7 +1146,7 @@ function BudgetsPage({ budgets, expCats, onSave, onBack, currency }) {
               <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{b.cats.slice(0,5).map(cid=>{const cat=expCats.find(c=>c.id===cid);return cat?<span key={cid} style={{fontSize:16}}>{ICONS[cat.icon]}</span>:null;})}</div>
             </div>
           </SwipeRow>
-        ))}
+        )} />
       </div>
 
       {showAdd&&(<Modal title={editId?"Modify Allocation":"Configure Budget Allocation"} onClose={()=>{setShowAdd(false);setEditId(null);}} center={false}>
@@ -1349,49 +1349,51 @@ function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currenc
       
       {bills.length===0&&<EmptyState icon="📋" message="No recurrent fixed monthly bill items configured yet." />}
       
-      <div style={{display:"flex",flexDirection:"column",gap:0,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
-        {bills.map((bill,idx)=>{
-          const paid=isPaid(bill);
-          const bank=banks.find(b=>b.id===bill.bankId); const cat=expCats.find(c=>c.id===bill.catId);
-          const isLast=idx===bills.length-1;
-          return (
-            <SwipeRow key={bill.id} onEdit={()=>openAdd(bill)} onDelete={()=>setConfirmDelete(bill.id)}>
-              <div style={{background:paid?C.accentDim+"55":C.card,boxSizing:"border-box",borderBottom:isLast?"none":`1px solid ${C.border}`}}>
-                <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px 6px"}}>
-                  <div style={{width:36,height:36,borderRadius:99,background:paid?C.accentDim:C.border+"88",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
-                    {ICONS[cat?.icon]||"⚡"}
-                  </div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{color:C.text,fontWeight:700,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{bill.name}</div>
-                    <div style={{color:C.muted,fontSize:11,marginTop:1}}>
-                      {bank?.name} · {cat?.name||"Bills"}
-                      {bill.dueDay?<span style={{color:C.faint}}> · Due {bill.dueDay}{bill.dueDay===1?"st":bill.dueDay===2?"nd":bill.dueDay===3?"rd":"th"}</span>:null}
+      {bills.length > 0 && (
+        <div style={{border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
+          <SortableList gap={0} items={bills} onReorder={onSave} renderItem={(bill, idx) => {
+            const paid=isPaid(bill);
+            const bank=banks.find(b=>b.id===bill.bankId); const cat=expCats.find(c=>c.id===bill.catId);
+            const isLast=idx===bills.length-1;
+            return (
+              <SwipeRow key={bill.id} onEdit={()=>openAdd(bill)} onDelete={()=>setConfirmDelete(bill.id)}>
+                <div style={{background:paid?C.accentDim+"55":C.card,boxSizing:"border-box",borderBottom:isLast?"none":`1px solid ${C.border}`}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px 6px"}}>
+                    <div style={{width:36,height:36,borderRadius:99,background:paid?C.accentDim:C.border+"88",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
+                      {ICONS[cat?.icon]||"⚡"}
                     </div>
-                    {(()=>{const r=getReminderStatus(bill);return r?<div style={{color:r.overdue?C.red:C.yellow,fontSize:10,fontWeight:700,marginTop:3}}>{r.overdue?"🔴 Overdue by "+r.days+" day"+(r.days!==1?"s":""):"🟡 Due in "+r.days+" day"+(r.days!==1?"s":"")}</div>:null;})()}
-                  </div>
-                  <div style={{color:paid?C.accent:C.red,fontSize:17,fontWeight:800,flexShrink:0}}>{fmt(bill.amount)}</div>
-                </div>
-                <div style={{padding:"0 14px 12px",display:"flex",gap:8}}>
-                  {!paid ? (
-                    <button onClick={()=>handlePay(bill)} style={{flex:1,background:C.accentDim,border:`1.5px solid ${C.accent}`,color:C.accent,borderRadius:10,height:44,fontWeight:800,fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-                      <span>✓</span> Pay Now
-                    </button>
-                  ) : (
-                    <>
-                      <div style={{flex:1,background:C.accent,color:C.bg,borderRadius:10,height:44,fontSize:14,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-                        ✓ Paid {filterMonth.slice(5)}
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{color:C.text,fontWeight:700,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{bill.name}</div>
+                      <div style={{color:C.muted,fontSize:11,marginTop:1}}>
+                        {bank?.name} · {cat?.name||"Bills"}
+                        {bill.dueDay?<span style={{color:C.faint}}> · Due {bill.dueDay}{bill.dueDay===1?"st":bill.dueDay===2?"nd":bill.dueDay===3?"rd":"th"}</span>:null}
                       </div>
-                      <button onClick={()=>setConfirmUndo(bill)} style={{flexShrink:0,background:C.yellowDim,border:`1.5px solid ${C.yellow}`,color:C.yellow,borderRadius:10,height:44,padding:"0 18px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
-                        ⟲ Undo
+                      {(()=>{const r=getReminderStatus(bill);return r?<div style={{color:r.overdue?C.red:C.yellow,fontSize:10,fontWeight:700,marginTop:3}}>{r.overdue?"🔴 Overdue by "+r.days+" day"+(r.days!==1?"s":""):"🟡 Due in "+r.days+" day"+(r.days!==1?"s":"")}</div>:null;})()}
+                    </div>
+                    <div style={{color:paid?C.accent:C.red,fontSize:17,fontWeight:800,flexShrink:0}}>{fmt(bill.amount)}</div>
+                  </div>
+                  <div style={{padding:"0 14px 12px",display:"flex",gap:8}}>
+                    {!paid ? (
+                      <button onClick={()=>handlePay(bill)} style={{flex:1,background:C.accentDim,border:`1.5px solid ${C.accent}`,color:C.accent,borderRadius:10,height:44,fontWeight:800,fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                        <span>✓</span> Pay Now
                       </button>
-                    </>
-                  )}
+                    ) : (
+                      <>
+                        <div style={{flex:1,background:C.accent,color:C.bg,borderRadius:10,height:44,fontSize:14,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                          ✓ Paid {filterMonth.slice(5)}
+                        </div>
+                        <button onClick={()=>setConfirmUndo(bill)} style={{flexShrink:0,background:C.yellowDim,border:`1.5px solid ${C.yellow}`,color:C.yellow,borderRadius:10,height:44,padding:"0 18px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+                          ⟲ Undo
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </SwipeRow>
-          );
-        })}
-      </div>
+              </SwipeRow>
+            );
+          }} />
+        </div>
+      )}
       
       {showAdd&&(<Modal title={editItem?"Edit Bill":"New Monthly Bill"} onClose={()=>{setShowAdd(false);setEditItem(null);}} center={false}><Input label="Bill Name" value={name} onChange={e=>setName(e.target.value)}/><div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Amount ({currency})</div><input type="number" step="any" value={amount} onChange={e=>setAmount(e.target.value)} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:15,outline:"none",boxSizing:"border-box"}}/></div><Select label="Pay from Account" value={bankId} onChange={e=>setBankId(e.target.value)}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select><Select label="Category" value={catId} onChange={e=>setCatId(e.target.value)}>{expCats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]||"📌"} {c.name}</option>)}</Select>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
