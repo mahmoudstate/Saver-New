@@ -256,7 +256,7 @@ function SortableItem({ id, children }) {
     opacity: isDragging ? 0.6 : 1,
     zIndex: isDragging ? 100 : "auto",
     position: isDragging ? "relative" : "static",
-    touchAction: isDragging ? "none" : "auto", // Prevents scroll conflict while active
+    touchAction: isDragging ? "none" : "auto", 
   };
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
@@ -271,10 +271,17 @@ function SortableList({ items, onReorder, renderItem, grid, gap = 10 }) {
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
   );
 
-  const handleDragStart = () => { HAPTICS.heavy(); };
+  const handleDragStart = () => { 
+    HAPTICS.heavy(); 
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+  };
 
   const handleDragEnd = (event) => {
     HAPTICS.heavy();
+    document.body.style.overflow = "";
+    document.body.style.touchAction = "";
+
     const { active, over } = event;
     if (over && active.id !== over.id) {
       const oldIndex = items.findIndex((i) => String(i.id) === String(active.id));
@@ -282,6 +289,13 @@ function SortableList({ items, onReorder, renderItem, grid, gap = 10 }) {
       onReorder(arrayMove(items, oldIndex, newIndex));
     }
   };
+
+  useEffect(() => {
+    return () => {
+      document.body.style.overflow = "";
+      document.body.style.touchAction = "";
+    };
+  }, []);
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -481,7 +495,7 @@ export default function App() {
   const filteredTxns=filterMonth==="all"?txns:txns.filter(t=>t.date.startsWith(filterMonth));
   const availMonths=[...new Set(txns.map(t=>t.date.slice(0,7)))].sort().reverse();
   const showBackupAlert = lastBackup && (Date.now() - lastBackup > 3 * 24 * 60 * 60 * 1000);
-  const isSubPageActive = ledgerBank || ledgerGroup || ledgerSaving || ledgerBudget || tab === "savings" || tab === "budgets" || tab === "quickactions";
+  const isSubPageActive = ledgerBank || ledgerGroup || ledgerSaving || ledgerBudget || tab === "savings" || tab === "budgets" || tab === "quickactions" || tab === "manual";
 
   return (
     <div style={{background:C.bg,minHeight:"100vh",color:C.text,fontFamily:"'DM Sans','Segoe UI',sans-serif",maxWidth:520,margin:"0 auto",paddingBottom:isSubPageActive?0:130, position:"relative", userSelect:"none", WebkitUserSelect:"none"}}>
@@ -502,8 +516,9 @@ export default function App() {
           {tab==="savings" && <SavingsPage savings={savings} onSave={saveSavings} txns={txns} onBack={()=>navigateTo("settings")}/>}
           {tab==="budgets" && <BudgetsPage budgets={budgets} expCats={expCats} onSave={saveBudgets} onBack={()=>navigateTo("settings")} currency={currency}/>}
           {tab==="quickactions" && <QuickActionsSetup quickActions={quickActions} expCats={expCats} banks={banks} onSave={saveQuickActions} onBack={()=>navigateTo("settings")} />}
+          {tab==="manual" && <UserManual onBack={()=>navigateTo("settings")} />}
           {tab==="monthly" && <MonthlyBills bills={bills} onSave={saveBills} banks={banks} expCats={expCats} onAddTxn={addTxn} delTxn={delTxn} bankBalance={bankBalance} currency={currency} setAppAlert={setAppAlert}/>}
-          {tab==="settings" && <Settings banks={banks} expCats={expCats} incCats={incCats} groups={groups} onBanks={saveBanks} onExpCats={saveExpCats} onIncCats={saveIncCats} onGroups={saveGroups} currency={currency} onCurrency={saveCurrencyHandler} username={username} onUsername={saveUsernameHandler} bankBalance={bankBalance} onOpenSavings={()=>navigateTo("savings")} onOpenBudgets={()=>navigateTo("budgets")} onOpenQuickActions={()=>navigateTo("quickactions")} setLastBackup={setLastBackup} txns={txns} bills={bills} savings={savings} budgets={budgets} onRestore={handleRestorePayload} setAppAlert={setAppAlert}/>}
+          {tab==="settings" && <Settings banks={banks} expCats={expCats} incCats={incCats} groups={groups} onBanks={saveBanks} onExpCats={saveExpCats} onIncCats={saveIncCats} onGroups={saveGroups} currency={currency} onCurrency={saveCurrencyHandler} username={username} onUsername={saveUsernameHandler} bankBalance={bankBalance} onOpenSavings={()=>navigateTo("savings")} onOpenBudgets={()=>navigateTo("budgets")} onOpenQuickActions={()=>navigateTo("quickactions")} onOpenManual={()=>navigateTo("manual")} setLastBackup={setLastBackup} txns={txns} bills={bills} savings={savings} budgets={budgets} onRestore={handleRestorePayload} setAppAlert={setAppAlert}/>}
           
           <BottomNav tab={tab} navigateTo={navigateTo} expCats={expCats} banks={banks} onAdd={addTxn} currency={currency} bankBalance={bankBalance} setAppAlert={setAppAlert} quickActions={quickActions} />
         </>
@@ -1290,6 +1305,124 @@ function QuickActionsSetup({ quickActions, expCats, banks, onSave, onBack }) {
   );
 }
 
+// ─── User Manual / Guide Page ──────────────────────────────────────────────────
+function UserManual({ onBack }) {
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+
+  const scrollToSection = (id) => {
+    const el = document.getElementById(id);
+    if (el) { el.scrollIntoView({ behavior: "smooth", block: "start" }); }
+  };
+
+  return (
+    <div style={{padding:"24px 16px 40px", minHeight: "100vh", background: C.bg, boxSizing:"border-box"}}>
+      {/* Header */}
+      <div style={{display:"flex",alignItems:"center",gap:8, marginBottom: 12}}>
+        <button onClick={onBack} style={{background:"transparent", border:"none", color:C.muted, fontSize:22, cursor:"pointer", padding:"10px 15px 10px 0", display:"flex", alignItems:"center", marginRight: 4}}><span style={{display:"block", transform:"translateY(-1px)"}}>❮</span></button>
+        <div style={{color:C.text,fontSize:22,fontWeight:800}}>User Guide</div>
+      </div>
+      <p style={{color: C.muted, fontSize: 13, lineHeight: 1.5, marginBottom: 20}}>
+        Welcome to Saver! Learn how to navigate and make the most out of your financial tracker using the interactive hints below.
+      </p>
+
+      {/* Smart Table of Contents */}
+      <div style={{display:"flex", gap:8, marginBottom:30, overflowX:"auto", paddingBottom: 10, WebkitOverflowScrolling: "touch"}}>
+        {["Reorder Cards", "Swipe Actions", "Quick Add", "Bills & Alerts"].map((item, idx) => (
+          <button key={item} onClick={() => scrollToSection(`guide-sec-${idx}`)} style={{ whiteSpace:"nowrap", padding:"8px 16px", borderRadius:20, border:`1px solid ${C.border}`, background:C.card, color:C.text, fontWeight:600, fontSize:12, cursor:"pointer" }}>
+            {item}
+          </button>
+        ))}
+      </div>
+
+      <style>{`
+        @keyframes float-up { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        @keyframes float-left { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-8px); } }
+        .guide-pointer-up { animation: float-up 1.5s infinite ease-in-out; font-size: 24px; text-align: center; margin-top: 8px; }
+        .guide-pointer-left { animation: float-left 1.5s infinite ease-in-out; font-size: 24px; display: inline-block; margin-left: 12px; }
+      `}</style>
+
+      {/* Guide Section 0: Reorder */}
+      <div id="guide-sec-0" style={{marginBottom: 40}}>
+        <div style={{display:"flex", alignItems:"center", gap:8, marginBottom: 12}}>
+          <span style={{background:C.accentDim, color:C.accent, padding:"4px 8px", borderRadius:8, fontSize:16}}>👆</span>
+          <h3 style={{color:C.text, margin:0, fontSize:18}}>Reorder Cards</h3>
+        </div>
+        <p style={{color:C.muted, fontSize:13, lineHeight:1.5, marginBottom:16}}>You can customize your Dashboard. <strong style={{color:C.text}}>Long press and hold</strong> any account, budget, or goal card until it pops up, then drag it to your preferred position.</p>
+        
+        {/* Real component used as visual hint */}
+        <div style={{position: "relative", padding: "10px", background: C.surface, borderRadius: 16, border: `1px dashed ${C.faint}`}}>
+          <Card style={{padding:"14px 14px 12px", pointerEvents: "none", opacity: 0.8}}>
+             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+               <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:8,height:8,borderRadius:99,background:C.blue,flexShrink:0}}/><span style={{color:C.muted,fontSize:12,fontWeight:600}}>Main Account</span></div>
+             </div>
+             <div style={{color:C.text,fontSize:17,fontWeight:800}}>{fmt(12500)}</div>
+          </Card>
+          <div className="guide-pointer-up" style={{color: C.accent}}>👆</div>
+          <div style={{textAlign: "center", color: C.accent, fontSize: 11, fontWeight: 700}}>Press & Hold to Drag</div>
+        </div>
+      </div>
+
+      {/* Guide Section 1: Swiping */}
+      <div id="guide-sec-1" style={{marginBottom: 40}}>
+        <div style={{display:"flex", alignItems:"center", gap:8, marginBottom: 12}}>
+          <span style={{background:C.blueDim, color:C.blue, padding:"4px 8px", borderRadius:8, fontSize:16}}>↔️</span>
+          <h3 style={{color:C.text, margin:0, fontSize:18}}>Swipe Actions</h3>
+        </div>
+        <p style={{color:C.muted, fontSize:13, lineHeight:1.5, marginBottom:16}}>Need to edit or delete a record? <strong style={{color:C.text}}>Swipe left or right</strong> on any transaction, bill, or saving goal to reveal quick actions.</p>
+        
+        {/* Real SwipeRow component used as an interactive example! */}
+        <div style={{padding: "10px", background: C.surface, borderRadius: 16, border: `1px dashed ${C.faint}`}}>
+           <div style={{display: "flex", alignItems: "center"}}>
+             <div style={{flex: 1}}>
+                <SwipeRow>
+                  <TxnRow txn={{type:"expense", amount:120, catName:"Coffee", catIcon:"coffee", bankName:"Cash", date:today()}} hideTotal={false} />
+                </SwipeRow>
+             </div>
+             <div className="guide-pointer-left" style={{color: C.blue}}>👈</div>
+           </div>
+           <div style={{textAlign: "center", color: C.blue, fontSize: 11, fontWeight: 700, marginTop: 4}}>Try swiping this card!</div>
+        </div>
+      </div>
+
+      {/* Guide Section 2: Quick Actions */}
+      <div id="guide-sec-2" style={{marginBottom: 40}}>
+        <div style={{display:"flex", alignItems:"center", gap:8, marginBottom: 12}}>
+          <span style={{background:C.yellowDim, color:C.yellow, padding:"4px 8px", borderRadius:8, fontSize:16}}>⚡</span>
+          <h3 style={{color:C.text, margin:0, fontSize:18}}>Quick Actions</h3>
+        </div>
+        <p style={{color:C.muted, fontSize:13, lineHeight:1.5, marginBottom:16}}>Record your frequent expenses instantly. <strong style={{color:C.text}}>Long press the (+) button</strong> on the bottom menu to open your 4 custom quick slots.</p>
+        
+        <div style={{padding: "20px", background: C.surface, borderRadius: 16, border: `1px dashed ${C.faint}`, display: "flex", flexDirection: "column", alignItems: "center"}}>
+           <div style={{ width:68, height:68, borderRadius:"50%", background:C.accent, color:C.bg, fontSize:36, display:"flex", alignItems:"center", justifyContent:"center" }}>+</div>
+           <div className="guide-pointer-up" style={{color: C.yellow}}>👆</div>
+           <div style={{textAlign: "center", color: C.yellow, fontSize: 11, fontWeight: 700}}>Press & Hold the Menu Add Button</div>
+        </div>
+      </div>
+
+      {/* Guide Section 3: Monthly Bills */}
+      <div id="guide-sec-3" style={{marginBottom: 20}}>
+        <div style={{display:"flex", alignItems:"center", gap:8, marginBottom: 12}}>
+          <span style={{background:C.redDim, color:C.red, padding:"4px 8px", borderRadius:8, fontSize:16}}>📅</span>
+          <h3 style={{color:C.text, margin:0, fontSize:18}}>Bills & Reminders</h3>
+        </div>
+        <p style={{color:C.muted, fontSize:13, lineHeight:1.5, marginBottom:16}}>Set up your recurring bills in the <strong style={{color:C.text}}>Bills Tab</strong>. Choose a Due Day and Reminder Days to get System Notifications before a bill is due.</p>
+        
+        <div style={{padding: "10px", background: C.surface, borderRadius: 16, border: `1px dashed ${C.faint}`}}>
+            <div style={{background: C.card, padding: "12px", borderRadius: 12}}>
+               <div style={{display: "flex", justifyContent: "space-between"}}>
+                 <span style={{fontWeight: 700, fontSize: 14}}>Internet Bill</span>
+                 <span style={{color: C.red, fontWeight: 800}}>{fmt(400)}</span>
+               </div>
+               <div style={{color: C.yellow, fontSize: 10, fontWeight: 700, marginTop: 6}}>🟡 Due in 2 days</div>
+            </div>
+            <div className="guide-pointer-up" style={{color: C.red, fontSize: 20}}>👆</div>
+            <div style={{textAlign: "center", color: C.red, fontSize: 11, fontWeight: 700}}>Notifications happen automatically</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Monthly Bills Screen ─────────────────────────────────────────────────────
 function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currency, setAppAlert }) {
   useEffect(() => { window.scrollTo(0, 0); }, []);
@@ -1446,7 +1579,7 @@ function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currenc
 }
 
 // ─── Settings Screen ──────────────────────────────────────────────────────────
-function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCats, onGroups, currency, onCurrency, username, onUsername, bankBalance, onOpenSavings, onOpenBudgets, onOpenQuickActions, setLastBackup, txns, bills, savings, budgets, onRestore, setAppAlert }) {
+function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCats, onGroups, currency, onCurrency, username, onUsername, bankBalance, onOpenSavings, onOpenBudgets, onOpenQuickActions, onOpenManual, setLastBackup, txns, bills, savings, budgets, onRestore, setAppAlert }) {
   useEffect(() => { window.scrollTo(0, 0); }, []);
   const [section, setSection] = useState("profile");
   const [modal, setModal] = useState(null);
@@ -1518,7 +1651,10 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
 
   return (
     <div style={{padding:"24px 16px 0"}}>
-      <div style={{color:C.text,fontSize:22,fontWeight:800,marginBottom:16}}>Settings</div>
+      <div style={{display:"flex",justifyContent:"space-between", alignItems:"center", marginBottom:16}}>
+         <div style={{color:C.text,fontSize:22,fontWeight:800}}>Settings</div>
+         <Btn small outline color={C.accent} onClick={onOpenManual}>📖 User Guide</Btn>
+      </div>
       
       <div style={{display:"flex",gap:8,marginBottom:20,overflowX:"auto",paddingBottom:4}}>
         {[{id:"profile",label:"👤 General"},{id:"currency",label:"💱 Currency"},{id:"banks",label:"🏦 Accounts"},{id:"expCats",label:"📤 Exp. Cat."},{id:"groups",label:"📊 Groups"}].map(s=>(
