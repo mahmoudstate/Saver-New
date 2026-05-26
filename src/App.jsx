@@ -16,6 +16,7 @@ const HAPTICS = {
   warning: () => vibrate(100),
 };
 
+// Global flag to prevent click after drag and manage scroll
 let isGlobalDragging = false;
 
 // ─── Palette & Global Helpers ──────────────────────────────────────────────────
@@ -108,7 +109,7 @@ async function save(key, val) { try { localStorage.setItem(key, JSON.stringify(v
 function Pill({ color, children, style }) { return <span style={{ background:color+"22", color, border:`1px solid ${color}44`, borderRadius:99, padding:"2px 10px", fontSize:11, fontWeight:700, letterSpacing:0.5, ...style }}>{children}</span>; }
 function Card({ children, style, onClick, ...props }) { 
   return (
-    <div {...props} onClick={(e) => { if (!isGlobalDragging && onClick) onClick(e); }} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:16, ...style }}>
+    <div {...props} onClick={(e) => { if (!isGlobalDragging && onClick) onClick(e); }} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:16, fontFamily: "'DM Sans', sans-serif", ...style }}>
       {children}
     </div>
   ); 
@@ -275,7 +276,7 @@ function SwipeRow({ onEdit, onDelete, children }) {
   );
 }
 
-// ─── dnd-kit Sortable Components (WITH DRAG BUG FIX) ─────────────────────────
+// ─── dnd-kit Sortable Components (FIXED SCROLL & LOCK) ────────────────────────
 function SortableItem({ id, children }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: String(id) });
   const style = {
@@ -329,7 +330,15 @@ function SortableList({ items, onReorder, renderItem, grid, gap = 10 }) {
   };
 
   useEffect(() => {
+    const preventScroll = (e) => {
+      if (isGlobalDragging) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener('touchmove', preventScroll, { passive: false });
+    
     return () => {
+      document.removeEventListener('touchmove', preventScroll);
       document.body.style.overflow = "";
       document.body.style.touchAction = "";
     };
@@ -405,7 +414,6 @@ function UserManual({ onBack }) {
 
   return (
     <div style={{padding:"24px 16px 130px", minHeight: "100vh", background: C.bg, boxSizing:"border-box"}}>
-      {/* Header */}
       <div style={{display:"flex",alignItems:"center",gap:8, marginBottom: 12}}>
         <button onClick={onBack} style={{background:"transparent", border:"none", color:C.muted, fontSize:22, cursor:"pointer", padding:"10px 15px 10px 0", display:"flex", alignItems:"center", marginRight: 4}}><span style={{display:"block", transform:"translateY(-1px)"}}>❮</span></button>
         <div style={{color:C.text,fontSize:22,fontWeight:800}}>Manual Guide</div>
@@ -417,7 +425,6 @@ function UserManual({ onBack }) {
 
       <Btn full outline color={C.accent} onClick={handleFeedback} style={{marginBottom: 24}}>🐞 Report a Bug / Suggestion</Btn>
 
-      {/* Smart Table of Contents */}
       <div style={{display:"flex", gap:8, marginBottom:30, overflowX:"auto", paddingBottom: 10, WebkitOverflowScrolling: "touch"}}>
         {["Home Screen", "Adding (+)", "Bills", "History", "Settings", "Pro Tips"].map((item, idx) => (
           <button key={item} onClick={() => scrollToSection(`guide-sec-${idx}`)} style={{ whiteSpace:"nowrap", padding:"8px 16px", borderRadius:20, border:`1px solid ${C.border}`, background:C.card, color:C.text, fontWeight:600, fontSize:12, cursor:"pointer", fontFamily: "'DM Sans', sans-serif" }}>
@@ -434,13 +441,11 @@ function UserManual({ onBack }) {
         .guide-box { padding: 16px; background: #17171f; border-radius: 16px; border: 1px dashed #444460; margin-top: 14px; }
       `}</style>
 
-      {/* 0. Home Screen */}
       <div id="guide-sec-0" style={{marginBottom: 40}}>
         <div style={{display:"flex", alignItems:"center", gap:8, marginBottom: 8}}>
           <span style={{background:C.blueDim, color:C.blue, padding:"4px 8px", borderRadius:8, fontSize:16}}>◈</span><h3 style={{color:C.text, margin:0, fontSize:18}}>Home Screen</h3>
         </div>
         <p style={{color:C.muted, fontSize:13, lineHeight:1.5}}>Your Dashboard gives you a complete overview. See your Total Balance, Monthly Income/Expenses, Accounts, and Spending Groups.</p>
-        
         <div className="guide-box">
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center", background:C.card, padding:"12px", borderRadius:12}}>
              <div><div style={{color:C.muted,fontSize:10,fontWeight:700}}>Total Balance</div><div style={{color:C.text,fontSize:20,fontWeight:800}}>••••••</div></div>
@@ -451,13 +456,11 @@ function UserManual({ onBack }) {
         </div>
       </div>
 
-      {/* 1. Adding Transactions */}
       <div id="guide-sec-1" style={{marginBottom: 40}}>
         <div style={{display:"flex", alignItems:"center", gap:8, marginBottom: 8}}>
           <span style={{background:C.accentDim, color:C.accent, padding:"4px 8px", borderRadius:8, fontSize:16}}>＋</span><h3 style={{color:C.text, margin:0, fontSize:18}}>Adding Transactions</h3>
         </div>
         <p style={{color:C.muted, fontSize:13, lineHeight:1.5}}>Tap the center <strong>(+)</strong> button to add Income, Expense, Transfer, or Saving. <br/><strong style={{color:C.red}}>Protection:</strong> The app blocks transactions if your account balance is insufficient.</p>
-        
         <div className="guide-box" style={{display: "flex", flexDirection: "column", alignItems: "center"}}>
            <div style={{ width:68, height:68, borderRadius:"50%", background:C.accent, color:C.bg, fontSize:36, display:"flex", alignItems:"center", justifyContent:"center" }}>+</div>
            <div className="guide-pointer-up" style={{color: C.yellow}}>👆</div>
@@ -465,7 +468,6 @@ function UserManual({ onBack }) {
         </div>
       </div>
 
-      {/* 2. Bills */}
       <div id="guide-sec-2" style={{marginBottom: 40}}>
         <div style={{display:"flex", alignItems:"center", gap:8, marginBottom: 8}}>
           <span style={{background:C.redDim, color:C.red, padding:"4px 8px", borderRadius:8, fontSize:16}}>☷</span><h3 style={{color:C.text, margin:0, fontSize:18}}>Monthly Bills</h3>
@@ -494,7 +496,6 @@ function UserManual({ onBack }) {
         </div>
       </div>
 
-      {/* 3. History */}
       <div id="guide-sec-3" style={{marginBottom: 40}}>
         <div style={{display:"flex", alignItems:"center", gap:8, marginBottom: 8}}>
           <span style={{background:C.purpleDim, color:C.purple, padding:"4px 8px", borderRadius:8, fontSize:16}}>☰</span><h3 style={{color:C.text, margin:0, fontSize:18}}>History & Records</h3>
@@ -509,7 +510,6 @@ function UserManual({ onBack }) {
         </div>
       </div>
 
-      {/* 4. Settings */}
       <div id="guide-sec-4" style={{marginBottom: 40}}>
         <div style={{display:"flex", alignItems:"center", gap:8, marginBottom: 8}}>
           <span style={{background:C.surface, border:`1px solid ${C.border}`, color:C.text, padding:"4px 8px", borderRadius:8, fontSize:16}}>⚙</span><h3 style={{color:C.text, margin:0, fontSize:18}}>Settings & Customization</h3>
@@ -526,7 +526,6 @@ function UserManual({ onBack }) {
         </div>
       </div>
 
-      {/* 4b. Savings, Budgets, Quick Actions */}
       <div id="guide-sec-4b" style={{marginBottom: 40}}>
         <div style={{display:"flex", alignItems:"center", gap:8, marginBottom: 8}}>
           <span style={{background:C.yellowDim, color:C.yellow, padding:"4px 8px", borderRadius:8, fontSize:16}}>◎</span><h3 style={{color:C.text, margin:0, fontSize:18}}>Savings, Budgets & Quick Actions</h3>
@@ -540,13 +539,11 @@ function UserManual({ onBack }) {
         </div>
       </div>
 
-      {/* 5. Pro Tips */}
       <div id="guide-sec-5" style={{marginBottom: 40}}>
         <div style={{display:"flex", alignItems:"center", gap:8, marginBottom: 8}}>
           <span style={{background:C.yellowDim, color:C.yellow, padding:"4px 8px", borderRadius:8, fontSize:16}}>💡</span><h3 style={{color:C.text, margin:0, fontSize:18}}>Pro Tips & Gestures</h3>
         </div>
         <p style={{color:C.muted, fontSize:13, lineHeight:1.5, marginBottom:16}}>Master the app with these native gestures built for speed.</p>
-        
         <div className="guide-box" style={{marginBottom:15}}>
            <div style={{display: "flex", alignItems: "center"}}>
              <div style={{flex: 1}}>
@@ -558,7 +555,6 @@ function UserManual({ onBack }) {
            </div>
            <div style={{textAlign: "center", color: C.blue, fontSize: 11, fontWeight: 700, marginTop: 8}}>Swipe horizontally on any transaction or bill to Edit/Delete.</div>
         </div>
-
         <div className="guide-box">
           <Card style={{padding:"14px 14px 12px", pointerEvents: "none", opacity: 0.8}}>
              <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:8,height:8,borderRadius:99,background:C.accent,flexShrink:0}}/><span style={{color:C.muted,fontSize:12,fontWeight:600}}>Bank Card</span></div>
@@ -810,34 +806,6 @@ function SaverApp() {
       )}
       {appAlert && <AlertModal title={appAlert.title} message={appAlert.message} btnColor={appAlert.color} onClose={()=>setAppAlert(null)} />}
     </div>
-  );
-}
-
-// ─── Error Boundary Wrapper ───────────────────────────────────────────────────
-class ErrorBoundary extends React.Component {
-  constructor(props) { super(props); this.state = { hasError: false }; }
-  static getDerivedStateFromError(error) { return { hasError: true }; }
-  componentDidCatch(error, errorInfo) { console.error("Saver App Error:", error, errorInfo); }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{padding: 40, textAlign: "center", color: C.text, background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", fontFamily: "'DM Sans', sans-serif"}}>
-          <div style={{fontSize: 50, marginBottom: 20}}>⚠️</div>
-          <h2 style={{margin: "0 0 10px 0"}}>Oops! Something went wrong.</h2>
-          <p style={{color: C.muted, marginBottom: 20}}>A technical glitch occurred. Don't worry, your data is safe.</p>
-          <Btn onClick={() => window.location.reload()}>Reload App</Btn>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-export default function App() {
-  return (
-    <ErrorBoundary>
-      <SaverApp />
-    </ErrorBoundary>
   );
 }
 
@@ -1933,5 +1901,33 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
       )}
       {confirmDel&&<ConfirmModal title="Delete?" message="This action cannot be undone." onClose={()=>setConfirmDel(null)} onConfirm={doDelete}/>}
     </div>
+  );
+}
+
+// ─── Error Boundary Wrapper ───────────────────────────────────────────────────
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false }; }
+  static getDerivedStateFromError(error) { return { hasError: true }; }
+  componentDidCatch(error, errorInfo) { console.error("Saver App Error:", error, errorInfo); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{padding: 40, textAlign: "center", color: C.text, background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", fontFamily: "'DM Sans', sans-serif"}}>
+          <div style={{fontSize: 50, marginBottom: 20}}>⚠️</div>
+          <h2 style={{margin: "0 0 10px 0"}}>Oops! Something went wrong.</h2>
+          <p style={{color: C.muted, marginBottom: 20}}>A technical glitch occurred. Don't worry, your data is safe.</p>
+          <Btn onClick={() => window.location.reload()}>Reload App</Btn>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <SaverApp />
+    </ErrorBoundary>
   );
 }
