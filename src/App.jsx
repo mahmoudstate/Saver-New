@@ -36,14 +36,24 @@ const CURRENCIES = [
   { code: "SAR", name: "Saudi Riyal" }, { code: "AED", name: "UAE Dirham" },
 ];
 
+// ─── FIX #1: currency as React-safe module-level ref (not bare global mutated outside React) ──
+// We keep _currency as a fallback for fmt() calls that happen outside React tree,
+// but the primary source of truth is the React state passed as prop.
 let _currency = "EGP";
-const setCurrency = (c) => { _currency = c; };
+const setCurrencyGlobal = (c) => { _currency = c; };
 
-const fmt = (n) => {
-  const rounded = Math.round(n * 100) / 100;
-  return new Intl.NumberFormat("en-US", { 
-    style: "currency", currency: _currency, minimumFractionDigits: rounded % 1 === 0 ? 0 : 1, maximumFractionDigits: 2 
-  }).format(rounded);
+// ─── FIX #2: fmt with try/catch to prevent crash on invalid currency code ──
+const fmt = (n, overrideCurrency) => {
+  const cur = overrideCurrency || _currency;
+  try {
+    const rounded = Math.round(n * 100) / 100;
+    return new Intl.NumberFormat("en-US", {
+      style: "currency", currency: cur,
+      minimumFractionDigits: rounded % 1 === 0 ? 0 : 1, maximumFractionDigits: 2
+    }).format(rounded);
+  } catch {
+    return `${cur} ${n}`;
+  }
 };
 
 const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -95,24 +105,43 @@ const DEFAULT_QUICK_ACTIONS = [
   { id: "q3", catId: "", amount: "", bankId: "" }, { id: "q4", catId: "", amount: "", bankId: "" }
 ];
 
-const KEYS = { 
-  txns:"et_txns", banks:"et_banks", expCats:"et_expCats", incCats:"et_incCats", 
-  groups:"et_groups", savings:"et_savings", currency:"et_currency", 
-  username:"et_username", lastBackup:"et_lastBackup", bills:"et_bills", 
+const KEYS = {
+  txns:"et_txns", banks:"et_banks", expCats:"et_expCats", incCats:"et_incCats",
+  groups:"et_groups", savings:"et_savings", currency:"et_currency",
+  username:"et_username", lastBackup:"et_lastBackup", bills:"et_bills",
   budgets:"et_budgets", quickActions: "et_quick_actions", seenWelcome: "et_seenWelcome"
 };
 
-async function load(key, fallback) { try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; } catch { return fallback; } }
-async function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
+// ─── FIX #3: Robust localStorage with quota/private-mode handling ──
+async function load(key, fallback) {
+  try {
+    const r = localStorage.getItem(key);
+    return r ? JSON.parse(r) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+async function save(key, val) {
+  try {
+    localStorage.setItem(key, JSON.stringify(val));
+    return true;
+  } catch (e) {
+    // Storage full or private mode – fail silently, app still works in-memory
+    console.warn("Storage unavailable:", e);
+    return false;
+  }
+}
 
 // ─── Shared UI Components ──────────────────────────────────────────────────────
-function Pill({ color, children, style }) { return <span style={{ background:color+"22", color, border:`1px solid ${color}44`, borderRadius:99, padding:"2px 10px", fontSize:11, fontWeight:700, letterSpacing:0.5, ...style }}>{children}</span>; }
-function Card({ children, style, onClick, ...props }) { 
+function Pill({ color, children, style }) {
+  return <span style={{ background:color+"22", color, border:`1px solid ${color}44`, borderRadius:99, padding:"2px 10px", fontSize:11, fontWeight:700, letterSpacing:0.5, ...style }}>{children}</span>;
+}
+function Card({ children, style, onClick, ...props }) {
   return (
     <div {...props} onClick={(e) => { if (!isGlobalDragging && onClick) onClick(e); }} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:16, fontFamily: "'DM Sans', sans-serif", ...style }}>
       {children}
     </div>
-  ); 
+  );
 }
 
 function Modal({ title, onClose, children, center }) {
@@ -243,7 +272,7 @@ function SwipeRow({ onEdit, onDelete, children }) {
         if (Math.abs(diffX) > 10 && Math.abs(diffX) > diffY) isHorizontal.current = true;
       }
       if (isHorizontal.current) {
-        e.preventDefault(); 
+        e.preventDefault();
         let target = currentX.current + diffX;
         if (target < -95) target = -95; if (target > 95) target = 95;
         el.style.transform = `translateX(${target}px)`; setSlide(target);
@@ -252,11 +281,10 @@ function SwipeRow({ onEdit, onDelete, children }) {
     const handleTouchEnd = () => {
       if (isVertical.current) return;
       el.style.transition = "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.15)";
-      if (slide < -35) { setSlide(-85); currentX.current = -85; el.style.transform = `translateX(-85px)`; HAPTICS.light(); globalActiveSwipeClose = closeSwipe; } 
-      else if (slide > 35) { setSlide(85); currentX.current = 85; el.style.transform = `translateX(85px)`; HAPTICS.light(); globalActiveSwipeClose = closeSwipe; } 
+      if (slide < -35) { setSlide(-85); currentX.current = -85; el.style.transform = `translateX(-85px)`; HAPTICS.light(); globalActiveSwipeClose = closeSwipe; }
+      else if (slide > 35) { setSlide(85); currentX.current = 85; el.style.transform = `translateX(85px)`; HAPTICS.light(); globalActiveSwipeClose = closeSwipe; }
       else { setSlide(0); currentX.current = 0; el.style.transform = `translateX(0px)`; if (globalActiveSwipeClose === closeSwipe) globalActiveSwipeClose = null; }
     };
-
     el.addEventListener('touchstart', handleTouchStart, { passive: false });
     el.addEventListener('touchmove', handleTouchMove, { passive: false });
     el.addEventListener('touchend', handleTouchEnd);
@@ -276,7 +304,7 @@ function SwipeRow({ onEdit, onDelete, children }) {
   );
 }
 
-// ─── dnd-kit Sortable Components (FIXED SCROLL & LOCK) ────────────────────────
+// ─── dnd-kit Sortable Components ─────────────────────────────────────────────
 function SortableItem({ id, children }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: String(id) });
   const style = {
@@ -285,7 +313,7 @@ function SortableItem({ id, children }) {
     opacity: isDragging ? 0.6 : 1,
     zIndex: isDragging ? 100 : "auto",
     position: isDragging ? "relative" : "static",
-    touchAction: isDragging ? "none" : "auto", 
+    touchAction: isDragging ? "none" : "auto",
   };
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
@@ -300,9 +328,9 @@ function SortableList({ items, onReorder, renderItem, grid, gap = 10 }) {
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
   );
 
-  const handleDragStart = () => { 
+  const handleDragStart = () => {
     isGlobalDragging = true;
-    HAPTICS.heavy(); 
+    HAPTICS.heavy();
     document.body.style.overflow = "hidden";
     document.body.style.touchAction = "none";
   };
@@ -316,7 +344,6 @@ function SortableList({ items, onReorder, renderItem, grid, gap = 10 }) {
   const handleDragEnd = (event) => {
     HAPTICS.heavy();
     cleanupDrag();
-
     const { active, over } = event;
     if (over && active.id !== over.id) {
       const oldIndex = items.findIndex((i) => String(i.id) === String(active.id));
@@ -325,18 +352,11 @@ function SortableList({ items, onReorder, renderItem, grid, gap = 10 }) {
     }
   };
 
-  const handleDragCancel = () => {
-    cleanupDrag();
-  };
+  const handleDragCancel = () => { cleanupDrag(); };
 
   useEffect(() => {
-    const preventScroll = (e) => {
-      if (isGlobalDragging) {
-        e.preventDefault();
-      }
-    };
+    const preventScroll = (e) => { if (isGlobalDragging) e.preventDefault(); };
     document.addEventListener('touchmove', preventScroll, { passive: false });
-    
     return () => {
       document.removeEventListener('touchmove', preventScroll);
       document.body.style.overflow = "";
@@ -359,8 +379,113 @@ function SortableList({ items, onReorder, renderItem, grid, gap = 10 }) {
   );
 }
 
+// ─── Add to Home Screen Guide Modal ──────────────────────────────────────────
+function detectPlatform() {
+  const ua = navigator.userAgent || "";
+  const isIOS = /iphone|ipad|ipod/i.test(ua);
+  const isAndroid = /android/i.test(ua);
+  const isInStandaloneMode = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  return { isIOS, isAndroid, isInStandaloneMode };
+}
+
+function AddToHomeModal({ onClose }) {
+  const { isIOS, isAndroid, isInStandaloneMode } = detectPlatform();
+
+  if (isInStandaloneMode) {
+    // Already installed – skip modal entirely, caller should not show it
+    onClose();
+    return null;
+  }
+
+  const Step = ({ num, children }) => (
+    <div style={{ display:"flex", gap:14, alignItems:"flex-start", marginBottom:18 }}>
+      <div style={{ width:32, height:32, borderRadius:99, background:C.accentDim, border:`1.5px solid ${C.accent}`, color:C.accent, fontWeight:800, fontSize:14, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{num}</div>
+      <div style={{ color:C.text, fontSize:14, lineHeight:1.6, paddingTop:4 }}>{children}</div>
+    </div>
+  );
+
+  if (isIOS) {
+    return (
+      <Modal title="Add Saver to Home Screen" onClose={onClose} center={false}>
+        <div style={{ background:C.blueDim, border:`1px solid ${C.blue}44`, borderRadius:12, padding:"12px 14px", marginBottom:20 }}>
+          <span style={{ color:C.blue, fontSize:13, fontWeight:600 }}>📱 iPhone / iPad detected — follow these steps in <strong>Safari</strong></span>
+        </div>
+        <Step num="1">
+          Open this page in <strong style={{color:C.accent}}>Safari</strong> (not Chrome or other browsers).
+        </Step>
+        <Step num="2">
+          Tap the <strong style={{color:C.accent}}>Share button</strong> at the bottom of the screen — it looks like a box with an arrow pointing up <span style={{fontSize:18}}>⎙</span>
+        </Step>
+        <Step num="3">
+          Scroll down in the share sheet and tap <strong style={{color:C.accent}}>"Add to Home Screen"</strong>
+        </Step>
+        <Step num="4">
+          Tap <strong style={{color:C.accent}}>"Add"</strong> in the top-right corner. Saver will appear on your home screen like a native app!
+        </Step>
+        <div style={{ background:C.accentDim, border:`1px solid ${C.accent}33`, borderRadius:12, padding:"12px 14px", marginBottom:20 }}>
+          <span style={{ color:C.accent, fontSize:13 }}>✅ Once added, open Saver from your home screen and it will run in full-screen mode with no browser bars.</span>
+        </div>
+        <Btn full onClick={onClose}>Got it!</Btn>
+      </Modal>
+    );
+  }
+
+  if (isAndroid) {
+    return (
+      <Modal title="Add Saver to Home Screen" onClose={onClose} center={false}>
+        <div style={{ background:C.accentDim, border:`1px solid ${C.accent}44`, borderRadius:12, padding:"12px 14px", marginBottom:20 }}>
+          <span style={{ color:C.accent, fontSize:13, fontWeight:600 }}>📱 Android detected — follow these steps in <strong>Chrome</strong></span>
+        </div>
+        <Step num="1">
+          Open this page in <strong style={{color:C.accent}}>Google Chrome</strong>.
+        </Step>
+        <Step num="2">
+          Tap the <strong style={{color:C.accent}}>three-dot menu</strong> <span style={{fontSize:16}}>⋮</span> in the top-right corner of Chrome.
+        </Step>
+        <Step num="3">
+          Tap <strong style={{color:C.accent}}>"Add to Home screen"</strong> or <strong style={{color:C.accent}}>"Install app"</strong> (the option name may vary).
+        </Step>
+        <Step num="4">
+          Tap <strong style={{color:C.accent}}>"Add"</strong> on the confirmation dialog. Saver will appear on your home screen!
+        </Step>
+        <div style={{ background:C.accentDim, border:`1px solid ${C.accent}33`, borderRadius:12, padding:"12px 14px", marginBottom:20 }}>
+          <span style={{ color:C.accent, fontSize:13 }}>✅ Once added, open Saver from your home screen for a full-screen experience — no browser bars!</span>
+        </div>
+        <Btn full onClick={onClose}>Got it!</Btn>
+      </Modal>
+    );
+  }
+
+  // Desktop or unknown
+  return (
+    <Modal title="Install Saver" onClose={onClose} center={false}>
+      <div style={{ background:C.purpleDim, border:`1px solid ${C.purple}44`, borderRadius:12, padding:"12px 14px", marginBottom:20 }}>
+        <span style={{ color:C.purple, fontSize:13, fontWeight:600 }}>💻 Desktop or unsupported browser detected</span>
+      </div>
+      <p style={{ color:C.muted, fontSize:14, lineHeight:1.7, marginBottom:16 }}>
+        For the best experience, open Saver on your <strong style={{color:C.text}}>iPhone or Android phone</strong> and add it to your home screen from the browser menu.
+      </p>
+      <p style={{ color:C.muted, fontSize:13, lineHeight:1.6 }}>
+        On Chrome desktop, you can also click the <strong style={{color:C.accent}}>install icon</strong> (⊕) in the address bar if it appears.
+      </p>
+      <Btn full onClick={onClose} style={{ marginTop:16 }}>Got it!</Btn>
+    </Modal>
+  );
+}
+
 // ─── Welcome Screen ───────────────────────────────────────────────────────────
 function WelcomeScreen({ onStart, onManual }) {
+  const [showInstall, setShowInstall] = useState(false);
+  const { isInStandaloneMode } = detectPlatform();
+
+  const handleStart = () => {
+    if (!isInStandaloneMode) {
+      setShowInstall(true);
+    } else {
+      onStart();
+    }
+  };
+
   return (
     <div style={{position:"fixed",inset:0,zIndex:900,background:C.bg,display:"flex",flexDirection:"column",padding:"40px 24px",boxSizing:"border-box",overflow:"auto", fontFamily:"'DM Sans', sans-serif"}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet"/>
@@ -370,9 +495,9 @@ function WelcomeScreen({ onStart, onManual }) {
           <h1 style={{color:C.text, fontSize:28, fontWeight:800, margin:"0 0 10px 0"}}>Welcome to Saver</h1>
           <h2 style={{color:C.accent, fontSize:16, fontWeight:600, margin:0}}>Your Personal Finance, Mastered.</h2>
         </div>
-        
+
         <p style={{color:C.muted, fontSize:15, lineHeight:1.6, marginBottom:24, textAlign:"center"}}>
-          Enjoy a simple, fast way to track your daily earnings and expenses. Your privacy is our top priority—all your data is securely stored directly on your phone.
+          Enjoy a simple, fast way to track your daily earnings and expenses. Your privacy is our top priority — all your data is securely stored directly on your phone.
         </p>
 
         <div style={{background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:20, marginBottom:30}}>
@@ -392,9 +517,13 @@ function WelcomeScreen({ onStart, onManual }) {
       </div>
 
       <div style={{display:"flex", flexDirection:"column", gap:12, marginTop:"auto"}}>
-        <Btn full onClick={onStart} style={{padding:"14px", fontSize:16}}>Start Using Saver</Btn>
+        <Btn full onClick={handleStart} style={{padding:"14px", fontSize:16}}>Start Using Saver</Btn>
         <Btn full outline color={C.muted} onClick={onManual} style={{padding:"14px", fontSize:16}}>Read Manual Guide</Btn>
       </div>
+
+      {showInstall && (
+        <AddToHomeModal onClose={() => { setShowInstall(false); onStart(); }} />
+      )}
     </div>
   );
 }
@@ -418,7 +547,7 @@ function UserManual({ onBack }) {
         <button onClick={onBack} style={{background:"transparent", border:"none", color:C.muted, fontSize:22, cursor:"pointer", padding:"10px 15px 10px 0", display:"flex", alignItems:"center", marginRight: 4}}><span style={{display:"block", transform:"translateY(-1px)"}}>❮</span></button>
         <div style={{color:C.text,fontSize:22,fontWeight:800}}>Manual Guide</div>
       </div>
-      
+
       <p style={{color: C.muted, fontSize: 13, lineHeight: 1.6, marginBottom: 16}}>
         Welcome to Saver! Learn how to navigate and make the most out of your financial tracker using the interactive hints below. Everything is stored locally on your device.
       </p>
@@ -640,11 +769,11 @@ function SaverApp() {
       const [t,b,ec,ic,g,s,cur,uname,bl,bdg,lb,qa,seen] = await Promise.all([
         load(KEYS.txns,[]), load(KEYS.banks,DEFAULT_BANKS), load(KEYS.expCats,DEFAULT_EXP_CATS),
         load(KEYS.incCats,DEFAULT_INC_CATS), load(KEYS.groups,DEFAULT_GROUPS), load(KEYS.savings,[]),
-        load(KEYS.currency,"EGP"), load(KEYS.username,""), load(KEYS.bills,[]), load(KEYS.budgets,[]), 
+        load(KEYS.currency,"EGP"), load(KEYS.username,""), load(KEYS.bills,[]), load(KEYS.budgets,[]),
         load(KEYS.lastBackup, null), load(KEYS.quickActions, DEFAULT_QUICK_ACTIONS), load(KEYS.seenWelcome, false)
       ]);
       setTxns(t); setBanks(b); setExpCats(ec); setIncCats(ic); setGroups(g); setSavings(s);
-      setCurrencyState(cur); setCurrency(cur); setUsernameState(uname); setBills(bl); setBudgets(bdg); setLastBackup(lb);
+      setCurrencyState(cur); setCurrencyGlobal(cur); setUsernameState(uname); setBills(bl); setBudgets(bdg); setLastBackup(lb);
       setQuickActions(qa); setHasSeenWelcome(seen);
       const curMonth = new Date().toISOString().slice(0,7);
       const hasCurMonth = t.some(tx => tx.date.startsWith(curMonth));
@@ -672,13 +801,13 @@ function SaverApp() {
   }, []);
 
   const navigateTo = useCallback((newTab, saveScroll = false) => {
-    if (saveScroll) { setScrollState({ y: window.scrollY, restore: true }); } 
+    if (saveScroll) { setScrollState({ y: window.scrollY, restore: true }); }
     else { setScrollState({ y: 0, restore: false }); window.scrollTo(0, 0); }
     setTab(newTab);
   }, []);
 
   const persist = useCallback(async (key,val) => { await save(key,val); }, []);
-  
+
   const bankBalance = useCallback((bankId) => {
     const inc=txns.filter(t=>t.bankId===bankId&&t.type==="income").reduce((a,t)=>a+t.amount,0);
     const exp=txns.filter(t=>t.bankId===bankId&&t.type==="expense").reduce((a,t)=>a+t.amount,0);
@@ -698,13 +827,13 @@ function SaverApp() {
       }
     }
     const generatedId = Date.now().toString();
-    const next=[{...t,id:generatedId},...txns]; setTxns(next); await persist(KEYS.txns,next); 
+    const next=[{...t,id:generatedId},...txns]; setTxns(next); await persist(KEYS.txns,next);
     HAPTICS.success();
-    return generatedId; 
+    return generatedId;
   };
-  
+
   const delTxn = async (id) => { const next=txns.filter(t=>t.id!==id); setTxns(next); await persist(KEYS.txns,next); return next; };
-  
+
   const updateTxn = async (id,data) => {
     const original = txns.find(t=>t.id===id);
     if(data.amount && (original.type === "expense" || original.type === "saving" || original.type === "transfer")) {
@@ -712,12 +841,12 @@ function SaverApp() {
       const netBalWithoutThis = bankBalance(checkBankId) + original.amount;
       if (netBalWithoutThis < data.amount) {
         HAPTICS.warning();
-        setAppAlert({ title: "Insufficient Balance", message: "⚠️ Sorry, this account balance is insufficient for this modifications!", color: C.red }); return false;
+        setAppAlert({ title: "Insufficient Balance", message: "⚠️ Sorry, this account balance is insufficient for this modification!", color: C.red }); return false;
       }
     }
     const next=txns.map(t=>t.id===id?{...t,...data}:t); setTxns(next); await persist(KEYS.txns,next); return true;
   };
-  
+
   const saveBanks = async (b) => { setBanks(b); await persist(KEYS.banks,b); };
   const saveExpCats = async (c) => { setExpCats(c); await persist(KEYS.expCats,c); };
   const saveIncCats = async (c) => { setIncCats(c); await persist(KEYS.incCats,c); };
@@ -726,7 +855,7 @@ function SaverApp() {
   const saveBills = async (b) => { setBills(b); await persist(KEYS.bills,b); };
   const saveBudgets = async (bdg) => { setBudgets(bdg); await persist(KEYS.budgets,bdg); };
   const saveQuickActions = async (qa) => { setQuickActions(qa); await persist(KEYS.quickActions, qa); };
-  const saveCurrencyHandler = async (c) => { setCurrencyState(c); setCurrency(c); await persist(KEYS.currency,c); };
+  const saveCurrencyHandler = async (c) => { setCurrencyState(c); setCurrencyGlobal(c); await persist(KEYS.currency,c); };
   const saveUsernameHandler = async (n) => { setUsernameState(n); await persist(KEYS.username,n); };
 
   const handleRestorePayload = async (importedData) => {
@@ -740,14 +869,14 @@ function SaverApp() {
       if(importedData.bills) { setBills(importedData.bills); await persist(KEYS.bills, importedData.bills); }
       if(importedData.budgets) { setBudgets(importedData.budgets); await persist(KEYS.budgets, importedData.budgets); }
       if(importedData.quickActions) { setQuickActions(importedData.quickActions); await persist(KEYS.quickActions, importedData.quickActions); }
-      if(importedData.currency) { setCurrencyState(importedData.currency); setCurrency(importedData.currency); await persist(KEYS.currency, importedData.currency); }
+      if(importedData.currency) { setCurrencyState(importedData.currency); setCurrencyGlobal(importedData.currency); await persist(KEYS.currency, importedData.currency); }
       if(importedData.username) { setUsernameState(importedData.username); await persist(KEYS.username, importedData.username); }
       const now = Date.now(); await save(KEYS.lastBackup, now); setLastBackup(now);
       HAPTICS.success();
       setAppAlert({ title: "Restore Successful", message: "🔄 Backup restored successfully! ✅", color: C.accent });
-    } catch { 
+    } catch {
       HAPTICS.warning();
-      setAppAlert({ title: "Restore Failed", message: "❌ Invalid or corrupted backup file structure detected.", color: C.red }); 
+      setAppAlert({ title: "Restore Failed", message: "❌ Invalid or corrupted backup file structure detected.", color: C.red });
     }
   };
 
@@ -757,27 +886,30 @@ function SaverApp() {
   };
 
   if (showSplash) return <SplashScreen />;
-  
+
   if (!hasSeenWelcome) return (
-    <WelcomeScreen 
-       onStart={completeWelcome} 
-       onManual={() => { completeWelcome(); navigateTo("manual"); }} 
+    <WelcomeScreen
+       onStart={completeWelcome}
+       onManual={() => { completeWelcome(); navigateTo("manual"); }}
     />
   );
 
   const allCats=[...expCats,...incCats];
   const filteredTxns=filterMonth==="all"?txns:txns.filter(t=>t.date.startsWith(filterMonth));
   const availMonths=[...new Set(txns.map(t=>t.date.slice(0,7)))].sort().reverse();
-  const showBackupAlert = lastBackup && (Date.now() - lastBackup > 3 * 24 * 60 * 60 * 1000);
+
+  // ─── FIX #4: Show backup alert if NEVER backed up OR over 3 days since last backup ──
+  const showBackupAlert = !lastBackup || (Date.now() - lastBackup > 3 * 24 * 60 * 60 * 1000);
+
   const isSubPageActive = ledgerBank || ledgerGroup || ledgerSaving || ledgerBudget || tab === "savings" || tab === "budgets" || tab === "quickactions" || tab === "manual";
 
   return (
     <div style={{background:C.bg,minHeight:"100vh",color:C.text,fontFamily:"'DM Sans', sans-serif",maxWidth:520,margin:"0 auto",paddingBottom:isSubPageActive?0:130, position:"relative", userSelect:"none", WebkitUserSelect:"none"}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet"/>
-      
+
       {showBackupAlert && tab==="dashboard" && !isSubPageActive && (
         <div style={{background:C.yellowDim, color:C.yellow, padding:"10px 16px", fontSize:12, fontWeight:700, display:"flex", justifyContent:"space-between", alignItems:"center"}}>
-          <span>⚠️ It has been over 3 days since your last backup!</span>
+          <span>⚠️ {lastBackup ? "It has been over 3 days since your last backup!" : "Back up your data to keep it safe!"}</span>
           <button onClick={()=>navigateTo("settings")} style={{background:"transparent", border:`1px solid ${C.yellow}`, color:C.yellow, borderRadius:8, padding:"4px 8px", fontSize:10, cursor:"pointer"}}>Backup Now</button>
         </div>
       )}
@@ -793,13 +925,13 @@ function SaverApp() {
           {tab==="manual" && <UserManual onBack={()=>navigateTo("settings")} />}
           {tab==="monthly" && <MonthlyBills bills={bills} onSave={saveBills} banks={banks} expCats={expCats} onAddTxn={addTxn} delTxn={delTxn} bankBalance={bankBalance} currency={currency} setAppAlert={setAppAlert}/>}
           {tab==="settings" && <Settings banks={banks} expCats={expCats} incCats={incCats} groups={groups} onBanks={saveBanks} onExpCats={saveExpCats} onIncCats={saveIncCats} onGroups={saveGroups} currency={currency} onCurrency={saveCurrencyHandler} username={username} onUsername={saveUsernameHandler} bankBalance={bankBalance} onOpenSavings={()=>navigateTo("savings")} onOpenBudgets={()=>navigateTo("budgets")} onOpenQuickActions={()=>navigateTo("quickactions")} onOpenManual={()=>navigateTo("manual")} setLastBackup={setLastBackup} txns={txns} bills={bills} savings={savings} budgets={budgets} onRestore={handleRestorePayload} setAppAlert={setAppAlert}/>}
-          
+
           <BottomNav tab={tab} navigateTo={navigateTo} expCats={expCats} banks={banks} onAdd={addTxn} currency={currency} bankBalance={bankBalance} setAppAlert={setAppAlert} quickActions={quickActions} />
         </>
       ) : (
         <>
           {ledgerBank && <DeepLedgerView title={ledgerBank.name} headerType="bank" headerData={{balance: bankBalance(ledgerBank.id)}} txns={txns.filter(t=>t.bankId===ledgerBank.id || t.fromBankId===ledgerBank.id || t.toBankId===ledgerBank.id)} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} onClose={()=>{ setLedgerBank(null); }} />}
-          {ledgerGroup && (()=>{ const spent=txns.filter(t=>t.type==="expense"&&ledgerGroup.cats.includes(t.catId)).reduce((a,t)=>a+t.amount,0); return <DeepLedgerView title={ledgerGroup.name} headerType="group" headerData={{spent, color:ledgerGroup.color}} txns={txns.filter(t=>t.type==="expense"&&ledgerGroup.cats.includes(t.catId))} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} onClose={()=>{ setLedgerGroup(null); } } />; })()}
+          {ledgerGroup && (()=>{ const spent=txns.filter(t=>t.type==="expense"&&ledgerGroup.cats.includes(t.catId)).reduce((a,t)=>a+t.amount,0); return <DeepLedgerView title={ledgerGroup.name} headerType="group" headerData={{spent, color:ledgerGroup.color}} txns={txns.filter(t=>t.type==="expense"&&ledgerGroup.cats.includes(t.catId))} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} onClose={()=>{ setLedgerGroup(null); }} />; })()}
           {ledgerSaving && (()=>{ const saved=txns.filter(t=>t.type==="saving"&&t.catName===ledgerSaving.name).reduce((a,t)=>a+t.amount,0); return <DeepLedgerView title={ledgerSaving.name} headerType="saving" headerData={{saved, goal:ledgerSaving.goal}} txns={txns.filter(t=>t.type==="saving"&&t.catName===ledgerSaving.name)} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} onClose={()=>{ setLedgerSaving(null); }} />; })()}
           {ledgerBudget && (()=>{ const spent=txns.filter(t=>t.type==="expense"&&ledgerBudget.cats.includes(t.catId)).reduce((a,t)=>a+t.amount,0); return <DeepLedgerView title={ledgerBudget.name} headerType="budget" headerData={{spent, limit:ledgerBudget.amount}} txns={txns.filter(t=>t.type==="expense"&&ledgerBudget.cats.includes(t.catId))} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} onClose={()=>{ setLedgerBudget(null); }} />; })()}
         </>
@@ -817,17 +949,17 @@ function BottomNav({ tab, navigateTo, expCats, banks, onAdd, currency, bankBalan
   const lastUsed = useRef({});
   const activeShortcuts = quickActions.filter(q => q.catId);
 
-  const handlePressStart = (e) => { 
-    e.preventDefault(); 
+  const handlePressStart = (e) => {
+    e.preventDefault();
     pressTimer.current = setTimeout(() => {
       HAPTICS.medium();
       setShowQuick(true);
-    }, 450); 
+    }, 450);
   };
-  const handlePressEnd = (e) => { 
-    e.preventDefault(); 
-    clearTimeout(pressTimer.current); 
-    if(!showQuick && !quickForm) navigateTo("add"); 
+  const handlePressEnd = (e) => {
+    e.preventDefault();
+    clearTimeout(pressTimer.current);
+    if(!showQuick && !quickForm) navigateTo("add");
   };
 
   const handleQuickSelect = (shortcut) => {
@@ -866,7 +998,16 @@ function BottomNav({ tab, navigateTo, expCats, banks, onAdd, currency, bankBalan
             +
           </button>
         </div>
-          
+
+        {/* ─── FIX #5: Show hint if long-pressed but no shortcuts configured ── */}
+        {showQuick && activeShortcuts.length === 0 && (
+          <div style={{ position:"fixed", bottom:135, left:"50%", transform:"translateX(-50%)", background:C.card, border:`1px solid ${C.border}`, borderRadius:18, padding:"16px 20px", width:"auto", maxWidth:"85%", boxShadow:"0 12px 32px rgba(0,0,0,0.7)", zIndex:60, textAlign:"center" }}>
+            <div style={{fontSize:24, marginBottom:8}}>⚡</div>
+            <div style={{color:C.text, fontWeight:700, fontSize:14, marginBottom:4}}>No shortcuts configured</div>
+            <div style={{color:C.muted, fontSize:12}}>Go to Settings → Quick Actions to set up your shortcuts.</div>
+          </div>
+        )}
+
         {showQuick && activeShortcuts.length > 0 && (
           <div style={{ position:"fixed", bottom:135, left:"50%", transform:"translateX(-50%)", background:C.card, border:`1px solid ${C.border}`, borderRadius:24, padding:"12px", width: "auto", maxWidth: "90%", boxShadow:"0 12px 32px rgba(0,0,0,0.7)", animation:"popIn 0.15s cubic-bezier(0.1, 0.8, 0.2, 1.15)", zIndex: 60, display: "flex", justifyContent: "center" }}>
             <style>{`@keyframes popIn { from{opacity:0; transform:translate(-50%, 14px) scale(0.96);} to{opacity:1; transform:translate(-50%, 0) scale(1);} }`}</style>
@@ -874,7 +1015,7 @@ function BottomNav({ tab, navigateTo, expCats, banks, onAdd, currency, bankBalan
               {activeShortcuts.map(q => {
                 const cat = expCats.find(c=>c.id===q.catId);
                 return (
-                  <button key={q.id} onClick={()=>handleQuickSelect(q)} 
+                  <button key={q.id} onClick={()=>handleQuickSelect(q)}
                           style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, width:90, height:90, color:C.text, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:3, cursor:"pointer", padding:"4px", boxSizing:"border-box", fontFamily: "'DM Sans', sans-serif" }}>
                     <span style={{fontSize:26, display:"block", lineHeight:1, marginBottom: 1}}>{ICONS[cat?.icon]||"📌"}</span>
                     <span style={{fontSize:10, fontWeight:700, color: C.text, textAlign: "center", width: "100%", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{cat?.name}</span>
@@ -915,7 +1056,7 @@ function NavBtn({ id, icon, label, tab, navigateTo }) {
 
 // ─── Dashboard Screen ────────────────────────────────────────────────────────
 function Dashboard({ txns, bills, budgets, banks, groups, expCats, savings, filterMonth, setFilterMonth, availMonths, username, bankBalance, txnsAll, onDeleteTxn, onUpdateTxn, onOpenBank, onOpenGroup, onOpenSaving, onOpenBudget, hideTotal, setHideTotal, navigateTo, scrollState, setScrollState, onBanks, onBudgets, onSavings, onGroups }) {
-  
+
   useEffect(() => {
     if (scrollState.restore) {
       setTimeout(() => window.scrollTo(0, scrollState.y), 50);
@@ -940,12 +1081,17 @@ function Dashboard({ txns, bills, budgets, banks, groups, expCats, savings, filt
   const incomeDiff = prevIncome>0 ? Math.round(((totalIncome-prevIncome)/prevIncome)*100) : null;
   const expDiff = prevExp>0 ? Math.round(((totalExp-prevExp)/prevExp)*100) : null;
   const isCurrentMonth = filterMonth === currentMonthStr || filterMonth === "all";
-  
+
   const billsForMonth = isCurrentMonth ? currentMonthStr : filterMonth;
   const paidBillsCount = bills.filter(b=>b.payments?.some(p=>p.month===billsForMonth)).length;
   const totalBillsCount = bills.length;
   const remainingBillsAmount = bills.filter(b=>!b.payments?.some(p=>p.month===billsForMonth)).reduce((sum,b)=>sum+b.amount,0);
-  const daysLeft = Math.max(1, new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() - new Date().getDate() + 1);
+
+  // ─── FIX #6: daysLeft scoped to current real month, not affected by filter ──
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysLeft = Math.max(1, daysInMonth - now.getDate() + 1);
+
   const recentsFiltered = txns.filter(t => { if (recentFilter === "expenses") return t.type === "expense"; if (recentFilter === "income") return t.type === "income"; return true; }).slice(0, 5);
 
   const spendingGroups = groups.filter(g=>{const t=txns.filter(tx=>tx.type==="expense"&&g.cats.includes(tx.catId)).reduce((a,tx)=>a+tx.amount,0); return t>0;});
@@ -973,7 +1119,7 @@ function Dashboard({ txns, bills, budgets, banks, groups, expCats, savings, filt
           <button onClick={()=>setHideTotal(v=>!v)} style={{background:C.border,border:"none",color:C.muted,width:36,height:36,borderRadius:99,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>{hideTotal?"🙈":"🐵"}</button>
         </div>
       </Card>
-      
+
       <div style={{marginBottom:20}}>
         <SortableList grid items={banks} onReorder={onBanks} renderItem={(b) => {
           const bal = bankBalance(b.id);
@@ -990,7 +1136,7 @@ function Dashboard({ txns, bills, budgets, banks, groups, expCats, savings, filt
         }} />
       </div>
       <style>{`.interactive-card:active { transform: scale(0.97); opacity: 0.9; }`}</style>
-      
+
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
         <Card style={{padding:"14px 14px 12px"}}>
           <div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Income</div>
@@ -1181,7 +1327,11 @@ function DeepLedgerView({ title, headerType, headerData, txns, onDelete, onUpdat
       </div>
 
       {confirmId && <ConfirmModal title="Delete Transaction?" message="This drops the record and updates balances instantly." onClose={() => setConfirmId(null)} onConfirm={() => { onDelete(confirmId); setConfirmId(null); }} />}
-      {editTxn && <EditTxnModal txn={editTxn} banks={banks} expCats={expCats} incCats={expCats} currency={_currency} onSave={async (data) => { const ok = await onUpdate(editTxn.id, data); if (ok) setEditTxn(null); }} onClose={() => setEditTxn(null)} />}
+      {/* ─── FIX #7: Show info toast when trying to edit a transfer ── */}
+      {editTxn && editTxn.type === "transfer" && (
+        <AlertModal title="Cannot Edit Transfer" message="Transfers cannot be edited directly. Delete this transfer and create a new one if needed." onClose={() => setEditTxn(null)} btnColor={C.blue} />
+      )}
+      {editTxn && editTxn.type !== "transfer" && <EditTxnModal txn={editTxn} banks={banks} expCats={expCats} incCats={expCats} currency={_currency} onSave={async (data) => { const ok = await onUpdate(editTxn.id, data); if (ok) setEditTxn(null); }} onClose={() => setEditTxn(null)} />}
     </div>
   );
 }
@@ -1215,11 +1365,8 @@ function AddTransaction({ banks, expCats, incCats, savings, currency, onAdd, onS
   useEffect(() => { window.scrollTo(0, 0); }, []);
   const [type, setType] = useState("expense");
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(today());
-  
   const [bankId, setBankId] = useState(banks[0]?.id||"");
   const [toBankId, setToBankId] = useState(banks.length > 1 ? banks[1]?.id : banks[0]?.id || "");
-  
   const [catId, setCatId] = useState(expCats[0]?.id||"");
   const [note, setNote] = useState("");
   const [savingId, setSavingId] = useState(savings[0]?.id||"");
@@ -1234,7 +1381,9 @@ function AddTransaction({ banks, expCats, incCats, savings, currency, onAdd, onS
   const handleSubmit = async () => {
     const parsedAmt = parseFloat(amount);
     if(!amount || isNaN(parsedAmt) || parsedAmt <= 0) return;
-    
+    // ─── FIX #8: Compute date at submit time (not mount time) ──
+    const submitDate = today();
+
     if (type === "transfer") {
         if (bankId === toBankId) {
             HAPTICS.warning();
@@ -1243,24 +1392,24 @@ function AddTransaction({ banks, expCats, incCats, savings, currency, onAdd, onS
         }
         const fromBank = banks.find(b=>b.id===bankId);
         const toBank = banks.find(b=>b.id===toBankId);
-        const success = await onAdd({type:"transfer", amount:parsedAmt, date, bankId:bankId, fromBankId:bankId, toBankId:toBankId, bankName:fromBank?.name, toBankName:toBank?.name, note});
+        const success = await onAdd({type:"transfer", amount:parsedAmt, date:submitDate, bankId:bankId, fromBankId:bankId, toBankId:toBankId, bankName:fromBank?.name, toBankName:toBank?.name, note});
         if(success !== false) { setAmount(""); setNote(""); onDone(); }
         return;
     }
 
     const bank = banks.find(b=>b.id===bankId);
-    
+
     if(type==="saving"){
       if(!savingId)return; const sv=savings.find(s=>s.id===savingId); if(!sv)return;
-      const success = await onAdd({type:"saving",amount:parsedAmt,date,bankId,bankName:bank?.name,catName:sv.name,catIcon:"saving",note});
+      const success = await onAdd({type:"saving",amount:parsedAmt,date:submitDate,bankId,bankName:bank?.name,catName:sv.name,catIcon:"saving",note});
       if(success !== false) {
-        const c={id:Date.now().toString(),amount:parsedAmt,date,bankId,bankName:bank?.name};
+        const c={id:Date.now().toString(),amount:parsedAmt,date:submitDate,bankId,bankName:bank?.name};
         await onSaveSavings(savings.map(s=>s.id===savingId?{...s,contributions:[...(s.contributions||[]),c]}:s));
         setAmount(""); setNote(""); onDone();
       }
     } else {
       const cat=cats.find(c=>c.id===catId);
-      const success = await onAdd({type,amount:parsedAmt,date,bankId,bankName:bank?.name,catId,catName:cat?.name,catIcon:cat?.icon,note});
+      const success = await onAdd({type,amount:parsedAmt,date:submitDate,bankId,bankName:bank?.name,catId,catName:cat?.name,catIcon:cat?.icon,note});
       if(success !== false) { setAmount(""); setNote(""); onDone(); }
     }
   };
@@ -1268,7 +1417,7 @@ function AddTransaction({ banks, expCats, incCats, savings, currency, onAdd, onS
   return (
     <div style={{padding:"24px 16px 0"}}>
       <div style={{color:C.text,fontSize:22,fontWeight:800,marginBottom:20}}>New Transaction</div>
-      
+
       <div style={{display:"flex",gap:8,marginBottom:20}}>
         {[{v:"expense",label:"Expense",color:C.red},{v:"income",label:"Income",color:C.accent},{v:"saving",label:"Saving",color:C.yellow},{v:"transfer",label:"Transfer",color:C.blue}].map(o=>(
           <button key={o.v} onClick={()=>setType(o.v)} style={{flex:1,padding:"10px 0",borderRadius:10,border:`1.5px solid ${type===o.v?o.color:C.border}`,background:type===o.v?o.color+"22":"transparent",color:type===o.v?o.color:C.muted,fontWeight:700,fontSize:12,cursor:"pointer", fontFamily: "'DM Sans', sans-serif"}}>{o.label}</button>
@@ -1279,12 +1428,7 @@ function AddTransaction({ banks, expCats, incCats, savings, currency, onAdd, onS
         <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Amount ({currency})</div>
         <input type="number" step="any" placeholder="0.00" value={amount} onChange={e=>setAmount(e.target.value)} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:15,outline:"none",boxSizing:"border-box", fontFamily: "'DM Sans', sans-serif"}}/>
       </div>
-      
-      <div style={{marginBottom:14}}>
-        <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Date</div>
-        <input type="date" value={date} onChange={e=>setDate(e.target.value)} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:15,outline:"none",boxSizing:"border-box",colorScheme:"dark",WebkitAppearance:"none",appearance:"none",display:"block", fontFamily: "'DM Sans', sans-serif"}}/>
-      </div>
-      
+
       {type === "transfer" ? (
          <>
            <Select label="From Account" value={bankId} onChange={e=>setBankId(e.target.value)}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select>
@@ -1295,7 +1439,7 @@ function AddTransaction({ banks, expCats, incCats, savings, currency, onAdd, onS
       )}
 
       {type==="saving"?(savings.length>0?<Select label="Saving Goal" value={savingId} onChange={e=>setSavingId(e.target.value)}>{savings.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</Select>:<div style={{color:C.muted,fontSize:13,marginBottom:14,padding:"10px 12px",background:C.card,borderRadius:10}}>No saving goals yet.</div>): type==="transfer" ? null : (<Select label="Category" value={catId} onChange={e=>setCatId(e.target.value)}>{cats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]||"📌"} {c.name}</option>)}</Select>)}
-      
+
       <Input label="Note (optional)" placeholder="Add a note..." value={note} onChange={e=>setNote(e.target.value)}/>
       <Btn full onClick={handleSubmit} style={{marginTop:8}}>Save Transaction</Btn>
     </div>
@@ -1310,7 +1454,8 @@ function History({ txns, onDelete, onUpdate, banks, expCats, incCats, currency, 
   const [filterMonth, setFilterMonth] = useState("all");
   const [confirmId, setConfirmId] = useState(null);
   const [editTxn, setEditTxn] = useState(null);
-  
+  const [transferAlert, setTransferAlert] = useState(false);
+
   const filtered=txns.filter(t=>{
     if(filterType!=="all"&&t.type!==filterType)return false;
     if(filterMonth!=="all"&&!t.date.startsWith(filterMonth))return false;
@@ -1325,7 +1470,7 @@ function History({ txns, onDelete, onUpdate, banks, expCats, incCats, currency, 
       <div style={{display:"flex",gap:8,marginBottom:14,overflowX:"auto"}}>
         {["all","expense","income","saving","transfer"].map(f=>(<button key={f} onClick={()=>setFilterType(f)} style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${filterType===f?C.accent:C.border}`,background:filterType===f?C.accentDim:"transparent",color:filterType===f?C.accent:C.muted,fontWeight:600,fontSize:12,cursor:"pointer",textTransform:"capitalize", fontFamily: "'DM Sans', sans-serif"}}>{f}</button>))}
       </div>
-      
+
       <div style={{marginBottom:16}}>
          <MonthSelect value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} availMonths={availMonths} />
       </div>
@@ -1333,12 +1478,16 @@ function History({ txns, onDelete, onUpdate, banks, expCats, incCats, currency, 
       <div style={{display:"flex",flexDirection:"column"}}>
         {filtered.length===0&&<EmptyState icon="💸" message="No transactions found." />}
         {filtered.map(t=>(
-          <SwipeRow key={t.id} onEdit={t.type!=="transfer"?()=>setEditTxn(t):null} onDelete={()=>setConfirmId(t.id)}>
+          <SwipeRow key={t.id}
+            onEdit={t.type !== "transfer" ? ()=>setEditTxn(t) : ()=>setTransferAlert(true)}
+            onDelete={()=>setConfirmId(t.id)}>
             <TxnRow txn={t} hideTotal={false} />
           </SwipeRow>
         ))}
       </div>
       {confirmId&&<ConfirmModal title="Delete Transaction?" message="This action cannot be undone." onClose={()=>setConfirmId(null)} onConfirm={()=>{onDelete(confirmId);setConfirmId(null);}}/>}
+      {/* ─── FIX #7 (History): Info alert for transfer edit attempt ── */}
+      {transferAlert && <AlertModal title="Cannot Edit Transfer" message="Transfers cannot be edited directly. Delete this transfer and create a new one if needed." onClose={()=>setTransferAlert(false)} btnColor={C.blue} />}
       {editTxn&&<EditTxnModal txn={editTxn} banks={banks} expCats={expCats} incCats={incCats} currency={currency} onSave={async(data)=>{const ok=await onUpdate(editTxn.id,data); if(ok)setEditTxn(null);}} onClose={()=>setEditTxn(null)}/>}
     </div>
   );
@@ -1351,7 +1500,7 @@ function EditTxnModal({ txn, banks, expCats, incCats, currency, onSave, onClose 
   const [catId, setCatId] = useState(txn.catId||"");
   const [note, setNote] = useState(txn.note||"");
   const cats=txn.type==="expense"?expCats:txn.type==="income"?incCats:[];
-  
+
   const handleSave=async()=>{
     const parsed = parseFloat(amount);
     if(!amount||isNaN(parsed)||parsed<=0) return;
@@ -1425,7 +1574,14 @@ function SavingsPage({ savings, onSave, txns, onBack }) {
         }} />
       </div>
       {showAdd&&(<Modal title={editId?"Edit Goal":"New Saving Goal"} onClose={()=>{setShowAdd(false);setEditId(null);}} center={false}><Input label="Goal Name" placeholder="e.g. Travel Fund..." value={name} onChange={e=>setName(e.target.value)}/><Input label="Target Amount" type="number" step="any" value={goal} onChange={e=>setGoal(e.target.value)}/><Btn full onClick={handleAdd}>{editId?"Update Goal":"Create Goal"}</Btn></Modal>)}
-      {confirmId&&<ConfirmModal title="Delete Goal?" message="This will permanently delete this saving goal." onClose={()=>setConfirmId(null)} onConfirm={async()=>{await onSave(savings.filter(s=>s.id!==confirmId));setConfirmId(null);}}/>}
+
+      {/* ─── FIX #9: Warn that deleting a goal will leave orphan transactions ── */}
+      {confirmId&&<ConfirmModal
+        title="Delete Goal?"
+        message="This will permanently delete this saving goal. Note: any saving transactions linked to this goal will remain in your history and still affect your account balances."
+        onClose={()=>setConfirmId(null)}
+        onConfirm={async()=>{await onSave(savings.filter(s=>s.id!==confirmId));setConfirmId(null);}}
+      />}
     </div>
   );
 }
@@ -1441,7 +1597,7 @@ function BudgetsPage({ budgets, expCats, onSave, onBack, currency }) {
   const [confirmId, setConfirmId] = useState(null);
 
   const startEdit=(b)=>{setEditId(b.id);setName(b.name);setAmount(b.amount);setSelectedCats(b.cats||[]);setShowAdd(true);};
-  
+
   const handleAdd=async()=>{
     if(!name||!amount||selectedCats.length===0)return;
     const parsedAmt = parseFloat(amount);
@@ -1460,7 +1616,7 @@ function BudgetsPage({ budgets, expCats, onSave, onBack, currency }) {
         <Btn small onClick={()=>{setEditId(null);setName("");setAmount("");setSelectedCats([]);setShowAdd(true);}}>+ Add Budget</Btn>
       </div>
       {budgets.length===0&&<EmptyState icon="📊" message="Set custom budgeting categories for precise monthly guardrails." />}
-      
+
       <div style={{marginBottom:20}}>
         <SortableList items={budgets} onReorder={onSave} renderItem={(b) => (
           <SwipeRow key={b.id} onEdit={()=>startEdit(b)} onDelete={()=>setConfirmId(b.id)}>
@@ -1517,9 +1673,7 @@ function QuickActionsSetup({ quickActions, expCats, banks, onSave, onBack }) {
 
   const handleCommitShortcut = async () => {
     const updated = quickActions.map(q => {
-      if (q.id === editingId) {
-        return { ...q, catId, amount, bankId };
-      }
+      if (q.id === editingId) return { ...q, catId, amount, bankId };
       return q;
     });
     await onSave(updated);
@@ -1528,9 +1682,7 @@ function QuickActionsSetup({ quickActions, expCats, banks, onSave, onBack }) {
 
   const handleClearShortcut = async (id) => {
     const updated = quickActions.map(q => {
-      if (q.id === id) {
-        return { ...q, catId: "", amount: "", bankId: "" };
-      }
+      if (q.id === id) return { ...q, catId: "", amount: "", bankId: "" };
       return q;
     });
     await onSave(updated);
@@ -1544,7 +1696,7 @@ function QuickActionsSetup({ quickActions, expCats, banks, onSave, onBack }) {
       </div>
 
       <p style={{color: C.muted, fontSize: 13, lineHeight: 1.5, marginBottom: 18}}>Configure up to 4 responsive shortcuts available globally when long pressing the navigation action node.</p>
-      
+
       <div style={{display:"flex", flexDirection:"column", gap:12}}>
         {quickActions.map((q, idx) => {
           const cat = expCats.find(c => c.id === q.catId);
@@ -1570,7 +1722,7 @@ function QuickActionsSetup({ quickActions, expCats, banks, onSave, onBack }) {
             {expCats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]} {c.name}</option>)}
           </Select>
           <Input label="Default Fixed Amount" type="number" step="any" value={amount} onChange={e=>setAmount(e.target.value)} />
-          <Select label="Default Account Account" value={bankId} onChange={e=>setBankId(e.target.value)}>
+          <Select label="Default Account" value={bankId} onChange={e=>setBankId(e.target.value)}>
             {banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
           </Select>
           <Btn full onClick={handleCommitShortcut} style={{marginTop:8}}>Commit Shortcut Slot</Btn>
@@ -1586,14 +1738,14 @@ function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currenc
   const [showAdd, setShowAdd] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
-  const [confirmUndo, setConfirmUndo] = useState(null); 
+  const [confirmUndo, setConfirmUndo] = useState(null);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [bankId, setBankId] = useState(banks[0]?.id||"");
   const [catId, setCatId] = useState(expCats[0]?.id||"");
   const [dueDay, setDueDay] = useState("1");
   const [reminderDays, setReminderDays] = useState("2");
-  
+
   const defaultMonth = new Date().toISOString().slice(0,7);
   const [filterMonth, setFilterMonth] = useState(defaultMonth);
   const availMonths = [...new Set([...bills.flatMap(b=>b.payments?.map(p=>p.month)||[]), defaultMonth])].sort().reverse();
@@ -1611,7 +1763,7 @@ function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currenc
   };
 
   const openAdd=(item=null)=>{setEditItem(item);setName(item?.name||"");setAmount(item?.amount?String(item.amount):"");setBankId(item?.bankId||banks[0]?.id||"");setCatId(item?.catId||expCats[0]?.id||"");setDueDay(item?.dueDay?String(item.dueDay):"1");setReminderDays(item?.reminderDays?String(item.reminderDays):"2");setShowAdd(true);};
-  
+
   const handleSave=async()=>{
     const parsedAmt = parseFloat(amount);
     if(!name||!amount||isNaN(parsedAmt)||parsedAmt<=0)return;
@@ -1627,7 +1779,7 @@ function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currenc
     const dateStr=today();
     const [y, mo] = filterMonth.split("-");
     const monthStr = `${MONTHS[+mo-1]} ${y}`;
-    
+
     const txnIdToken = await onAddTxn({
       type:"expense",amount:bill.amount,date:dateStr,
       bankId:bill.bankId,bankName:bank?.name,
@@ -1645,7 +1797,7 @@ function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currenc
     if(!confirmUndo) return;
     const payment = confirmUndo.payments.find(p=>p.month === filterMonth);
     if(payment && payment.txnId) {
-      await delTxn(payment.txnId); 
+      await delTxn(payment.txnId);
     }
     await onSave(bills.map(b=>b.id===confirmUndo.id?{...b,payments:b.payments.filter(p=>p.month!==filterMonth)}:b));
     setConfirmUndo(null);
@@ -1665,18 +1817,18 @@ function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currenc
       <div style={{marginBottom:16}}>
          <MonthSelect value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} availMonths={availMonths} />
       </div>
-      
+
       <div style={{color:C.muted,fontSize:13,marginBottom:16}}>{paidCount}/{bills.length} paid in selected month</div>
-      
+
       {bills.length>0&&(
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
           <Card style={{padding:"14px 14px 12px"}}><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Total Monthly</div><div style={{color:C.text,fontSize:18,fontWeight:800}}>{fmt(totalMonthly)}</div></Card>
           <Card style={{padding:"14px 14px 12px"}}><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Paid Selected</div><div style={{color:C.accent,fontSize:18,fontWeight:800}}>{fmt(paidAmount)}</div></Card>
         </div>
       )}
-      
+
       {bills.length===0&&<EmptyState icon="📋" message="No monthly bills added yet." />}
-      
+
       {bills.length > 0 && (
         <div style={{border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
           <SortableList gap={0} items={bills} onReorder={onSave} renderItem={(bill, idx) => {
@@ -1722,7 +1874,7 @@ function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currenc
           }} />
         </div>
       )}
-      
+
       {showAdd&&(<Modal title={editItem?"Edit Bill":"New Monthly Bill"} onClose={()=>{setShowAdd(false);setEditItem(null);}} center={false}><Input label="Bill Name" value={name} onChange={e=>setName(e.target.value)}/><div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Amount ({currency})</div><input type="number" step="any" value={amount} onChange={e=>setAmount(e.target.value)} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:15,outline:"none",boxSizing:"border-box", fontFamily: "'DM Sans', sans-serif"}}/></div><Select label="Pay from Account" value={bankId} onChange={e=>setBankId(e.target.value)}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select><Select label="Category" value={catId} onChange={e=>setCatId(e.target.value)}>{expCats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]||"📌"} {c.name}</option>)}</Select>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
             <div><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Due Day</div><input type="number" min="1" max="28" value={dueDay} onChange={e=>setDueDay(e.target.value)} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:15,outline:"none",boxSizing:"border-box", fontFamily: "'DM Sans', sans-serif"}}/><div style={{color:C.faint,fontSize:10,marginTop:4}}>Day of month (1–28)</div></div>
@@ -1748,22 +1900,24 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
   const [inputThreshold, setInputThreshold] = useState("");
   const [nameInput, setNameInput] = useState(username||"");
   const [confirmDel, setConfirmDel] = useState(null);
-  
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
+  const [pendingRestore, setPendingRestore] = useState(null);
+
   const fileInputRef = useRef(null);
 
   const openAdd=(type,item=null)=>{setModal({type,item});setInputName(item?.name||"");setInputColor(item?.color||C.accent);setInputGroup(item?.group||"daily");setInputIcon(item?.icon||"others");setGroupCats(item?.cats||[]);setInputThreshold(item?.lowBalanceThreshold?String(item.lowBalanceThreshold):"");};
-  
+
   const handleSave=async()=>{
     if(!inputName.trim())return; const id=modal.item?.id||Date.now().toString();
     const thresh = parseFloat(inputThreshold); const threshVal = !isNaN(thresh) && thresh > 0 ? thresh : undefined;
-    
+
     if(modal.type==="bank") await onBanks(modal.item?banks.map(b=>b.id===id?{id,name:inputName,color:inputColor,lowBalanceThreshold:threshVal}:b):[...banks,{id,name:inputName,color:inputColor,lowBalanceThreshold:threshVal}]);
     else if(modal.type==="expCat") await onExpCats(modal.item?expCats.map(c=>c.id===id?{id,name:inputName,icon:inputIcon,group:inputGroup}:c):[...expCats,{id,name:inputName,icon:inputIcon,group:inputGroup}]);
     else if(modal.type==="incCat") await onIncCats(modal.item?incCats.map(c=>c.id===id?{id,name:inputName,icon:inputIcon}:c):[...incCats,{id,name:inputName,icon:inputIcon}]);
     else if(modal.type==="group") await onGroups(modal.item?groups.map(g=>g.id===id?{id,name:inputName,color:inputColor,cats:groupCats}:g):[...groups,{id,name:inputName,color:inputColor,cats:groupCats}]);
     setModal(null);
   };
-  
+
   const doDelete=async()=>{
     const{type,item}=confirmDel;
     if(type==="bank")await onBanks(banks.filter(b=>b.id!==item.id));
@@ -1772,7 +1926,7 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
     else if(type==="group")await onGroups(groups.filter(g=>g.id!==item.id));
     setConfirmDel(null);
   };
-  
+
   const handleBackup = async () => {
     const data = { txns, banks, expCats, incCats, groups, savings, bills, budgets, currency, username };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -1780,7 +1934,7 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
     const a = document.createElement("a");
     a.href = url;
     const backupDate = new Date().toISOString().split("T")[0];
-    a.download = `Saver_Backup_${backupDate}.json`; 
+    a.download = `Saver_Backup_${backupDate}.json`;
     a.click();
     const now = Date.now();
     await save(KEYS.lastBackup, now);
@@ -1789,6 +1943,7 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
     setAppAlert({ title: "Backup Complete", message: "🔄 Backup file saved to your Downloads folder.", color: C.accent });
   };
 
+  // ─── FIX #10: Confirm before restore ──
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1796,14 +1951,15 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
     reader.onload = async (evt) => {
       try {
         const parsed = JSON.parse(evt.target.result);
-        await onRestore(parsed);
+        setPendingRestore(parsed);
+        setShowRestoreConfirm(true);
       } catch {
         HAPTICS.warning();
         setAppAlert({ title: "Import Error", message: "❌ Failed parsing JSON file. Check payload validity.", color: C.red });
       }
     };
     reader.readAsText(file);
-    e.target.value = ""; 
+    e.target.value = "";
   };
 
   const canDelBank=(b)=>bankBalance(b.id)===0;
@@ -1815,7 +1971,7 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
          <div style={{color:C.text,fontSize:22,fontWeight:800}}>Settings</div>
          <Btn small outline color={C.accent} onClick={onOpenManual}>📖 User Guide</Btn>
       </div>
-      
+
       <div style={{display:"flex",gap:8,marginBottom:20,overflowX:"auto",paddingBottom:4}}>
         {[{id:"profile",label:"👤 General"},{id:"currency",label:"💱 Currency"},{id:"banks",label:"🏦 Accounts"},{id:"expCats",label:"📤 Exp. Cat."}, {id:"incCats",label:"💰 Inc. Cat."}, {id:"groups",label:"📊 Groups"}].map(s=>(
           <button key={s.id} onClick={()=>setSection(s.id)} style={{whiteSpace:"nowrap",padding:"8px 14px",borderRadius:10,border:`1px solid ${section===s.id?C.accent:C.border}`,background:section===s.id?C.accentDim:"transparent",color:section===s.id?C.accent:C.muted,fontWeight:700,fontSize:12,cursor:"pointer", fontFamily: "'DM Sans', sans-serif"}}>{s.label}</button>
@@ -1827,9 +1983,9 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
           <div onClick={onOpenSavings} style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",cursor:"pointer",marginBottom:10}}><div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:18,color:C.yellow}}>◎</span><span style={{color:C.text,fontWeight:600,fontSize:14}}>Savings Goals</span></div><span style={{color:C.muted}}>❯</span></div>
           <div onClick={onOpenBudgets} style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",cursor:"pointer",marginBottom:10}}><div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:18,color:C.accent}}>📊</span><span style={{color:C.text,fontWeight:600,fontSize:14}}>Monthly Budgets</span></div><span style={{color:C.muted}}>❯</span></div>
           <div onClick={onOpenQuickActions} style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",cursor:"pointer",marginBottom:20}}><div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:18,color:C.blue}}>⚡</span><span style={{color:C.text,fontWeight:600,fontSize:14}}>Quick Actions</span></div><span style={{color:C.muted}}>❯</span></div>
-          
+
           <Card style={{marginBottom:16}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Your Name</div><input value={nameInput} onChange={e=>setNameInput(e.target.value)} placeholder="Enter name..." style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:15,outline:"none",boxSizing:"border-box",marginBottom:12, fontFamily: "'DM Sans', sans-serif"}}/><Btn full onClick={()=>{onUsername(nameInput.trim()); setAppAlert({title:"Profile Updated", message:"Name updated successfully!", color:C.accent});}}>Save Name</Btn></Card>
-          
+
           <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Backup & Restore</div>
           <Card style={{marginBottom:16}}>
             <p style={{color:C.muted, fontSize:12, marginBottom:14, lineHeight:1.4}}>Download a backup or restore from a previous backup file.</p>
@@ -1843,6 +1999,7 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
       )}
 
       {section==="currency"&&(<div style={{display:"flex",flexDirection:"column",gap:10}}>{CURRENCIES.map(cur=>(<button key={cur.code} onClick={()=>onCurrency(cur.code)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:currency===cur.code?C.accentDim:C.card,border:`1.5px solid ${currency===cur.code?C.accent:C.border}`,borderRadius:12,padding:"14px 16px",cursor:"pointer",textAlign:"left", fontFamily: "'DM Sans', sans-serif"}}><div><div style={{color:currency===cur.code?C.accent:C.text,fontWeight:700,fontSize:15}}>{cur.code}</div><div style={{color:C.muted,fontSize:12,marginTop:2}}>{cur.name}</div></div>{currency===cur.code&&<span style={{color:C.accent,fontSize:20}}>✓</span>}</button>))}</div>)}
+
       {section==="banks"&&(<><div style={{display:"flex",flexDirection:"column"}}>{banks.map(b=>(
         <SwipeRow key={b.id} onEdit={()=>openAdd("bank",b)} onDelete={()=>canDelBank(b)?setConfirmDel({type:"bank",item:b}):setAppAlert({title:"Action Blocked", message:`Cannot delete "${b.name}" — it still has a balance of ${fmt(bankBalance(b.id))}. Clear balance first.`, color:C.red})}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px"}}>
@@ -1851,7 +2008,7 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
           </div>
         </SwipeRow>
       ))}</div><Btn outline full onClick={()=>openAdd("bank")} style={{marginTop:8}}>+ Add Account</Btn></>)}
-      
+
       {section==="expCats"&&(<><div style={{display:"flex",flexDirection:"column"}}>{expCats.map(c=>(
         <SwipeRow key={c.id} onEdit={()=>openAdd("expCat",c)} onDelete={()=>setConfirmDel({type:"expCat",item:c})}>
           <div style={{display:"flex",alignItems:"center",padding:"14px 16px"}}><span style={{fontSize:18,marginRight:10}}>{ICONS[c.icon]||"📌"}</span><span style={{color:C.text,fontWeight:600,fontSize:14}}>{c.name}</span></div>
@@ -1900,6 +2057,21 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
         </Modal>
       )}
       {confirmDel&&<ConfirmModal title="Delete?" message="This action cannot be undone." onClose={()=>setConfirmDel(null)} onConfirm={doDelete}/>}
+
+      {/* ─── FIX #10: Restore confirmation modal ── */}
+      {showRestoreConfirm && (
+        <ConfirmModal
+          title="Restore Backup?"
+          message="⚠️ This will overwrite ALL your current data with the backup file. This cannot be undone. Are you sure?"
+          confirmColor={C.purple}
+          onClose={() => { setShowRestoreConfirm(false); setPendingRestore(null); }}
+          onConfirm={async () => {
+            setShowRestoreConfirm(false);
+            await onRestore(pendingRestore);
+            setPendingRestore(null);
+          }}
+        />
+      )}
     </div>
   );
 }
