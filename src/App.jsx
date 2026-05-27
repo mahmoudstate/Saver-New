@@ -1,7 +1,8 @@
+// ─── Saver One V1.0 ───────────────────────────────────────────────────────────
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, verticalListSortingStrategy, rectSortingStrategy, useSortable } from "@dnd-kit/sortable";
-import Privacy from './Privacy'; // استيراد صفحة الخصوصية الجديدة
+import Privacy from "./Privacy";
 
 // ─── Haptic Feedback Engine ────────────────────────────────────────────────────
 const vibrate = (pattern) => {
@@ -37,13 +38,9 @@ const CURRENCIES = [
   { code: "SAR", name: "Saudi Riyal" }, { code: "AED", name: "UAE Dirham" },
 ];
 
-// ─── FIX #1: currency as React-safe module-level ref (not bare global mutated outside React) ──
-// We keep _currency as a fallback for fmt() calls that happen outside React tree,
-// but the primary source of truth is the React state passed as prop.
 let _currency = "EGP";
 const setCurrencyGlobal = (c) => { _currency = c; };
 
-// ─── FIX #2: fmt with try/catch to prevent crash on invalid currency code ──
 const fmt = (n, overrideCurrency) => {
   const cur = overrideCurrency || _currency;
   try {
@@ -113,7 +110,6 @@ const KEYS = {
   budgets:"et_budgets", quickActions: "et_quick_actions", seenWelcome: "et_seenWelcome"
 };
 
-// ─── FIX #3: Robust localStorage with quota/private-mode handling ──
 async function load(key, fallback) {
   try {
     const r = localStorage.getItem(key);
@@ -174,6 +170,19 @@ function ConfirmModal({ title, message, onConfirm, onClose, confirmColor }) {
   );
 }
 
+// ─── App Footer Component ─────────────────────────────────────────────────────
+function AppFooter({ navigateTo }) {
+  return (
+    <div style={{textAlign: "center", marginTop: 40, marginBottom: 20, width: "100%"}}>
+      <div style={{color: "#60a5fa", opacity: 0.6, fontSize: "13px", fontWeight: "700", marginBottom: "6px"}}>Saver One V1.0</div>
+      <div style={{marginBottom: "10px"}}>
+        <span onClick={() => navigateTo && navigateTo("privacy")} style={{color: "#6ee7b7", fontWeight: "700", fontSize: "12px", borderBottom: "1px solid #6ee7b7", cursor: "pointer"}}>Privacy Policy</span>
+      </div>
+      <div style={{color: "#60a5fa", opacity: 0.6, fontSize: "10px", fontWeight: "500"}}>Offline & 100% Private · Powered by Mahmoud © 2026</div>
+    </div>
+  );
+}
+
 function AlertModal({ title, message, onClose, btnColor=C.accent }) {
   return (
     <Modal title={title} onClose={onClose} center={true}>
@@ -227,7 +236,7 @@ function Btn({ children, color=C.accent, outline, full, small, ...props }) {
 
 function ProgressBar({ value, max, color }) {
   const pct = max ? Math.min(100,(value/max)*100) : 0;
-  return <div style={{ height:6, background:C.border, borderRadius:99, overflow:"hidden" }}><div style={{ height:"100%", width:`${pct}%`, background:color||C.accent, borderRadius:99, transition:"width .4s" }} /></div>;
+  return <div style={{ height:6, background:C.border, borderRadius99:99, borderRadius:"99px", overflow:"hidden" }}><div style={{ height:"100%", width:`${pct}%`, background:color||C.accent, borderRadius:99, transition:"width .4s" }} /></div>;
 }
 
 function EmptyState({ icon, message }) {
@@ -409,18 +418,10 @@ function AddToHomeModal({ onClose }) {
         <div style={{ background:C.blueDim, border:`1px solid ${C.blue}44`, borderRadius:12, padding:"12px 14px", marginBottom:20 }}>
           <span style={{ color:C.blue, fontSize:13, fontWeight:600 }}>📱 iPhone / iPad detected — follow these steps in <strong>Safari</strong></span>
         </div>
-        <Step num="1">
-          Open this page in <strong style={{color:C.accent}}>Safari</strong> (not Chrome or other browsers).
-        </Step>
-        <Step num="2">
-          Tap the <strong style={{color:C.accent}}>Share button</strong> at the bottom of the screen — it looks like a box with an arrow pointing up <span style={{fontSize:18}}>⎙</span>
-        </Step>
-        <Step num="3">
-          Scroll down in the share sheet and tap <strong style={{color:C.accent}}>"Add to Home Screen"</strong>
-        </Step>
-        <Step num="4">
-          Tap <strong style={{color:C.accent}}>"Add"</strong> in the top-right corner. Saver will appear on your home screen like a native app!
-        </Step>
+        <Step num="1">Open this page in <strong style={{color:C.accent}}>Safari</strong> (not Chrome or other browsers).</Step>
+        <Step num="2">Tap the <strong style={{color:C.accent}}>Share button</strong> at the bottom of the screen — it looks like a box with an arrow pointing up <span style={{fontSize:18}}>⎙</span></Step>
+        <Step num="3">Scroll down in the share sheet and tap <strong style={{color:C.accent}}>"Add to Home Screen"</strong></Step>
+        <Step num="4">Tap <strong style={{color:C.accent}}>"Add"</strong> in the top-right corner. Saver will appear on your home screen like a native app!</Step>
         <div style={{ background:C.accentDim, border:`1px solid ${C.accent}33`, borderRadius:12, padding:"12px 14px", marginBottom:20 }}>
           <span style={{ color:C.accent, fontSize:13 }}>✅ Once added, open Saver from your home screen and it will run in full-screen mode with no browser bars.</span>
         </div>
@@ -435,18 +436,10 @@ function AddToHomeModal({ onClose }) {
         <div style={{ background:C.accentDim, border:`1px solid ${C.accent}44`, borderRadius:12, padding:"12px 14px", marginBottom:20 }}>
           <span style={{ color:C.accent, fontSize:13, fontWeight:600 }}>📱 Android detected — follow these steps in <strong>Chrome</strong></span>
         </div>
-        <Step num="1">
-          Open this page in <strong style={{color:C.accent}}>Google Chrome</strong>.
-        </Step>
-        <Step num="2">
-          Tap the <strong style={{color:C.accent}}>three-dot menu</strong> <span style={{fontSize:16}}>⋮</span> in the top-right corner of Chrome.
-        </Step>
-        <Step num="3">
-          Tap <strong style={{color:C.accent}}>"Add to Home screen"</strong> or <strong style={{color:C.accent}}>"Install app"</strong> (the option name may vary).
-        </Step>
-        <Step num="4">
-          Tap <strong style={{color:C.accent}}>"Add"</strong> on the confirmation dialog. Saver will appear on your home screen!
-        </Step>
+        <Step num="1">Open this page in <strong style={{color:C.accent}}>Google Chrome</strong>.</Step>
+        <Step num="2">Tap the <strong style={{color:C.accent}}>three-dot menu</strong> <span style={{fontSize:16}}>⋮</span> in the top-right corner of Chrome.</Step>
+        <Step num="3">Tap <strong style={{color:C.accent}}>"Add to Home screen"</strong> or <strong style={{color:C.accent}}>"Install app"</strong> (the option name may vary).</Step>
+        <Step num="4">Tap <strong style={{color:C.accent}}>"Add"</strong> on the confirmation dialog. Saver will appear on your home screen!</Step>
         <div style={{ background:C.accentDim, border:`1px solid ${C.accent}33`, borderRadius:12, padding:"12px 14px", marginBottom:20 }}>
           <span style={{ color:C.accent, fontSize:13 }}>✅ Once added, open Saver from your home screen for a full-screen experience — no browser bars!</span>
         </div>
@@ -468,19 +461,6 @@ function AddToHomeModal({ onClose }) {
       </p>
       <Btn full onClick={onClose} style={{ marginTop:16 }}>Got it!</Btn>
     </Modal>
-  );
-}
-
-// ─── App Footer Component ─────────────────────────────────────────────────────
-function AppFooter({ navigateTo }) {
-  return (
-    <div style={{textAlign: "center", marginTop: 40, marginBottom: 20, width: "100%"}}>
-      <div style={{color: "#60a5fa", opacity: 0.6, fontSize: "13px", fontWeight: "700", marginBottom: "6px"}}>Saver One V1.0</div>
-      <div style={{marginBottom: "10px"}}>
-        <span onClick={() => navigateTo && navigateTo("privacy")} style={{color: "#6ee7b7", fontWeight: "700", fontSize: "12px", borderBottom: "1px solid #6ee7b7", cursor: "pointer"}}>Privacy Policy</span>
-      </div>
-      <div style={{color: "#60a5fa", opacity: 0.6, fontSize: "10px", fontWeight: "500"}}>Offline & 100% Private · Powered by Mahmoud © 2026</div>
-    </div>
   );
 }
 
@@ -567,9 +547,7 @@ function UserManual({ onBack, navigateTo }) {
 
       <div style={{marginBottom: 24}}>
         <Btn full outline color={C.accent} onClick={handleFeedback}>🐞 Report a Bug / Suggestion</Btn>
-        <div style={{textAlign: "center", color: C.faint, fontSize: 10, marginTop: 8}}>
-          (Opens email to: hello@savertrack.app)
-        </div>
+        <div style={{textAlign: "center", color: C.faint, fontSize: 10, marginTop: 8}}>(Opens email to: hello@savertrack.app)</div>
       </div>
 
       <div style={{display:"flex", gap:8, marginBottom:30, overflowX:"auto", paddingBottom: 10, WebkitOverflowScrolling: "touch"}}>
@@ -713,7 +691,6 @@ function UserManual({ onBack, navigateTo }) {
       </div>
 
       <AppFooter navigateTo={navigateTo} />
-
     </div>
   );
 }
@@ -749,7 +726,6 @@ function SplashScreen() {
           <div key={i} style={{width:5,height:5,borderRadius:99,background:"#6ee7b7",animation:`saverBounce 1.3s ease ${i*0.22}s infinite`}}/>
         ))}
       </div>
-      
       <div style={{color:"#444460", fontSize:10, position:"absolute", bottom:24, fontWeight:700, letterSpacing:1}}>
         Saver One V1.0
       </div>
@@ -923,7 +899,6 @@ function SaverApp() {
   const filteredTxns=filterMonth==="all"?txns:txns.filter(t=>t.date.startsWith(filterMonth));
   const availMonths=[...new Set(txns.map(t=>t.date.slice(0,7)))].sort().reverse();
 
-  // ─── FIX #4: Show backup alert if NEVER backed up OR over 3 days since last backup ──
   const showBackupAlert = !lastBackup || (Date.now() - lastBackup > 3 * 24 * 60 * 60 * 1000);
 
   const isSubPageActive = ledgerBank || ledgerGroup || ledgerSaving || ledgerBudget || tab === "savings" || tab === "budgets" || tab === "quickactions" || tab === "manual" || tab === "privacy";
@@ -1025,7 +1000,6 @@ function BottomNav({ tab, navigateTo, expCats, banks, onAdd, currency, bankBalan
           </button>
         </div>
 
-        {/* ─── FIX #5: Show hint if long-pressed but no shortcuts configured ── */}
         {showQuick && activeShortcuts.length === 0 && (
           <div style={{ position:"fixed", bottom:135, left:"50%", transform:"translateX(-50%)", background:C.card, border:`1px solid ${C.border}`, borderRadius:18, padding:"16px 20px", width:"auto", maxWidth:"85%", boxShadow:"0 12px 32px rgba(0,0,0,0.7)", zIndex:60, textAlign:"center" }}>
             <div style={{fontSize:24, marginBottom:8}}>⚡</div>
@@ -1113,7 +1087,6 @@ function Dashboard({ txns, bills, budgets, banks, groups, expCats, savings, filt
   const totalBillsCount = bills.length;
   const remainingBillsAmount = bills.filter(b=>!b.payments?.some(p=>p.month===billsForMonth)).reduce((sum,b)=>sum+b.amount,0);
 
-  // ─── FIX #6: daysLeft scoped to current real month, not affected by filter ──
   const now = new Date();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const daysLeft = Math.max(1, daysInMonth - now.getDate() + 1);
@@ -1353,7 +1326,6 @@ function DeepLedgerView({ title, headerType, headerData, txns, onDelete, onUpdat
       </div>
 
       {confirmId && <ConfirmModal title="Delete Transaction?" message="This drops the record and updates balances instantly." onClose={() => setConfirmId(null)} onConfirm={() => { onDelete(confirmId); setConfirmId(null); }} />}
-      {/* ─── FIX #7: Show info toast when trying to edit a transfer ── */}
       {editTxn && editTxn.type === "transfer" && (
         <AlertModal title="Cannot Edit Transfer" message="Transfers cannot be edited directly. Delete this transfer and create a new one if needed." onClose={() => setEditTxn(null)} btnColor={C.blue} />
       )}
@@ -1371,12 +1343,8 @@ function TxnRow({ txn, hideTotal }) {
             {txn.type==="saving"?ICONS.saving:isTrans?ICONS.transfer:ICONS[txn.catIcon]||"📌"}
         </div>
         <div>
-            <div style={{color:C.text,fontWeight:600,fontSize:14}}>
-                {isTrans ? "Transfer" : (txn.catName||txn.type)}
-            </div>
-            <div style={{color:C.muted,fontSize:11}}>
-                {isTrans ? `${txn.bankName} ➔ ${txn.toBankName}` : txn.bankName} · {fmtDate(txn.date)}
-            </div>
+            <div style={{color:C.text,fontWeight:600,fontSize:14}}>{isTrans ? "Transfer" : (txn.catName||txn.type)}</div>
+            <div style={{color:C.muted,fontSize:11}}>{isTrans ? `${txn.bankName} ➔ ${txn.toBankName}` : txn.bankName} · {fmtDate(txn.date)}</div>
         </div>
       </div>
       <div style={{color:isExp?C.red:isInc?C.accent:isTrans?C.blue:C.yellow,fontWeight:800,fontSize:15}}>
@@ -1407,7 +1375,6 @@ function AddTransaction({ banks, expCats, incCats, savings, currency, onAdd, onS
   const handleSubmit = async () => {
     const parsedAmt = parseFloat(amount);
     if(!amount || isNaN(parsedAmt) || parsedAmt <= 0) return;
-    // ─── FIX #8: Compute date at submit time (not mount time) ──
     const submitDate = today();
 
     if (type === "transfer") {
@@ -1504,15 +1471,12 @@ function History({ txns, onDelete, onUpdate, banks, expCats, incCats, currency, 
       <div style={{display:"flex",flexDirection:"column"}}>
         {filtered.length===0&&<EmptyState icon="💸" message="No transactions found." />}
         {filtered.map(t=>(
-          <SwipeRow key={t.id}
-            onEdit={t.type !== "transfer" ? ()=>setEditTxn(t) : ()=>setTransferAlert(true)}
-            onDelete={()=>setConfirmId(t.id)}>
+          <SwipeRow key={t.id} onEdit={t.type !== "transfer" ? ()=>setEditTxn(t) : ()=>setTransferAlert(true)} onDelete={()=>setConfirmId(t.id)}>
             <TxnRow txn={t} hideTotal={false} />
           </SwipeRow>
         ))}
       </div>
       {confirmId&&<ConfirmModal title="Delete Transaction?" message="This action cannot be undone." onClose={()=>setConfirmId(null)} onConfirm={()=>{onDelete(confirmId);setConfirmId(null);}}/>}
-      {/* ─── FIX #7 (History): Info alert for transfer edit attempt ── */}
       {transferAlert && <AlertModal title="Cannot Edit Transfer" message="Transfers cannot be edited directly. Delete this transfer and create a new one if needed." onClose={()=>setTransferAlert(false)} btnColor={C.blue} />}
       {editTxn&&<EditTxnModal txn={editTxn} banks={banks} expCats={expCats} incCats={incCats} currency={currency} onSave={async(data)=>{const ok=await onUpdate(editTxn.id,data); if(ok)setEditTxn(null);}} onClose={()=>setEditTxn(null)}/>}
     </div>
@@ -1600,14 +1564,7 @@ function SavingsPage({ savings, onSave, txns, onBack }) {
         }} />
       </div>
       {showAdd&&(<Modal title={editId?"Edit Goal":"New Saving Goal"} onClose={()=>{setShowAdd(false);setEditId(null);}} center={false}><Input label="Goal Name" placeholder="e.g. Travel Fund..." value={name} onChange={e=>setName(e.target.value)}/><Input label="Target Amount" type="number" step="any" value={goal} onChange={e=>setGoal(e.target.value)}/><Btn full onClick={handleAdd}>{editId?"Update Goal":"Create Goal"}</Btn></Modal>)}
-
-      {/* ─── FIX #9: Warn that deleting a goal will leave orphan transactions ── */}
-      {confirmId&&<ConfirmModal
-        title="Delete Goal?"
-        message="This will permanently delete this saving goal. Note: any saving transactions linked to this goal will remain in your history and still affect your account balances."
-        onClose={()=>setConfirmId(null)}
-        onConfirm={async()=>{await onSave(savings.filter(s=>s.id!==confirmId));setConfirmId(null);}}
-      />}
+      {confirmId&&<ConfirmModal title="Delete Goal?" message="This will permanently delete this saving goal. Note: any saving transactions linked to this goal will remain in your history and still affect your account balances." onClose={()=>setConfirmId(null)} onConfirm={async()=>{await onSave(savings.filter(s=>s.id!==confirmId));setConfirmId(null);}}/>}
     </div>
   );
 }
@@ -1865,32 +1822,21 @@ function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currenc
               <SwipeRow key={bill.id} onEdit={()=>openAdd(bill)} onDelete={()=>setConfirmDelete(bill.id)}>
                 <div style={{background:paid?C.accentDim+"55":C.card,boxSizing:"border-box",borderBottom:isLast?"none":`1px solid ${C.border}`}}>
                   <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px 6px"}}>
-                    <div style={{width:36,height:36,borderRadius:99,background:paid?C.accentDim:C.border+"88",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
-                      {ICONS[cat?.icon]||"⚡"}
-                    </div>
+                    <div style={{width:36,height:36,borderRadius:99,background:paid?C.accentDim:C.border+"88",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{ICONS[cat?.icon]||"⚡"}</div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{color:C.text,fontWeight:700,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{bill.name}</div>
-                      <div style={{color:C.muted,fontSize:11,marginTop:1}}>
-                        {bank?.name} · {cat?.name||"Bills"}
-                        {bill.dueDay?<span style={{color:C.faint}}> · Due {bill.dueDay}{bill.dueDay===1?"st":bill.dueDay===2?"nd":bill.dueDay===3?"rd":"th"}</span>:null}
-                      </div>
+                      <div style={{color:C.muted,fontSize:11,marginTop:1}}>{bank?.name} · {cat?.name||"Bills"}{bill.dueDay?<span style={{color:C.faint}}> · Due {bill.dueDay}{bill.dueDay===1?"st":bill.dueDay===2?"nd":bill.dueDay===3?"rd":"th"}</span>:null}</div>
                       {(()=>{const r=getReminderStatus(bill);return r?<div style={{color:r.overdue?C.red:C.yellow,fontSize:10,fontWeight:700,marginTop:3}}>{r.overdue?"🔴 Overdue by "+r.days+" day"+(r.days!==1?"s":""):"🟡 Due in "+r.days+" day"+(r.days!==1?"s":"")}</div>:null;})()}
                     </div>
                     <div style={{color:paid?C.accent:C.red,fontSize:17,fontWeight:800,flexShrink:0}}>{fmt(bill.amount)}</div>
                   </div>
                   <div style={{padding:"0 14px 12px",display:"flex",gap:8}}>
                     {!paid ? (
-                      <button onClick={()=>handlePay(bill)} style={{flex:1,background:C.accentDim,border:`1.5px solid ${C.accent}`,color:C.accent,borderRadius:10,height:44,fontWeight:800,fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6, fontFamily: "'DM Sans', sans-serif"}}>
-                        <span>✓</span> Pay Now
-                      </button>
+                      <button onClick={()=>handlePay(bill)} style={{flex:1,background:C.accentDim,border:`1.5px solid ${C.accent}`,color:C.accent,borderRadius:10,height:44,fontWeight:800,fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6, fontFamily: "'DM Sans', sans-serif"}}><span>✓</span> Pay Now</button>
                     ) : (
                       <>
-                        <div style={{flex:1,background:C.accent,color:C.bg,borderRadius:10,height:44,fontSize:14,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-                          ✓ Paid {filterMonth.slice(5)}
-                        </div>
-                        <button onClick={()=>setConfirmUndo(bill)} style={{flexShrink:0,background:C.yellowDim,border:`1.5px solid ${C.yellow}`,color:C.yellow,borderRadius:10,height:44,padding:"0 18px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4, fontFamily: "'DM Sans', sans-serif"}}>
-                          ⟲ Undo
-                        </button>
+                        <div style={{flex:1,background:C.accent,color:C.bg,borderRadius:10,height:44,fontSize:14,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>✓ Paid {filterMonth.slice(5)}</div>
+                        <button onClick={()=>setConfirmUndo(bill)} style={{flexShrink:0,background:C.yellowDim,border:`1.5px solid ${C.yellow}`,color:C.yellow,borderRadius:10,height:44,padding:"0 18px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4, fontFamily: "'DM Sans', sans-serif"}}>⟲ Undo</button>
                       </>
                     )}
                   </div>
@@ -1969,7 +1915,6 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
     setAppAlert({ title: "Backup Complete", message: "🔄 Backup file saved to your Downloads folder.", color: C.accent });
   };
 
-  // ─── FIX #10: Confirm before restore ──
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -2077,14 +2022,13 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
           {modal.type==="expCat"&&(<Select label="Group Tag" value={inputGroup} onChange={e=>setInputGroup(e.target.value)}>{["daily","fixed","lifestyle","growth","other"].map(g=><option key={g} value={g}>{g}</option>)}</Select>)}
           {modal.type==="group"&&(<>
             <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Color</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{[C.accent,C.red,C.blue,C.yellow,C.purple,"#fb923c","#34d399","#f472b6"].map(col=>(<button key={col} onClick={()=>setInputColor(col)} style={{width:28,height:28,borderRadius:99,background:col,border:inputColor===col?"3px solid white":"3px solid transparent",cursor:"pointer"}}/>))}</div></div>
-            <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Categories</div><div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:200,overflow:"auto",background:C.bg,padding:10,borderRadius:10,border:`1px solid ${C.border}`}}>{expCats.map(c=>{const checked=groupCats.includes(c.id);return(<label key={c.id} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"4px 0",userSelect:"none"}}><div onClick={()=>setGroupCats(checked?groupCats.filter(x=>x!==c.id):[...groupCats,c.id])} style={{width:18,height:18,borderRadius:4,border:`2px solid ${checked?C.accent:C.faint}`,background:checked?C.accentDim:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{checked&&<span style={{color:C.accent,fontSize:12}}>✓</span>}</div><span style={{color:C.text,fontSize:14}}>{ICONS[c.icon]||"📌"} {c.name}</span></label>);})}</div></div>
+            <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Categories</div><div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:200,overflow:"auto",background:C.bg,padding:10,borderRadius:10,border:`1px solid ${C.border}`}}>{expCats.map(c=>{const checked=groupCats.includes(c.id);return(<label key={c.id} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"4px 0",userSelect:"none"}><div onClick={()=>setGroupCats(checked?groupCats.filter(x=>x!==c.id):[...groupCats,c.id])} style={{width:18,height:18,borderRadius:4,border:`2px solid ${checked?C.accent:C.faint}`,background:checked?C.accentDim:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{checked&&<span style={{color:C.accent,fontSize:12}}>✓</span>}</div><span style={{color:C.text,fontSize:14}}>{ICONS[c.icon]||"📌"} {c.name}</span></label>);})}</div></div>
           </>)}
           <Btn full onClick={handleSave} style={{marginTop:8}}>Save</Btn>
         </Modal>
       )}
       {confirmDel&&<ConfirmModal title="Delete?" message="This action cannot be undone." onClose={()=>setConfirmDel(null)} onConfirm={doDelete}/>}
 
-      {/* ─── FIX #10: Restore confirmation modal ── */}
       {showRestoreConfirm && (
         <ConfirmModal
           title="Restore Backup?"
@@ -2098,7 +2042,6 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
           }}
         />
       )}
-      
       <AppFooter navigateTo={navigateTo} />
     </div>
   );
