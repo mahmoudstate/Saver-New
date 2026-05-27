@@ -176,12 +176,17 @@ function AlertModal({ title, message, onClose, btnColor=C.accent }) {
   );
 }
 
-function AppFooter({ navigateTo }) {
+function AppFooter({ navigateTo, onPrivacyClick }) {
   return (
     <div style={{textAlign: "center", marginTop: 40, marginBottom: 20, width: "100%"}}>
-      <div style={{color: "#60a5fa", opacity: 0.6, fontSize: "13px", fontWeight: "700", marginBottom: "6px"}}>Saver One V1.0</div>
-      <div style={{marginBottom: "10px"}}>
-        <span onClick={() => navigateTo && navigateTo("privacy")} style={{color: "#6ee7b7", fontWeight: "700", fontSize: "12px", borderBottom: "1px solid #6ee7b7", cursor: "pointer"}}>Privacy Policy</span>
+      <div style={{marginBottom: "6px", display: "flex", justifyContent: "center", alignItems: "center", gap: "8px"}}>
+        <span style={{color: "#60a5fa", opacity: 0.8, fontSize: "13px", fontWeight: "700"}}>Saver One V1.0</span>
+        {(navigateTo || onPrivacyClick) && (
+          <>
+            <span style={{color: "#444460"}}>|</span>
+            <span onClick={() => onPrivacyClick ? onPrivacyClick() : (navigateTo && navigateTo("privacy"))} style={{color: "#6ee7b7", fontWeight: "700", fontSize: "13px", cursor: "pointer"}}>Privacy Policy</span>
+          </>
+        )}
       </div>
       <div style={{color: "#60a5fa", opacity: 0.6, fontSize: "10px", fontWeight: "500"}}>Offline & 100% Private · Powered by Mahmoud © 2026</div>
     </div>
@@ -455,7 +460,7 @@ function AddToHomeModal({ onClose }) {
   );
 }
 
-function WelcomeScreen({ onStart, onManual, navigateTo }) {
+function WelcomeScreen({ onStart, onManual, onPrivacy }) {
   const [showInstall, setShowInstall] = useState(false);
   const { isInStandaloneMode } = detectPlatform();
 
@@ -502,7 +507,7 @@ function WelcomeScreen({ onStart, onManual, navigateTo }) {
         <Btn full outline color={C.muted} onClick={onManual} style={{padding:"14px", fontSize:16}}>Read Manual Guide</Btn>
       </div>
 
-      <AppFooter navigateTo={navigateTo} />
+      <AppFooter onPrivacyClick={onPrivacy} />
 
       {showInstall && (
         <AddToHomeModal onClose={() => { setShowInstall(false); onStart(); }} />
@@ -726,6 +731,7 @@ function SplashScreen() {
 function SaverApp() {
   const [tab, setTab] = useState("dashboard");
   const [scrollState, setScrollState] = useState({ y: 0, restore: false });
+  const [showPrivacyBeforeWelcome, setShowPrivacyBeforeWelcome] = useState(false);
   const [txns, setTxns] = useState([]);
   const [banks, setBanks] = useState(DEFAULT_BANKS);
   const [expCats, setExpCats] = useState(DEFAULT_EXP_CATS);
@@ -876,13 +882,16 @@ function SaverApp() {
 
   if (showSplash) return <SplashScreen />;
 
-  if (!hasSeenWelcome) return (
-    <WelcomeScreen
-       onStart={completeWelcome}
-       onManual={() => { completeWelcome(); navigateTo("manual"); }}
-       navigateTo={navigateTo}
-    />
-  );
+  if (!hasSeenWelcome) {
+    if (showPrivacyBeforeWelcome) return <Privacy onBack={() => setShowPrivacyBeforeWelcome(false)} />;
+    return (
+      <WelcomeScreen
+         onStart={completeWelcome}
+         onManual={() => { completeWelcome(); navigateTo("manual"); }}
+         onPrivacy={() => setShowPrivacyBeforeWelcome(true)}
+      />
+    );
+  }
 
   const allCats=[...expCats,...incCats];
   const filteredTxns=filterMonth==="all"?txns:txns.filter(t=>t.date.startsWith(filterMonth));
@@ -1814,32 +1823,21 @@ function MonthlyBills({ bills, onSave, banks, expCats, onAddTxn, delTxn, currenc
               <SwipeRow key={bill.id} onEdit={()=>openAdd(bill)} onDelete={()=>setConfirmDelete(bill.id)}>
                 <div style={{background:paid?C.accentDim+"55":C.card,boxSizing:"border-box",borderBottom:isLast?"none":`1px solid ${C.border}`}}>
                   <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px 6px"}}>
-                    <div style={{width:36,height:36,borderRadius:99,background:paid?C.accentDim:C.border+"88",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
-                      {ICONS[cat?.icon]||"⚡"}
-                    </div>
+                    <div style={{width:36,height:36,borderRadius:99,background:paid?C.accentDim:C.border+"88",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{ICONS[cat?.icon]||"⚡"}</div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{color:C.text,fontWeight:700,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{bill.name}</div>
-                      <div style={{color:C.muted,fontSize:11,marginTop:1}}>
-                        {bank?.name} · {cat?.name||"Bills"}
-                        {bill.dueDay?<span style={{color:C.faint}}> · Due {bill.dueDay}{bill.dueDay===1?"st":bill.dueDay===2?"nd":bill.dueDay===3?"rd":"th"}</span>:null}
-                      </div>
+                      <div style={{color:C.muted,fontSize:11,marginTop:1}}>{bank?.name} · {cat?.name||"Bills"}{bill.dueDay?<span style={{color:C.faint}}> · Due {bill.dueDay}{bill.dueDay===1?"st":bill.dueDay===2?"nd":bill.dueDay===3?"rd":"th"}</span>:null}</div>
                       {(()=>{const r=getReminderStatus(bill);return r?<div style={{color:r.overdue?C.red:C.yellow,fontSize:10,fontWeight:700,marginTop:3}}>{r.overdue?"🔴 Overdue by "+r.days+" day"+(r.days!==1?"s":""):"🟡 Due in "+r.days+" day"+(r.days!==1?"s":"")}</div>:null;})()}
                     </div>
                     <div style={{color:paid?C.accent:C.red,fontSize:17,fontWeight:800,flexShrink:0}}>{fmt(bill.amount)}</div>
                   </div>
                   <div style={{padding:"0 14px 12px",display:"flex",gap:8}}>
                     {!paid ? (
-                      <button onClick={()=>handlePay(bill)} style={{flex:1,background:C.accentDim,border:`1.5px solid ${C.accent}`,color:C.accent,borderRadius:10,height:44,fontWeight:800,fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6, fontFamily: "'DM Sans', sans-serif"}}>
-                        <span>✓</span> Pay Now
-                      </button>
+                      <button onClick={()=>handlePay(bill)} style={{flex:1,background:C.accentDim,border:`1.5px solid ${C.accent}`,color:C.accent,borderRadius:10,height:44,fontWeight:800,fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6, fontFamily: "'DM Sans', sans-serif"}}><span>✓</span> Pay Now</button>
                     ) : (
                       <>
-                        <div style={{flex:1,background:C.accent,color:C.bg,borderRadius:10,height:44,fontSize:14,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-                          ✓ Paid {filterMonth.slice(5)}
-                        </div>
-                        <button onClick={()=>setConfirmUndo(bill)} style={{flexShrink:0,background:C.yellowDim,border:`1.5px solid ${C.yellow}`,color:C.yellow,borderRadius:10,height:44,padding:"0 18px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4, fontFamily: "'DM Sans', sans-serif"}}>
-                          ⟲ Undo
-                        </button>
+                        <div style={{flex:1,background:C.accent,color:C.bg,borderRadius:10,height:44,fontSize:14,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>✓ Paid {filterMonth.slice(5)}</div>
+                        <button onClick={()=>setConfirmUndo(bill)} style={{flexShrink:0,background:C.yellowDim,border:`1.5px solid ${C.yellow}`,color:C.yellow,borderRadius:10,height:44,padding:"0 18px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4, fontFamily: "'DM Sans', sans-serif"}}>⟲ Undo</button>
                       </>
                     )}
                   </div>
@@ -1952,7 +1950,7 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
       </div>
 
       {section==="profile"&&(
-        <div>
+        <div style={{ paddingBottom: 20 }}>
           <div onClick={onOpenSavings} style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",cursor:"pointer",marginBottom:10}}><div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:18,color:C.yellow}}>◎</span><span style={{color:C.text,fontWeight:600,fontSize:14}}>Savings Goals</span></div><span style={{color:C.muted}}>❯</span></div>
           <div onClick={onOpenBudgets} style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",cursor:"pointer",marginBottom:10}}><div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:18,color:C.accent}}>📊</span><span style={{color:C.text,fontWeight:600,fontSize:14}}>Monthly Budgets</span></div><span style={{color:C.muted}}>❯</span></div>
           <div onClick={onOpenQuickActions} style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",cursor:"pointer",marginBottom:20}}><div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:18,color:C.blue}}>⚡</span><span style={{color:C.text,fontWeight:600,fontSize:14}}>Quick Actions</span></div><span style={{color:C.muted}}>❯</span></div>
@@ -1968,6 +1966,7 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
             </div>
             <input type="file" ref={fileInputRef} accept=".json" onChange={handleFileChange} style={{ display:"none" }} />
           </Card>
+          <AppFooter navigateTo={navigateTo} />
         </div>
       )}
 
@@ -2044,7 +2043,6 @@ function Settings({ banks, expCats, incCats, groups, onBanks, onExpCats, onIncCa
           }}
         />
       )}
-      <AppFooter navigateTo={navigateTo} />
     </div>
   );
 }
