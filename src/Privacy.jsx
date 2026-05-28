@@ -18,11 +18,11 @@ export default function Privacy({ onBack }) {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          
+
           <div style={{ background: "#17171f", padding: "18px", borderRadius: "16px", border: "1px solid #2a2a38" }}>
             <h3 style={{ color: "#6ee7b7", margin: "0 0 10px 0", fontSize: "16px", fontWeight: "600" }}>1. 100% Offline (Local Storage)</h3>
             <p style={{ margin: "0", fontSize: "13.5px", lineHeight: "1.6", color: "#8888a8" }}>
-              <strong style={{ color: "#e8e8f0" }}>Saver</strong> is designed to work completely offline. All your accounts, budgets, and daily expenses are securely encrypted and stored solely within your device's memory.
+              <strong style={{ color: "#e8e8f0" }}>Saver</strong> is designed to work completely offline. All your accounts, budgets, and daily expenses are securely stored solely within your device's local storage, protected by your device's own security sandbox.
             </p>
           </div>
 
@@ -36,7 +36,14 @@ export default function Privacy({ onBack }) {
           <div style={{ background: "#17171f", padding: "18px", borderRadius: "16px", border: "1px solid #2a2a38" }}>
             <h3 style={{ color: "#e8e8f0", margin: "0 0 10px 0", fontSize: "16px", fontWeight: "600" }}>3. Data Safety</h3>
             <p style={{ margin: "0", fontSize: "13.5px", lineHeight: "1.6", color: "#8888a8" }}>
-              The app relies on advanced browser local storage technologies to save records. Please remember that permanently clearing your browser cache may erase the data, so we always recommend using the built-in Backup feature.
+              The app relies on your device's built-in browser local storage to save records. Your data never leaves your device and is never transmitted over any network. Please remember that permanently clearing your browser cache may erase the data, so we always recommend using the built-in Backup feature.
+            </p>
+          </div>
+
+          <div style={{ background: "#17171f", padding: "18px", borderRadius: "16px", border: "1px solid #2a2a38" }}>
+            <h3 style={{ color: "#fbbf24", margin: "0 0 10px 0", fontSize: "16px", fontWeight: "600" }}>4. Device Security</h3>
+            <p style={{ margin: "0", fontSize: "13.5px", lineHeight: "1.6", color: "#8888a8" }}>
+              Your data is protected by your device's native security features, including iOS Sandbox protection on Apple devices. We recommend keeping your device's screen lock and passcode enabled for maximum protection of your financial data.
             </p>
           </div>
 
