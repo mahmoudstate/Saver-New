@@ -577,8 +577,8 @@ function SaverApp(){
       <>
         {tab==="dashboard"&&<Dashboard txns={filteredTxns} txnsAll={txns} bills={bills} budgets={budgets} banks={banks} groups={groups} expCats={expCats} savings={activeSavings} filterMonth={filterMonth} setFilterMonth={setFilterMonth} availMonths={availMonths} username={username} {...sharedProps} onDeleteTxn={delTxn} onUpdateTxn={updateTxn} onOpenBank={(b)=>{setScrollState({y:window.scrollY,restore:true});setLedgerBank(b);}} onOpenGroup={(g)=>{setScrollState({y:window.scrollY,restore:true});setLedgerGroup(g);}} onOpenSaving={(s)=>{setScrollState({y:window.scrollY,restore:true});setLedgerSaving(s);}} onOpenBudget={(bdg)=>{setScrollState({y:window.scrollY,restore:true});setLedgerBudget(bdg);}} hideTotal={hideTotal} setHideTotal={setHideTotal} navigateTo={navigateTo} scrollState={scrollState} setScrollState={setScrollState} onBanks={saveBanks} onBudgets={saveBudgets} onSavings={saveSavings} onGroups={saveGroups}/>}
         {tab==="add"&&<AddTransaction banks={banks} expCats={expCats} incCats={incCats} savings={activeSavings} currency={currency} onAdd={addTxn} onDone={()=>navigateTo("dashboard")} {...sharedProps} setAppAlert={setAppAlert} onGoalToast={setGoalToast} txns={txns}/>}
-        {tab==="history"&&<History txns={txns} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} currency={currency} availMonths={availMonths}/>}
         {tab==="savings"&&<SavingsPage savings={savings} onSave={saveSavings} txns={txns} banks={banks} onBack={()=>navigateTo("settings")} addTxn={addTxn} delTxn={delTxn} onGoalToast={setGoalToast} {...sharedProps} setAppAlert={setAppAlert} onOpenSaving={(s)=>{setScrollState({y:window.scrollY,restore:true});setLedgerSaving(s);}}/>}
+        {tab==="history"&&<History txns={txns} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} currency={currency} availMonths={availMonths} savings={savings} setAppAlert={setAppAlert}/>}
         {tab==="budgets"&&<BudgetsPage budgets={budgets} expCats={expCats} onSave={saveBudgets} onBack={()=>navigateTo("settings")} currency={currency}/>}
         {tab==="quickactions"&&<QuickActionsSetup quickActions={quickActions} expCats={expCats} banks={banks} onSave={saveQuickActions} onBack={()=>navigateTo("settings")}/>}
         {tab==="manual"&&<UserManual onBack={()=>navigateTo("settings")} navigateTo={navigateTo}/>}
@@ -655,7 +655,6 @@ function NavBtn({id,icon,label,tab,navigateTo}){
   const a=tab===id;
   return <button onClick={()=>navigateTo(id,false)} style={{background:"none",border:"none",color:a?C.accent:C.muted,display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"4px 0",cursor:"pointer",transition:"color .2s",width:55,fontFamily:"'DM Sans', sans-serif"}}><span style={{fontSize:22}}>{icon}</span><span style={{fontSize:10,fontWeight:700,letterSpacing:.5,textTransform:"uppercase"}}>{label}</span></button>;
 }
-
 // ── TxnRow ────────────────────────────────────────────────────────────────────
 function TxnRow({txn,hideTotal,onClick}){
   const isExp=txn.type==="expense"||txn.type==="goal_withdraw";
@@ -663,11 +662,14 @@ function TxnRow({txn,hideTotal,onClick}){
   const isTrans=txn.type==="transfer";
   const isSav=txn.type==="saving";
   const bg=isExp?C.redDim:isInc?C.accentDim:isTrans?C.blueDim:C.yellowDim;
-  const ic=isSav?ICONS.saving:isTrans?ICONS.transfer:txn.type==="goal_withdraw"?"💳":txn.type==="goal_return"?"🔓":ICONS[txn.catIcon]||"📌";
-  const baseLabel=isTrans?"Transfer":txn.type==="goal_withdraw"?`Spent from ${txn.goalName||"Goal"}`:txn.type==="goal_return"?`Returned from ${txn.goalName||"Goal"}`:txn.catName||txn.type;
   
-  // إضافة علامة الربط للعمليات المقسمة
-  const label = <>{baseLabel} {txn.splitGroupId && <span title="Linked Transaction" style={{fontSize:11, marginLeft:4, filter:"grayscale(1)"}}>🔗</span>}</>;
+  // تغيير أيقونة واسم عملية إرجاع الفلوس للبنك
+  const ic=isSav?ICONS.saving:isTrans?ICONS.transfer:txn.type==="goal_withdraw"?"💳":txn.type==="goal_return"?"🏦":ICONS[txn.catIcon]||"📌";
+  const baseLabel=isTrans?"Transfer":txn.type==="goal_withdraw"?`Spent from ${txn.goalName||"Goal"}`:txn.type==="goal_return"?`Returned to Bank`:txn.catName||txn.type;
+  
+  // إضافة علامة الربط مع آخر 3 أرقام من الـ ID للعمليات المقسمة
+  const splitId = txn.splitGroupId ? txn.splitGroupId.slice(-3) : "";
+  const label = <>{baseLabel} {txn.splitGroupId && <span title="Linked Transaction" style={{fontSize:11, marginLeft:6, filter:"grayscale(1)"}}>🔗 #{splitId}</span>}</>;
   
   const sub=isTrans?`${txn.bankName} ➔ ${txn.toBankName}`:txn.bankName;
   const amtColor=isExp?C.red:isInc?C.accent:isTrans?C.blue:C.yellow;
@@ -913,9 +915,9 @@ function SavingDetailView({goal,saved,txns,onDelete,addTxn,banks,savings,onSave,
     const enabling=!goal.spendingMode;
     setConfirmAction({
       type:"spending",
-      title:enabling?"Activate Spending Mode?":"Stop Spending Mode?",
+      title:enabling?"Start Spending Mode?":"Stop Spending Mode?",
       message:enabling?"💳 This will make the goal available as a payment source in the Add Transaction screen.\n\nYou can spend directly from this goal's balance.":"⏹ This will remove the goal from the payment sources list.\n\nYour saved balance stays safe.",
-      color:enabling?C.orange:C.muted,
+      color:enabling?C.accent:C.orange,
       onConfirm:async()=>{await onSave(savings.map(s=>s.id===goal.id?{...s,spendingMode:!goal.spendingMode}:s));HAPTICS.success();}
     });
   };
@@ -924,9 +926,7 @@ function SavingDetailView({goal,saved,txns,onDelete,addTxn,banks,savings,onSave,
     const amt=parseFloat(withdrawAmt);
     if(!amt||isNaN(amt)||amt<=0)return;
     if(amt>saved){setAppAlert({title:"Insufficient Balance",message:`Goal only has ${fmt(saved)}.`,color:C.red});return;}
-    // إصلاح سحب الطوارئ: نستخدم goal_return لفك التجميد عن الأموال لتعود للبنك
-    // يتم تمرير bankId وهمي لأن نظام الـ Auto-Split سيتولى إرجاع الأموال لكل بنك حسب رصيده في الهدف
-    const ok=await addTxn({type:"goal_return",amount:amt,date:today(),bankId:banks[0]?.id, goalId:goal.id,goalName:goal.name,catId:"",catName:"Emergency Withdrawal",catIcon:"saving"});
+    const ok=await addTxn({type:"goal_return",amount:amt,date:today(),bankId:banks[0]?.id, goalId:goal.id,goalName:goal.name,catId:"",catName:"Returned to Bank",catIcon:"saving"});
     if(ok!==false){setWithdrawModal(false);setWithdrawAmt("");}
   };
 
@@ -992,10 +992,10 @@ function SavingDetailView({goal,saved,txns,onDelete,addTxn,banks,savings,onSave,
 
     {!isArchived ? (
       <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:24}}>
-        <button onClick={handleToggleSpending} style={{width:"100%",background:goal.spendingMode?C.orange+"22":C.surface,border:`1.5px solid ${goal.spendingMode?C.orange:C.border}`,color:goal.spendingMode?C.orange:C.text,borderRadius:12,padding:"14px 0",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>{goal.spendingMode?"⏹ Stop Spending Mode":"💳 Start Spending Mode"}</button>
+        <button onClick={handleToggleSpending} style={{width:"100%",background:goal.spendingMode?C.orange+"22":C.accent+"22",border:`1.5px solid ${goal.spendingMode?C.orange:C.accent}`,color:goal.spendingMode?C.orange:C.accent,borderRadius:12,padding:"14px 0",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>{goal.spendingMode?"⏹ Stop Spending Mode":"💳 Start Spending Mode"}</button>
         <div style={{display:"flex",gap:8}}>
-          <button onClick={()=>setWithdrawModal(true)} style={{flex:1,background:C.orangeDim,border:`1.5px solid ${C.orange}`,color:C.orange,borderRadius:10,padding:"11px 0",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>➖ Withdraw</button>
-          <button onClick={handleArchive} style={{flex:1,background:C.accentDim,border:`1.5px solid ${C.accent}`,color:C.accent,borderRadius:10,padding:"11px 0",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>🗃️ Archive</button>
+          <button onClick={()=>setWithdrawModal(true)} style={{flex:1,background:C.blueDim,border:`1.5px solid ${C.blue}`,color:C.blue,borderRadius:10,padding:"11px 0",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>🏦 Return to Bank</button>
+          <button onClick={handleArchive} style={{flex:1,background:C.accentDim,border:`1.5px solid ${C.accent}`,color:C.accent,borderRadius:10,padding:"11px 0",fontWeight:700,fontSize:13,cursor:"cursor",fontFamily:"'DM Sans', sans-serif"}}>🗃️ Complete & Archive</button>
         </div>
         <button onClick={handleDelete} style={{width:"100%",background:"transparent",border:`1px solid ${C.redDim}`,color:C.red,borderRadius:10,padding:"9px 0",fontWeight:600,fontSize:12,cursor:"pointer",fontFamily:"'DM Sans', sans-serif", marginTop:4}}>🗑 Delete Goal</button>
       </div>
@@ -1013,14 +1013,14 @@ function SavingDetailView({goal,saved,txns,onDelete,addTxn,banks,savings,onSave,
       </div>
     )}
 
-    {withdrawModal&&<Modal title={`Emergency Withdrawal`} onClose={()=>setWithdrawModal(false)} center={false}>
-      <div style={{background:C.orangeDim,border:`1px solid ${C.orange}44`,borderRadius:12,padding:"12px 14px",marginBottom:16}}>
-        <div style={{color:C.orange,fontSize:13,fontWeight:700}}>⚠️ Emergency Withdrawal</div>
+    {withdrawModal&&<Modal title={`Return to Bank`} onClose={()=>setWithdrawModal(false)} center={false}>
+      <div style={{background:C.blueDim,border:`1px solid ${C.blue}44`,borderRadius:12,padding:"12px 14px",marginBottom:16}}>
+        <div style={{color:C.blue,fontSize:13,fontWeight:700}}>🏦 Return to Bank</div>
         <div style={{color:C.muted,fontSize:12,marginTop:4}}>Funds will automatically return to the bank accounts they were saved from.</div>
       </div>
-      <div style={{color:C.muted,fontSize:13,marginBottom:14}}>Available in goal: <strong style={{color:C.yellow}}>{fmt(saved)}</strong></div>
-      <Input label="Amount to withdraw" type="number" step="any" placeholder="0.00" value={withdrawAmt} onChange={e=>setWithdrawAmt(e.target.value)}/>
-      <div style={{display:"flex",gap:10}}><Btn outline color={C.muted} full onClick={()=>setWithdrawModal(false)}>Cancel</Btn><Btn color={C.orange} full onClick={handleWithdraw}>Withdraw</Btn></div>
+      <div style={{color:C.muted,fontSize:13,marginBottom:14}}>Available to return: <strong style={{color:C.yellow}}>{fmt(saved)}</strong></div>
+      <Input label="Amount to return" type="number" step="any" placeholder="0.00" value={withdrawAmt} onChange={e=>setWithdrawAmt(e.target.value)}/>
+      <div style={{display:"flex",gap:10}}><Btn outline color={C.muted} full onClick={()=>setWithdrawModal(false)}>Cancel</Btn><Btn color={C.blue} full onClick={handleWithdraw}>Return Funds</Btn></div>
     </Modal>}
 
     {confirmAction&&<ConfirmModal title={confirmAction.title} message={confirmAction.message} confirmColor={confirmAction.color} onClose={()=>setConfirmAction(null)} onConfirm={()=>{confirmAction.onConfirm();setConfirmAction(null);}}/>}
@@ -1146,7 +1146,7 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,ban
 }
 
 // ── History ───────────────────────────────────────────────────────────────────
-function History({txns,onDelete,onUpdate,banks,expCats,incCats,currency,availMonths}){
+function History({txns,onDelete,onUpdate,banks,expCats,incCats,currency,availMonths,savings,setAppAlert}){
   useEffect(()=>{window.scrollTo(0,0);},[]);
   const[search,setSearch]=useState("");const[filterType,setFilterType]=useState("all");const[filterMonth,setFilterMonth]=useState("all");const[confirmTxn,setConfirmTxn]=useState(null);const[editTxn,setEditTxn]=useState(null);const[viewTxn,setViewTxn]=useState(null);
 
@@ -1159,7 +1159,35 @@ function History({txns,onDelete,onUpdate,banks,expCats,incCats,currency,availMon
 
   const editable=(t)=>t.type!=="transfer"&&t.type!=="goal_withdraw"&&t.type!=="goal_return";
 
-  return <div style={{padding:"24px 16px 0"}}>
+  // دالة ذكية للتحكم في التعديل
+  const handleEditClick = (t) => {
+      if (t.splitGroupId) {
+          setAppAlert({title: "Linked Transaction", message: "🔗 لا يمكن تعديل عملية مقسمة على أكثر من حساب. يرجى حذفها وإعادة إضافتها.", color: C.yellow});
+          return;
+      }
+      if (t.goalId && savings) {
+          const goal = savings.find(s => s.id === t.goalId);
+          if (!goal || goal.status === "archived") {
+              setAppAlert({title: "Historical Lock 🔒", message: "هذا الهدف مغلق أو تم حذفه. لا يمكن تعديل عملياته للحفاظ على دقة حساباتك.", color: C.orange});
+              return;
+          }
+      }
+      setEditTxn(t);
+  };
+
+  // دالة ذكية للتحكم في الحذف
+  const handleDeleteClick = (t) => {
+      if (t.goalId && savings) {
+          const goal = savings.find(s => s.id === t.goalId);
+          if (!goal || goal.status === "archived") {
+              setAppAlert({title: "Historical Lock 🔒", message: "هذا الهدف مغلق أو تم حذفه. هذه العملية مقفولة تماماً ولا يمكن حذفها.", color: C.orange});
+              return;
+          }
+      }
+      setConfirmTxn(t);
+  };
+
+  return <div style={{padding:"24px 16px 0", paddingBottom: 100}}>
     <div style={{color:C.text,fontSize:22,fontWeight:800,marginBottom:16}}>History</div>
     <input placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:15,outline:"none",boxSizing:"border-box",marginBottom:12,fontFamily:"'DM Sans', sans-serif"}}/>
     <div style={{display:"flex",gap:8,marginBottom:14,overflowX:"auto"}}>
@@ -1169,7 +1197,7 @@ function History({txns,onDelete,onUpdate,banks,expCats,incCats,currency,availMon
     <div style={{color:C.faint,fontSize:11,marginBottom:12}}>{filtered.length} transaction{filtered.length!==1?"s":""}</div>
     <div style={{display:"flex",flexDirection:"column"}}>
       {filtered.length===0&&<EmptyState icon="💸" message="No transactions found."/>}
-      {filtered.map(t=><SwipeRow key={t.id} onEdit={editable(t)?()=>setEditTxn(t):()=>setViewTxn(t)} onDelete={()=>setConfirmTxn(t)}><TxnRow txn={t} hideTotal={false} onClick={()=>setViewTxn(t)}/></SwipeRow>)}
+      {filtered.map(t=><SwipeRow key={t.id} onEdit={editable(t)?()=>handleEditClick(t):()=>setViewTxn(t)} onDelete={()=>handleDeleteClick(t)}><TxnRow txn={t} hideTotal={false} onClick={()=>setViewTxn(t)}/></SwipeRow>)}
     </div>
     {confirmTxn&&<ConfirmModal 
       title={confirmTxn.splitGroupId ? "Delete Linked Transactions?" : "Delete Transaction?"} 
@@ -1182,15 +1210,37 @@ function History({txns,onDelete,onUpdate,banks,expCats,incCats,currency,availMon
   </div>;
 }
 
+// ── EditTxnModal ──────────────────────────────────────────────────────────────
 function EditTxnModal({txn,banks,expCats,incCats,currency,onSave,onClose}){
-  const[amount,setAmount]=useState(String(txn.amount));const[date,setDate]=useState(txn.date);const[bankId,setBankId]=useState(txn.bankId);const[catId,setCatId]=useState(txn.catId||"");const[note,setNote]=useState(txn.note||"");
+  const[amount,setAmount]=useState(String(txn.amount));
+  const[date,setDate]=useState(txn.date);
+  const[bankId,setBankId]=useState(txn.bankId);
+  const[catId,setCatId]=useState(txn.catId||"");
+  const[note,setNote]=useState(txn.note||"");
+
   const cats=txn.type==="expense"?expCats:txn.type==="income"?incCats:[];
-  const handleSave=async()=>{const p=parseFloat(amount);if(!amount||isNaN(p)||p<=0)return;const bank=banks.find(b=>b.id===bankId),cat=cats.find(c=>c.id===catId);await onSave({amount:p,date,bankId,bankName:bank?.name,catId,catName:cat?.name||txn.catName,catIcon:cat?.icon||txn.catIcon,note});};
+  const isSav=txn.type==="saving";
+
+  const handleSave=async()=>{
+    const p=parseFloat(amount);
+    if(!amount||isNaN(p)||p<=0)return;
+    const bank=banks.find(b=>b.id===bankId);
+    const cat=cats.find(c=>c.id===catId);
+    await onSave({amount:p,date,bankId,bankName:bank?.name,catId,catName:cat?.name,catIcon:cat?.icon,note});
+  };
+
   return <Modal title="Edit Transaction" onClose={onClose} center={false}>
-    <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Amount ({currency})</div><input type="number" step="any" value={amount} onChange={e=>setAmount(e.target.value)} style={IS}/></div>
-    <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Date</div><input type="date" value={date} onChange={e=>setDate(e.target.value)} style={{...IS,colorScheme:"dark"}}/></div>
-    <Select label="Account" value={bankId} onChange={e=>setBankId(e.target.value)}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select>
-    {cats.length>0&&<Select label="Category" value={catId} onChange={e=>setCatId(e.target.value)}>{cats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]||"📌"} {c.name}</option>)}</Select>}
+    <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Amount</div><Input type="number" step="any" value={amount} onChange={e=>setAmount(e.target.value)}/></div>
+    <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Date</div><Input type="date" value={date} onChange={e=>setDate(e.target.value)}/></div>
+    
+    <div style={{ opacity: isSav ? 0.6 : 1, pointerEvents: isSav ? "none" : "auto", marginBottom: isSav ? 4 : 0 }}>
+      <Select label="Account" value={bankId} onChange={e=>setBankId(e.target.value)}>
+        {banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
+      </Select>
+    </div>
+    {isSav && <div style={{color:C.orange,fontSize:11,marginBottom:14,fontWeight:600,lineHeight:1.4}}>⚠️ To change the account, please delete this transaction and create a new one.</div>}
+
+    {cats.length>0&&<Select label="Category" value={catId} onChange={e=>setCatId(e.target.value)}>{cats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]} {c.name}</option>)}</Select>}
     <Input label="Note (optional)" value={note} onChange={e=>setNote(e.target.value)}/>
     <Btn full onClick={handleSave}>Save Changes</Btn>
   </Modal>;
