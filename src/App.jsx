@@ -506,17 +506,32 @@ function SaverApp(){
        HAPTICS.warning(); setAppAlert({title: "Split Transaction", message: "❌ This transaction is split across multiple banks. Please delete and recreate it.", color: C.yellow}); return false;
     }
 
-    if(orig.type==="saving" && data.amount < orig.amount){
-        const diff = orig.amount - data.amount;
-        if(goalSaved(orig.goalId) - diff < 0) {
-            HAPTICS.warning(); setAppAlert({title: "Action Blocked", message: "❌ Cannot reduce this amount. Funds have already been spent.", color: C.red}); return false;
+    if(data.amount && data.amount !== orig.amount){
+        // حماية عمليات الإيداع (التقليل أو الزيادة)
+        if(orig.type==="saving"){
+            // حالة التقليل: نمنعه لو الفلوس اتصرفت بالفعل
+            if(data.amount < orig.amount){
+                const diff = orig.amount - data.amount;
+                if(goalSaved(orig.goalId) - diff < 0) {
+                    HAPTICS.warning(); setAppAlert({title: "Action Blocked", message: "❌ Cannot reduce this amount. Funds have already been spent.", color: C.red}); return false;
+                }
+            } 
+            // حالة الزيادة: نمنعه لو البنك مفيهوش رصيد يغطي الزيادة
+            else if(data.amount > orig.amount){
+                const extraNeeded = data.amount - orig.amount;
+                const avail = safeToSpend(orig.bankId);
+                if(avail < extraNeeded) {
+                    HAPTICS.warning(); setAppAlert({title: "Insufficient Balance", message: `⚠️ Available bank balance is ${fmt(avail)}. Not enough to increase this saving.`, color: C.red}); return false;
+                }
+            }
         }
-    }
 
-    if(data.amount&&(orig.type==="expense"||orig.type==="transfer")){
-      const checkId=orig.type==="transfer"?orig.fromBankId:orig.bankId;
-      const availWithout=safeToSpend(checkId)+orig.amount;
-      if(availWithout<data.amount){HAPTICS.warning();setAppAlert({title:"Insufficient Balance",message:"⚠️ Not enough balance for this modification.",color:C.red});return false;}
+        // حماية عمليات الصرف والتحويل (كما هي)
+        if(orig.type==="expense"||orig.type==="transfer"){
+          const checkId=orig.type==="transfer"?orig.fromBankId:orig.bankId;
+          const availWithout=safeToSpend(checkId)+orig.amount;
+          if(availWithout<data.amount){HAPTICS.warning();setAppAlert({title:"Insufficient Balance",message:"⚠️ Not enough balance for this modification.",color:C.red});return false;}
+        }
     }
 
     const next=txns.map(t=>t.id===id?{...t,...data}:t);setTxns(next);await persist(KEYS.txns,next);return true;
