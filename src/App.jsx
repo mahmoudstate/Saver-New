@@ -319,58 +319,34 @@ function SplashScreen(){
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
-// CORE ACCOUNTING ENGINE
+// CORE ACCOUNTING ENGINE V1.3 (Fixed & Bulletproof)
 // ════════════════════════════════════════════════════════════════════════════════
-//
-// bankBalance(bankId, txns):
-//   = income + transferIn - expense - transferOut
-//   NOTE: "saving" transactions are NOT subtracted here —
-//         they stay in the bank as "frozen" funds tracked separately.
-//
-// goalSaved(goalId, txns):
-//   = SUM of type="saving" where goalId matches
-//   - SUM of type="goal_withdraw" where goalId matches
-//   - SUM of type="goal_return" where goalId matches (archive/delete)
-//   This is derived purely from transactions, so any edit/delete
-//   instantly reflects everywhere.
-//
-// frozenForBank(bankId, savings, txns):
-//   = for each active (non-archived) goal:
-//     SUM saving txns for that goal from this bank
-//   - SUM goal_withdraw txns for that goal from this bank
-//   - SUM goal_return txns for that goal from this bank
-//
-// safeToSpend(bankId) = bankBalance(bankId) - frozenForBank(bankId)
-//
-// ════════════════════════════════════════════════════════════════════════════════
-
 function calcBankBalance(bankId, txns){
   return txns.reduce((acc,t)=>{
-    if(t.bankId===bankId&&t.type==="income") return acc+t.amount;
-    if(t.bankId===bankId&&t.type==="expense") return acc-t.amount;
-    if(t.bankId===bankId&&t.type==="goal_withdraw") return acc-t.amount;
-    if(t.bankId===bankId&&t.type==="goal_return") return acc+t.amount;
-    if(t.toBankId===bankId&&t.type==="transfer") return acc+t.amount;
-    if(t.fromBankId===bankId&&t.type==="transfer") return acc-t.amount;
-    // saving stays in bank — not subtracted
+    if(t.bankId===bankId && t.type==="income") return acc+t.amount;
+    if(t.bankId===bankId && t.type==="expense") return acc-t.amount;
+    if(t.bankId===bankId && t.type==="goal_withdraw") return acc-t.amount;
+    if(t.toBankId===bankId && t.type==="transfer") return acc+t.amount;
+    if(t.fromBankId===bankId && t.type==="transfer") return acc-t.amount;
     return acc;
   },0);
 }
 
 function calcGoalSaved(goalId, txns){
   return txns.reduce((acc,t)=>{
-    if(t.goalId===goalId&&t.type==="saving") return acc+t.amount;
-    if(t.goalId===goalId&&t.type==="goal_withdraw") return acc-t.amount;
-    if(t.goalId===goalId&&t.type==="goal_return") return acc-t.amount;
+    if(t.goalId===goalId && t.type==="saving") return acc+t.amount;
+    if(t.goalId===goalId && t.type==="goal_withdraw") return acc-t.amount;
+    if(t.goalId===goalId && t.type==="goal_return") return acc-t.amount;
     return acc;
   },0);
 }
 
 function calcFrozenForBank(bankId, savings, txns){
-  return savings.filter(s=>s.status!=="archived").reduce((total,g)=>{
-    const contributed=txns.filter(t=>t.goalId===g.id&&t.bankId===bankId&&t.type==="saving").reduce((a,t)=>a+t.amount,0);
-    const withdrawn=txns.filter(t=>t.goalId===g.id&&t.bankId===bankId&&(t.type==="goal_withdraw"||t.type==="goal_return")).reduce((a,t)=>a+t.amount,0);
-    return total+Math.max(0,contributed-withdrawn);
+  return txns.reduce((acc,t)=>{
+     if(t.bankId===bankId && t.type==="saving") return acc+t.amount;
+     if(t.bankId===bankId && t.type==="goal_withdraw") return acc-t.amount;
+     if(t.bankId===bankId && t.type==="goal_return") return acc-t.amount;
+     return acc;
   },0);
 }
 
@@ -442,46 +418,107 @@ function SaverApp(){
 
   const persist=useCallback(async(key,val)=>{await save(key,val);},[]);
 
-  // ── Accounting helpers (memoized, derived from txns) ──────────────────────
+// ── Accounting helpers (memoized) ─────────────────────────────────────────────
   const bankBalance=useCallback((bankId)=>calcBankBalance(bankId,txns),[txns]);
   const goalSaved=useCallback((goalId)=>Math.max(0,calcGoalSaved(goalId,txns)),[txns]);
-  const frozenForBank=useCallback((bankId)=>calcFrozenForBank(bankId,savings,txns),[savings,txns]);
+  const frozenForBank=useCallback((bankId)=>Math.max(0,calcFrozenForBank(bankId,savings,txns)),[savings,txns]);
   const safeToSpend=useCallback((bankId)=>bankBalance(bankId)-frozenForBank(bankId),[bankBalance,frozenForBank]);
 
-  // ── addTxn ────────────────────────────────────────────────────────────────
+  // دالة لمعرفة نصيب كل بنك داخل الهدف المفتوح
+  const getGoalBalancesPerBank = (goalId) => {
+    const balances = {};
+    txns.forEach(t => {
+      if (t.goalId === goalId) {
+        if (t.type === "saving") balances[t.bankId] = (balances[t.bankId] || 0) + t.amount;
+        if (t.type === "goal_withdraw" || t.type === "goal_return") balances[t.bankId] = (balances[t.bankId] || 0) - t.amount;
+      }
+    });
+    return balances;
+  };
+
+  // ── Transactions Engine (Add, Delete, Update) ───────────────────────────────
   const processingRef=useRef(false);
   const addTxn=async(t)=>{
     if(processingRef.current)return false;
     processingRef.current=true;
     try{
-      // Validate balance using safeToSpend for regular expenses, bankBalance for goal operations
       if(t.type==="expense"||t.type==="transfer"){
         const checkId=t.type==="transfer"?t.fromBankId:t.bankId;
         const avail=safeToSpend(checkId);
-        if(avail<t.amount){HAPTICS.warning();setAppAlert({title:"Insufficient Balance",message:`⚠️ Available balance is ${fmt(avail)}. Not enough for this transaction.`,color:C.red});return false;}
+        if(avail<t.amount){HAPTICS.warning();setAppAlert({title:"Insufficient Balance",message:`⚠️ Available balance is ${fmt(avail)}. Not enough.`,color:C.red});return false;}
       }
       if(t.type==="saving"){
         const avail=safeToSpend(t.bankId);
-        if(avail<t.amount){HAPTICS.warning();setAppAlert({title:"Insufficient Balance",message:`⚠️ Available balance is ${fmt(avail)}. Not enough to save this amount.`,color:C.red});return false;}
+        if(avail<t.amount){HAPTICS.warning();setAppAlert({title:"Insufficient Balance",message:`⚠️ Available balance is ${fmt(avail)}. Not enough to save.`,color:C.red});return false;}
       }
-      if(t.type==="goal_withdraw"){
+
+      // Auto-Split Logic
+      if(t.type==="goal_withdraw" || t.type==="goal_return"){
         const saved=goalSaved(t.goalId);
         if(t.amount>saved){HAPTICS.warning();setAppAlert({title:"Insufficient Goal Balance",message:`⚠️ Goal only has ${fmt(saved)}.`,color:C.red});return false;}
+
+        let rem = t.amount;
+        const bpb = getGoalBalancesPerBank(t.goalId);
+        const newTxns = [];
+        const ts = Date.now();
+
+        for (const [bId, bAmt] of Object.entries(bpb)) {
+          if (bAmt > 0 && rem > 0) {
+            const deduct = Math.min(bAmt, rem);
+            const bankObj = banks.find(b=>b.id===bId);
+            newTxns.push({ ...t, id:(ts+newTxns.length).toString(), amount:deduct, bankId:bId, bankName:bankObj?.name||"Unknown", splitGroupId:ts.toString() });
+            rem -= deduct;
+          }
+        }
+
+        if(newTxns.length > 0){
+          const next = [...newTxns, ...txns];
+          setTxns(next); await persist(KEYS.txns, next);
+          HAPTICS.success(); return newTxns[0].id;
+        }
       }
+
       const id=Date.now().toString();
       const next=[{...t,id},...txns];setTxns(next);await persist(KEYS.txns,next);
       HAPTICS.success();return id;
     }finally{setTimeout(()=>{processingRef.current=false;},500);}
   };
 
-  const delTxn=async(id)=>{const next=txns.filter(t=>t.id!==id);setTxns(next);await persist(KEYS.txns,next);return next;};
+  const delTxn=async(id)=>{
+    const t = txns.find(x => x.id === id);
+    if(!t) return false;
+
+    if(t.type === "saving"){
+        const currentSaved = goalSaved(t.goalId);
+        if(currentSaved - t.amount < 0) {
+            HAPTICS.warning(); setAppAlert({title: "Action Blocked", message: "❌ Cannot delete this saving deposit because the funds have already been spent or returned.", color: C.red}); return false;
+        }
+    }
+
+    const next = t.splitGroupId ? txns.filter(x => x.splitGroupId !== t.splitGroupId) : txns.filter(x => x.id !== id);
+    setTxns(next); await persist(KEYS.txns, next); return next;
+  };
+
   const updateTxn=async(id,data)=>{
     const orig=txns.find(t=>t.id===id);if(!orig)return false;
+
+    if (orig.splitGroupId && data.amount && data.amount !== orig.amount) {
+       HAPTICS.warning(); setAppAlert({title: "Split Transaction", message: "❌ This transaction is split across multiple banks. Please delete and recreate it.", color: C.yellow}); return false;
+    }
+
+    if(orig.type==="saving" && data.amount < orig.amount){
+        const diff = orig.amount - data.amount;
+        if(goalSaved(orig.goalId) - diff < 0) {
+            HAPTICS.warning(); setAppAlert({title: "Action Blocked", message: "❌ Cannot reduce this amount. Funds have already been spent.", color: C.red}); return false;
+        }
+    }
+
     if(data.amount&&(orig.type==="expense"||orig.type==="transfer")){
       const checkId=orig.type==="transfer"?orig.fromBankId:orig.bankId;
       const availWithout=safeToSpend(checkId)+orig.amount;
       if(availWithout<data.amount){HAPTICS.warning();setAppAlert({title:"Insufficient Balance",message:"⚠️ Not enough balance for this modification.",color:C.red});return false;}
     }
+
     const next=txns.map(t=>t.id===id?{...t,...data}:t);setTxns(next);await persist(KEYS.txns,next);return true;
   };
 
