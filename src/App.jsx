@@ -2158,20 +2158,30 @@ function Settings({banks,expCats,incCats,groups,onBanks,onExpCats,onIncCats,onGr
     return null;
   };
 
+  // التعديل هنا: إجبار المتصفح على التحميل المباشر بدون فتح شاشة المعاينة
   const handleBackup=async()=>{
     const data={txns,banks,expCats,incCats,groups,savings,bills,budgets,currency,username};
-    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-    const url=URL.createObjectURL(blob);const a=document.createElement("a");
-    a.href=url;a.download=`Saver_Backup_${new Date().toISOString().split("T")[0]}.json`;a.click();
+    // استخدام octet-stream يجبر الـ iOS على تنزيل الملف فوراً
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/octet-stream"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.style.display="none";
+    a.href=url;
+    a.download=`Saver_Backup_${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url); // تنظيف الذاكرة
+    
     const now=Date.now();await save(KEYS.lastBackup,now);setLastBackup(now);
-    HAPTICS.success();setAppAlert({title:"Backup Complete",message:"🔄 Backup saved to your Downloads folder.",color:C.accent});
+    HAPTICS.success();setAppAlert({title:"Backup Complete",message:"🔄 Backup saved directly to your device.",color:C.accent});
   };
+
   const handleFileChange=(e)=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=async(ev)=>{try{const p=JSON.parse(ev.target.result);setPendingRestore(p);setShowRestoreConfirm(true);}catch{HAPTICS.warning();setAppAlert({title:"Import Error",message:"❌ Failed parsing JSON file.",color:C.red});}};r.readAsText(f);e.target.value="";};
   const iconKeys=Object.keys(ICONS).filter(k=>!["dashboard","add","settings","saving","bills_nav","income","expense","transfer","close","check","trash","edit","bank","cash","goal","budget"].includes(k));
 
   return <div style={{padding:"24px 16px 0"}}>
     
-    {/* ── التعديل هنا: تكبير كلمة Settings وتوسيع زرار الـ Guide ── */}
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
         <div style={{color:C.text,fontSize:28,fontWeight:800}}>Settings</div>
         <button onClick={onOpenManual} style={{background:C.accent+"22", border:`1px solid ${C.accent}44`, color:C.accent, fontWeight:800, fontSize:15, cursor:"pointer", display:"flex", alignItems:"center", gap:8, padding:"10px 20px", borderRadius:14, transition:"all 0.2s ease"}}>
@@ -2179,8 +2189,9 @@ function Settings({banks,expCats,incCats,groups,onBanks,onExpCats,onIncCats,onGr
         </button>
     </div>
 
-    <div style={{display:"flex",gap:8,marginBottom:20,overflowX:"auto",paddingBottom:4}}>
-      {[{id:"profile",label:"👤 General"},{id:"currency",label:"💱 Currency"},{id:"banks",label:"🏦 Accounts"},{id:"expCats",label:"📤 Exp. Cat."},{id:"incCats",label:"💰 Inc. Cat."},{id:"groups",label:"📊 Groups"}].map(s=><button key={s.id} onClick={()=>setSection(s.id)} style={{whiteSpace:"nowrap",padding:"8px 14px",borderRadius:10,border:`1px solid ${section===s.id?C.accent:C.border}`,background:section===s.id?C.accentDim:"transparent",color:section===s.id?C.accent:C.muted,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>{s.label}</button>)}
+    {/* التعديل هنا: تكبير الزراير ومساحاتها لتكون مريحة وشيك */}
+    <div style={{display:"flex",gap:10,marginBottom:24,overflowX:"auto",paddingBottom:10,paddingTop:4}}>
+      {[{id:"profile",label:"👤 General"},{id:"currency",label:"💱 Currency"},{id:"banks",label:"🏦 Accounts"},{id:"expCats",label:"📤 Exp. Cat."},{id:"incCats",label:"💰 Inc. Cat."},{id:"groups",label:"📊 Groups"}].map(s=><button key={s.id} onClick={()=>setSection(s.id)} style={{whiteSpace:"nowrap",padding:"12px 18px",borderRadius:12,border:`1px solid ${section===s.id?C.accent:C.border}`,background:section===s.id?C.accentDim:"transparent",color:section===s.id?C.accent:C.muted,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",transition:"all 0.2s ease"}}>{s.label}</button>)}
     </div>
 
     {section==="profile"&&<div style={{paddingBottom:20}}>
