@@ -1593,7 +1593,6 @@ function SavingsPage({savings,onSave,txns,banks,onBack,addTxn,delTxn,onGoalToast
 function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[]}){
   useEffect(()=>{window.scrollTo(0,0);},[]);
 
-  // ضبط الزمن المحلي لضمان الوقوف دايماً على الشهر الفعلي
   const getLocalMonth = () => {
     const d = new Date();
     const offset = d.getTimezoneOffset() * 60000;
@@ -1602,58 +1601,132 @@ function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[]}){
   const curMonth = getLocalMonth();
 
   const[filterMonth,setFilterMonth]=useState(curMonth);
-  // قراءة الشهور المتاحة من العمليات الفعيلة لربطها بالفلتر
+  // قراءة الشهور من العمليات وإضافة الشهر الحالي
   const availMonths=[...new Set([curMonth, ...txns.map(t=>t.date.slice(0,7))])].sort().reverse();
 
   const[showAdd,setShowAdd]=useState(false);const[editId,setEditId]=useState(null);const[name,setName]=useState("");const[amount,setAmount]=useState("");const[selectedCats,setSelectedCats]=useState([]);const[confirmId,setConfirmId]=useState(null);
+  // إضافة حالة لشهر البداية للميزانية
+  const[startMonth,setStartMonth]=useState(curMonth);
 
-  const startEdit=(b)=>{setEditId(b.id);setName(b.name);setAmount(b.amount);setSelectedCats(b.cats||[]);setShowAdd(true);};
-  const handleAdd=async()=>{if(!name||!amount||selectedCats.length===0)return;const pa=parseFloat(amount);if(editId)await onSave(budgets.map(b=>b.id===editId?{...b,name,amount:pa,cats:selectedCats}:b));else await onSave([...budgets,{id:Date.now().toString(),name,amount:pa,cats:selectedCats}]);setShowAdd(false);setEditId(null);setName("");setAmount("");setSelectedCats([]);};
+  const startEdit=(b)=>{setEditId(b.id);setName(b.name);setAmount(b.amount);setSelectedCats(b.cats||[]);setStartMonth(b.startMonth||curMonth);setShowAdd(true);};
+  
+  const handleAdd=async()=>{
+    if(!name||!amount||selectedCats.length===0)return;
+    const pa=parseFloat(amount);
+    const sm = startMonth || curMonth;
+    if(editId)await onSave(budgets.map(b=>b.id===editId?{...b,name,amount:pa,cats:selectedCats,startMonth:sm}:b));
+    else await onSave([...budgets,{id:Date.now().toString(),name,amount:pa,cats:selectedCats,startMonth:sm}]);
+    setShowAdd(false);setEditId(null);setName("");setAmount("");setSelectedCats([]);setStartMonth(curMonth);
+  };
 
-  // حساب الأيام المتبقية عشان يعرضلك المعدل اليومي المسموح
   const now2=new Date(),daysLeft=Math.max(1,new Date(now2.getFullYear(),now2.getMonth()+1,0).getDate()-now2.getDate()+1);
 
-  return <div style={{padding:"24px 16px 40px",minHeight:"100vh",background:C.bg,boxSizing:"border-box"}}>
+  // ── فلترة الميزانيات حسب شهر البداية ──
+  // لو الفلتر "الكل"، هنعرض كل الميزانيات، لو شهر معين، هنعرض بس اللي اتولدت في الشهر ده أو قبله
+  const displayBudgets = filterMonth === "all" ? budgets : budgets.filter(b => !b.startMonth || b.startMonth <= filterMonth);
+
+  // ── تحليلات ذكية لفلتر "الكل" (Insights Engine) ──
+  let mostSaved = null;
+  let mostOverspent = null;
+  
+  if (filterMonth === "all" && budgets.length > 0) {
+     let maxSaveAmt = -999999;
+     let maxOverAmt = -999999;
+
+     budgets.forEach(bdg => {
+        const allExp = txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&bdg.cats.includes(t.catId));
+        // حساب عدد الشهور الفعالة للميزانية دي
+        const activeMonths = availMonths.filter(m => !bdg.startMonth || m >= bdg.startMonth);
+        const monthsCount = activeMonths.length || 1;
+        const totalSpent = allExp.filter(t => activeMonths.includes(t.date.slice(0,7))).reduce((a,t)=>a+t.amount,0);
+        
+        const avgSpent = totalSpent / monthsCount;
+        const diff = bdg.amount - avgSpent; // موجب = توفير، سالب = خرم الميزانية
+
+        if (diff > 0 && diff > maxSaveAmt) { maxSaveAmt = diff; mostSaved = { ...bdg, avgSpent, diff }; }
+        if (diff < 0 && Math.abs(diff) > maxOverAmt) { maxOverAmt = Math.abs(diff); mostOverspent = { ...bdg, avgSpent, diff: Math.abs(diff) }; }
+     });
+  }
+
+  return <div style={{padding:"24px 16px 130px",minHeight:"100vh",background:C.bg,boxSizing:"border-box"}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
        <div style={{display:"flex",alignItems:"center",gap:8}}>
          <button onClick={onBack} style={{background:"transparent",border:"none",color:C.muted,fontSize:22,cursor:"pointer",padding:"10px 15px 10px 0",display:"flex",alignItems:"center"}}><span style={{display:"block",transform:"translateY(-1px)"}}>❮</span></button>
          <div style={{color:C.text,fontSize:22,fontWeight:800}}>Budgets</div>
        </div>
-       <Btn small onClick={()=>{setEditId(null);setName("");setAmount("");setSelectedCats([]);setShowAdd(true);}}>+ Add Budget</Btn>
+       <Btn small onClick={()=>{setEditId(null);setName("");setAmount("");setSelectedCats([]);setStartMonth(curMonth);setShowAdd(true);}}>+ Add Budget</Btn>
     </div>
 
-    {/* فلتر الشهور */}
     {budgets.length > 0 && <div style={{marginBottom:16}}><MonthSelect value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} availMonths={availMonths}/></div>}
 
     {budgets.length===0&&<EmptyState icon="📊" message="Set monthly spending limits per category group."/>}
 
-    <div style={{marginBottom:20}}>
-      <SortableList items={budgets} onReorder={onSave} renderItem={(bdg)=>{
-        const targetMonth = filterMonth === "all" ? curMonth : filterMonth;
-        const allExp=txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&bdg.cats.includes(t.catId));
-        const spent=allExp.filter(t=>t.date.startsWith(targetMonth)).reduce((a,t)=>a+t.amount,0);
+    {filterMonth === "all" && budgets.length > 0 && (
+      <div style={{marginBottom:24}}>
+        <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Performance Insights</div>
+        <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16}}>
+           <Card style={{padding:"14px 12px"}}>
+              <div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Most Saved</div>
+              {mostSaved ? (
+                <>
+                  <div style={{color:C.text, fontWeight:800, fontSize:14, marginBottom:2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{mostSaved.name}</div>
+                  <div style={{color:C.accent, fontSize:12, fontWeight:700}}>Saves avg {fmt(mostSaved.diff)}</div>
+                </>
+              ) : <div style={{color:C.faint, fontSize:12}}>No data yet</div>}
+           </Card>
+           <Card style={{padding:"14px 12px"}}>
+              <div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Most Overspent</div>
+              {mostOverspent ? (
+                <>
+                  <div style={{color:C.text, fontWeight:800, fontSize:14, marginBottom:2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{mostOverspent.name}</div>
+                  <div style={{color:C.red, fontSize:12, fontWeight:700}}>Over by avg {fmt(mostOverspent.diff)}</div>
+                </>
+              ) : <div style={{color:C.faint, fontSize:12}}>Looking good 🟢</div>}
+           </Card>
+        </div>
+      </div>
+    )}
 
-        // لو المستخدم اختار "All Time"
+    {displayBudgets.length === 0 && filterMonth !== "all" && budgets.length > 0 && (
+       <EmptyState icon="⏳" message="No active budgets for this specific month."/>
+    )}
+
+    <div style={{marginBottom:20}}>
+      <SortableList items={displayBudgets} onReorder={onSave} renderItem={(bdg)=>{
         if(filterMonth==="all"){
-            const months=[...new Set(allExp.map(t=>t.date.slice(0,7)))];
-            const avg=months.length>0?allExp.reduce((a,t)=>a+t.amount,0)/months.length:0;
-            const totalAllExp=txns.filter(t=>t.type==="expense"||t.type==="goal_withdraw").reduce((a,t)=>a+t.amount,0);
-            const histPct=totalAllExp>0?Math.round((allExp.reduce((a,t)=>a+t.amount,0)/totalAllExp)*100):0;
+            const allExp=txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&bdg.cats.includes(t.catId));
+            const activeMonths = availMonths.filter(m => !bdg.startMonth || m >= bdg.startMonth);
+            const monthsCount = activeMonths.length || 1;
+            const totalSpent = allExp.filter(t => activeMonths.includes(t.date.slice(0,7))).reduce((a,t)=>a+t.amount,0);
+            const avg = totalSpent / monthsCount;
+            const isSafe = avg <= bdg.amount;
+
             return <SwipeRow key={bdg.id} onEdit={()=>startEdit(bdg)} onDelete={()=>setConfirmId(bdg.id)}>
-               <div style={{padding:"16px 16px"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{color:C.text,fontSize:16,fontWeight:700}}>{bdg.name}</span><Pill color={C.blue}>{histPct}% of expenses</Pill></div>
-                  <div style={{color:C.muted,fontSize:12}}>Monthly avg: <span style={{color:C.text,fontWeight:700}}>{fmt(avg)}</span></div>
+               <div style={{padding:"16px", background:C.card, border:`1px solid ${C.border}`, borderRadius:12}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                    <div style={{display:"flex", alignItems:"center", gap:8}}>
+                       <span style={{color:C.text,fontSize:16,fontWeight:700}}>{bdg.name}</span>
+                       <Pill color={isSafe?C.accent:C.red} style={{fontSize:10}}>{isSafe?"🟢 Safe":"🔴 Over"}</Pill>
+                    </div>
+                    <div style={{color:C.text, fontWeight:800}}>{fmt(bdg.amount)} <span style={{color:C.muted, fontSize:10, fontWeight:500}}>limit</span></div>
+                  </div>
+                  <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+                    <div style={{color:C.muted,fontSize:12}}>Average Spent</div>
+                    <div style={{color:isSafe?C.accent:C.red, fontWeight:800}}>{fmt(avg)} / mo</div>
+                  </div>
+                  <ProgressBar value={avg} max={bdg.amount} color={isSafe?C.accent:C.red}/>
                </div>
             </SwipeRow>;
         }
 
-        // لو المستخدم اختار شهر معين (الوضع العادي)
+        const allExp=txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&bdg.cats.includes(t.catId));
+        const spent=allExp.filter(t=>t.date.startsWith(filterMonth)).reduce((a,t)=>a+t.amount,0);
         const rem=Math.max(0,bdg.amount-spent);
         const pct=bdg.amount>0?Math.min(100,Math.round((spent/bdg.amount)*100)):0;
         const barColor=pct>=90?C.red:pct>=70?C.yellow:C.accent;
 
         return <SwipeRow key={bdg.id} onEdit={()=>startEdit(bdg)} onDelete={()=>setConfirmId(bdg.id)}>
-          <div style={{padding:"16px 16px"}}>
+          <div style={{padding:"16px", background:C.card, border:`1px solid ${C.border}`, borderRadius:12}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{color:C.text,fontSize:16,fontWeight:700}}>{bdg.name}</span><Pill color={barColor}>{pct}%</Pill></div>
             <div style={{color:C.muted,fontSize:12,marginBottom:8}}>Spent <span style={{color:C.text,fontWeight:700}}>{fmt(spent)}</span> of {fmt(bdg.amount)}</div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{color:rem===0?C.red:C.accent,fontSize:18,fontWeight:800}}>{fmt(rem)} left</span><span style={{color:C.muted,fontSize:11}}>Daily: {fmt(rem/daysLeft)}</span></div>
@@ -1665,7 +1738,15 @@ function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[]}){
 
     {showAdd&&<Modal title={editId?"Edit Budget":"New Budget"} onClose={()=>{setShowAdd(false);setEditId(null);}} center={false}>
       <Input label="Budget Name" placeholder="e.g. Dining & Coffee" value={name} onChange={e=>setName(e.target.value)}/>
-      <Input label={`Monthly Limit (${currency})`} type="number" step="any" value={amount} onChange={e=>setAmount(e.target.value)}/>
+      
+      <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10}}>
+         <Input label={`Limit (${currency})`} type="number" step="any" value={amount} onChange={e=>setAmount(e.target.value)}/>
+         <div style={{marginBottom:14}}>
+            <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Starts From</div>
+            <input type="month" value={startMonth} onChange={e=>setStartMonth(e.target.value)} style={{...IS, colorScheme:"dark"}}/>
+         </div>
+      </div>
+
       <div style={{marginBottom:14}}>
          <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Categories</div>
          <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:160,overflow:"auto",background:C.bg,padding:10,borderRadius:10,border:`1px solid ${C.border}`}}>
