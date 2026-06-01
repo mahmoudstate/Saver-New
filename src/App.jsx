@@ -1261,7 +1261,7 @@ function SavingDetailView({goal,saved,txns,onDelete,addTxn,banks,savings,onSave,
   </div>;
 }
 
-// ── AddTransaction ────────────────────────────────────────────────────────────
+// ── AddTransaction ────────────────────────────────────────────────────────────────────────────────────────
 function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,safeToSpend,goalSaved,setAppAlert,onGoalToast,txns}){
   const[type,setType]=useState("expense");
   const[amount,setAmount]=useState("");
@@ -1274,83 +1274,62 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
   const cats = type==="expense" ? expCats : type==="income" ? incCats : [];
   const spendingGoals = savings.filter(s=>s.spendingMode&&s.status!=="archived");
 
-  const handleSubmit=async()=>{
-    const amt=parseFloat(amount);
-    if(!amount||isNaN(amt)||amt<=0){setAppAlert({title:"Invalid Amount",message:"Please enter a valid amount.",color:C.red});return;}
-    
-    if(type==="transfer"){
-        if(sourceId===toBankId){setAppAlert({title:"Error",message:"Cannot transfer to the same account.",color:C.red}); return;}
-        await onAdd({type:"transfer",amount:amt,date:txnDate,bankId:sourceId,toBankId,note});
-    } else {
-        const bank=banks.find(b=>b.id===sourceId);
-        const cat=cats.find(c=>c.id===catId);
-        await onAdd({type,amount:amt,date:txnDate,bankId:sourceId,bankName:bank?.name,catId,catName:cat?.name,catIcon:cat?.icon,note});
-    }
-    setAmount("");onDone();
-  };
-
   const theme = type==="expense"?C.red:type==="income"?C.accent:type==="saving"?C.yellow:C.blue;
 
-  return <div style={{position:"fixed", inset:0, background:C.bg, zIndex:100, overflowY:"auto", padding:"24px 16px 40px", WebkitOverflowScrolling:"touch"}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+  // ستايل القائمة المنسدلة الموحد (Premium)
+  const selectStyle = {
+      ...IS, background:C.card, border:`1px solid ${C.border}`, 
+      borderRadius:12, padding:"12px 14px", appearance:"none", cursor:"pointer"
+  };
+
+  return <div style={{position:"fixed", inset:0, background:C.bg, zIndex:100, display:"flex", flexDirection:"column", overflow:"hidden"}}>
+    <div style={{padding:"24px 16px 16px", display:"flex",justifyContent:"space-between",alignItems:"center"}}>
        <div style={{color:C.text,fontSize:20,fontWeight:800}}>New Transaction</div>
        <button onClick={onDone} style={{background:C.card,border:`1px solid ${C.border}`,color:C.muted,width:36,height:36,borderRadius:99,cursor:"pointer"}}>✕</button>
     </div>
 
-    <div style={{display:"flex",gap:8,marginBottom:24}}>
-      {["expense","income","saving","transfer"].map(t=><button key={t} onClick={()=>setType(t)} style={{flex:1,textTransform:"capitalize",padding:"10px 0",borderRadius:12,border:`1px solid ${type===t?theme:C.border}`,background:type===t?theme+"22":"transparent",color:type===t?theme:C.muted,fontWeight:700,fontSize:13,cursor:"pointer"}}>{t}</button>)}
+    <div style={{padding:"0 16px", flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch"}}>
+        <div style={{display:"flex",gap:8,marginBottom:24}}>
+          {["expense","income","saving","transfer"].map(t=><button key={t} onClick={()=>setType(t)} style={{flex:1,textTransform:"capitalize",padding:"10px 0",borderRadius:12,border:`1px solid ${type===t?theme:C.border}`,background:type===t?theme+"22":"transparent",color:type===t?theme:C.muted,fontWeight:700,fontSize:13,cursor:"pointer"}}>{t}</button>)}
+        </div>
+
+        {/* مساحة أكبر للمبلغ */}
+        <div style={{textAlign:"center", marginBottom:32, padding:"20px 0"}}>
+            <div style={{color:C.muted,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:8}}>Amount ({currency})</div>
+            <input type="number" inputMode="decimal" placeholder="0.00" value={amount} onChange={e=>setAmount(e.target.value)} 
+                   style={{background:"transparent", border:"none", color:amount?theme:C.faint, fontSize:56, fontWeight:800, textAlign:"center", width:"100%", outline:"none"}} />
+        </div>
+
+        {/* القوائم المنسدلة بدلاً من الكروت الزحمة */}
+        <div style={{display:"flex", flexDirection:"column", gap:16}}>
+            <Input type="date" value={txnDate} onChange={e=>setTxnDate(e.target.value)} style={{background:C.card, border:`1px solid ${C.border}`}}/>
+            
+            {type==="transfer" ? (
+                <>
+                    <Select label="From Account" value={sourceId} onChange={e=>setSourceId(e.target.value)} style={selectStyle}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select>
+                    <Select label="To Account" value={toBankId} onChange={e=>setToBankId(e.target.value)} style={selectStyle}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select>
+                </>
+            ) : (
+                <Select label={type==="income"?"Account":"Pay From"} value={sourceId} onChange={e=>setSourceId(e.target.value)} style={selectStyle}>
+                    {banks.map(b=><option key={b.id} value={b.id}>🏦 {b.name}</option>)}
+                    {spendingGoals.map(g=><option key={"goal_"+g.id} value={"goal_"+g.id}>🎯 {g.name}</option>)}
+                </Select>
+            )}
+
+            {type!=="transfer" && (
+                <Select label="Category" value={catId} onChange={e=>setCatId(e.target.value)} style={selectStyle}>
+                    {cats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]} {c.name}</option>)}
+                </Select>
+            )}
+
+            <Input label="Note" placeholder="Add a note..." value={note} onChange={e=>setNote(e.target.value)} style={{background:C.card, border:`1px solid ${C.border}`}}/>
+        </div>
     </div>
 
-    <div style={{position:"relative", textAlign:"center", marginBottom:24}}>
-        <input type="number" inputMode="decimal" placeholder="0.00" value={amount} onChange={e=>setAmount(e.target.value)} 
-               style={{position:"absolute", width:"100%", height:"100%", opacity:0, cursor:"pointer", zIndex:2}} />
-        <div style={{fontSize:48, fontWeight:800, color: amount?theme:C.faint}}>
-            {amount ? `${type==="expense"?"−":""}${amount}` : "0.00"}
-        </div>
-        <div style={{color:C.muted, fontSize:12, fontWeight:700, textTransform:"uppercase"}}>{currency}</div>
+    {/* زر الحفظ ثابت في الأسفل */}
+    <div style={{padding:"16px", borderTop:`1px solid ${C.border}`}}>
+        <Btn full onClick={handleSubmit} style={{background:theme, border:"none", padding:"16px", borderRadius:16}}>Save Transaction</Btn>
     </div>
-
-    <Input type="date" value={txnDate} onChange={e=>setTxnDate(e.target.value)} style={{background:C.card, border:`1px solid ${C.border}`}}/>
-
-    {/* قسم البنوك والتحويل */}
-    <div style={{marginBottom:20}}>
-        <div style={{color:C.muted,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:10}}>{type==="transfer"?"From Account":"Accounts"}</div>
-        <div style={{display:"flex", gap:8, overflowX:"auto", paddingBottom:4}}>
-            {banks.map(b=><button key={b.id} onClick={()=>setSourceId(b.id)} style={{flexShrink:0, padding:"10px 16px", borderRadius:12, border:`1.5px solid ${sourceId===b.id?theme:C.border}`, background:sourceId===b.id?theme+"22":C.card, color:sourceId===b.id?theme:C.text, fontWeight:600}}>{b.name}</button>)}
-        </div>
-    </div>
-
-    {type==="transfer" && <div style={{marginBottom:20}}>
-        <div style={{color:C.muted,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:10}}>To Account</div>
-        <div style={{display:"flex", gap:8, overflowX:"auto", paddingBottom:4}}>
-            {banks.filter(b=>b.id!==sourceId).map(b=><button key={b.id} onClick={()=>setToBankId(b.id)} style={{flexShrink:0, padding:"10px 16px", borderRadius:12, border:`1.5px solid ${toBankId===b.id?theme:C.border}`, background:toBankId===b.id?theme+"22":C.card, color:toBankId===b.id?theme:C.text, fontWeight:600}}>{b.name}</button>)}
-        </div>
-    </div>}
-
-    {/* الأهداف (لا تظهر في التحويل) */}
-    {type!=="transfer" && spendingGoals.length > 0 && <div style={{marginBottom:20}}>
-        <div style={{color:C.muted,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:10}}>Savings Goals</div>
-        <div style={{display:"flex", gap:8, overflowX:"auto", paddingBottom:4}}>
-            {spendingGoals.map(g=><button key={g.id} onClick={()=>setSourceId("goal_"+g.id)} style={{flexShrink:0, padding:"10px 16px", borderRadius:12, border:`1.5px solid ${sourceId==="goal_"+g.id?theme:C.border}`, background:sourceId==="goal_"+g.id?theme+"22":C.card, color:sourceId==="goal_"+g.id?theme:C.text, fontWeight:600}}>🎯 {g.name}</button>)}
-        </div>
-    </div>}
-
-    {/* التصنيفات (لا تظهر في التحويل) */}
-    {type!=="transfer" && <div style={{marginBottom:24}}>
-        <div style={{color:C.muted,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:10}}>Category</div>
-        <div style={{display:"flex", flexWrap:"wrap", gap:8}}>
-            {cats.map(c=><button key={c.id} onClick={()=>setCatId(c.id)} style={{padding:"8px 12px", borderRadius:10, border:`1px solid ${catId===c.id?theme:C.border}`, background:catId===c.id?theme+"22":C.card, color:catId===c.id?theme:C.text, fontSize:13, fontWeight:600}}>
-                <span style={{marginRight:6}}>{ICONS[c.icon]}</span>{c.name}
-            </button>)}
-        </div>
-    </div>}
-
-    <div style={{marginBottom:24}}>
-      <div style={{color:C.muted,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:8}}>Note</div>
-      <input placeholder="Add a note..." value={note} onChange={e=>setNote(e.target.value)} style={{...IS, background:C.card, border:`1px solid ${C.border}`}}/>
-    </div>
-
-    <Btn full onClick={handleSubmit} style={{background:theme, border:"none", padding:"16px", borderRadius:16}}>Save Transaction</Btn>
   </div>;
 }
 
