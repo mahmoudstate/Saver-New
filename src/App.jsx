@@ -2171,11 +2171,11 @@ function Settings({banks,expCats,incCats,groups,onBanks,onExpCats,onIncCats,onGr
 
   return <div style={{padding:"24px 16px 0"}}>
     
-    {/* ── هنا التعديل بتاع زرار الـ Guide ── */}
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-        <div style={{color:C.text,fontSize:22,fontWeight:800}}>Settings</div>
-        <button onClick={onOpenManual} style={{background:C.accent+"22", border:`1px solid ${C.accent}44`, color:C.accent, fontWeight:800, fontSize:14, cursor:"pointer", display:"flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:12, transition:"all 0.2s ease"}}>
-            <span>Guide</span> <span style={{fontSize:16}}>💡</span>
+    {/* ── التعديل هنا: تكبير كلمة Settings وتوسيع زرار الـ Guide ── */}
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <div style={{color:C.text,fontSize:28,fontWeight:800}}>Settings</div>
+        <button onClick={onOpenManual} style={{background:C.accent+"22", border:`1px solid ${C.accent}44`, color:C.accent, fontWeight:800, fontSize:15, cursor:"pointer", display:"flex", alignItems:"center", gap:8, padding:"10px 20px", borderRadius:14, transition:"all 0.2s ease"}}>
+            <span>Guide</span> <span style={{fontSize:18}}>💡</span>
         </button>
     </div>
 
