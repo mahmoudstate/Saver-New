@@ -51,7 +51,7 @@ export default function Privacy({ onBack }) {
       </div>
 
       <div style={{ textAlign: "center", marginTop: 40, width: "100%" }}>
-        <div style={{ color: "#60a5fa", opacity: 0.8, fontSize: "13px", fontWeight: "700", marginBottom: "6px" }}>Saver One V1.0</div>
+        <div style={{ color: "#60a5fa", opacity: 0.8, fontSize: "13px", fontWeight: "700", marginBottom: "6px" }}>Saver One V1.2</div>
         <div style={{ color: "#60a5fa", opacity: 0.6, fontSize: "10px", fontWeight: "500" }}>Offline & 100% Private · Powered by Mahmoud © 2026</div>
       </div>
     </div>
