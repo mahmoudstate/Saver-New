@@ -3,11 +3,13 @@ import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSe
 import { arrayMove, SortableContext, verticalListSortingStrategy, rectSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import Privacy from "./Privacy";
 
+// ── Haptics ───────────────────────────────────────────────────────────────────
 const vibrate = (p) => { if (typeof window !== "undefined" && window.navigator?.vibrate) try { window.navigator.vibrate(p); } catch(e){} };
 const HAPTICS = { light:()=>vibrate(10), medium:()=>vibrate(20), heavy:()=>vibrate(50), success:()=>vibrate([30,50,30]), warning:()=>vibrate(100) };
 
 let isGlobalDragging = false;
 
+// ── Colors ────────────────────────────────────────────────────────────────────
 const C = {
   bg:"#0f0f13", surface:"#17171f", card:"#1e1e28", border:"#2a2a38",
   accent:"#6ee7b7", accentDim:"#1a3d30",
@@ -19,6 +21,7 @@ const C = {
   text:"#e8e8f0", muted:"#8888a8", faint:"#444460",
 };
 
+// ── Currency ──────────────────────────────────────────────────────────────────
 const CURRENCIES = [
   {code:"EGP",name:"Egyptian Pound"},{code:"GBP",name:"British Pound"},
   {code:"USD",name:"US Dollar"},{code:"EUR",name:"Euro"},
@@ -34,10 +37,12 @@ const fmt = (n, ov) => {
   } catch { return `${cur} ${n}`; }
 };
 
+// ── Date helpers ──────────────────────────────────────────────────────────────
 const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const fmtDate = (d) => { const dt=new Date(d+"T12:00:00"); return `${DAYS[dt.getDay()]}: ${dt.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}`; };
 
+// الذكاء الجديد لمعرفة التوقيت المحلي وجلب الشهر الحالي بدقة
 const getLocalTime = () => {
   const d = new Date();
   const offset = d.getTimezoneOffset() * 60000;
@@ -47,6 +52,18 @@ const getLocalTime = () => {
 const today = () => getLocalTime().today;
 const currentMonth = () => getLocalTime().month;
 
+// ── Goal encouragement messages ───────────────────────────────────────────────
+const getGoalMessage = (pct) => {
+  if (pct<=0) return null;
+  if (pct<=25) return ["Great start! Every bit counts 🚀","Nice! You're building momentum 💪"][Math.floor(Math.random()*2)];
+  if (pct<=49) return ["Keep going, you're on the right track! 📈","Your goal is getting closer! 🤩"][Math.floor(Math.random()*2)];
+  if (pct===50) return "Halfway there! The hard part is behind you 🎉";
+  if (pct<=89) return ["Past the midpoint — almost there! 🏃‍♂️💨","So close now! Just a few steps left 🔥"][Math.floor(Math.random()*2)];
+  if (pct<=99) return "Almost done! One final push ⏳✨";
+  return "Goal reached! Time to enjoy your hard work 🥳🎯";
+};
+
+// ── Icons ─────────────────────────────────────────────────────────────────────
 const ICONS = {
   dashboard:"◈",add:"＋",settings:"⚙",saving:"◎",bills_nav:"☷",budget:"📊",
   income:"↑",expense:"↓",transfer:"→",
@@ -58,6 +75,12 @@ const ICONS = {
   travel:"✈️",gaming:"🎮",pharmacy:"💊",laundry:"🧺",tuition:"🎓",gym:"🏋️",
 };
 
+// ── Transaction types ─────────────────────────────────────────────────────────
+// type: "income" | "expense" | "saving" | "transfer" | "goal_withdraw" | "goal_return"
+// goal_withdraw = spending from goal (expense linked to goal)
+// goal_return   = archive/delete returns money to bank (income)
+
+// ── Defaults ──────────────────────────────────────────────────────────────────
 const DEFAULT_BANKS = [{id:"b1",name:"CIB",color:C.blue},{id:"b2",name:"NBE",color:C.accent},{id:"b3",name:"Cash",color:C.yellow}];
 const DEFAULT_EXP_CATS = [
   {id:"food",name:"Food",icon:"food",group:"daily"},{id:"coffee",name:"Coffee",icon:"coffee",group:"daily"},
@@ -88,6 +111,7 @@ const DEFAULT_QUICK_ACTIONS = [
   {id:"q3",catId:"",amount:"",bankId:""},{id:"q4",catId:"",amount:"",bankId:""}
 ];
 
+// ── Storage keys ──────────────────────────────────────────────────────────────
 const KEYS = {
   txns:"et_txns",banks:"et_banks",expCats:"et_expCats",incCats:"et_incCats",
   groups:"et_groups",savings:"et_savings",currency:"et_currency",
@@ -97,8 +121,10 @@ const KEYS = {
 async function load(key,fallback){try{const r=localStorage.getItem(key);return r?JSON.parse(r):fallback;}catch{return fallback;}}
 async function save(key,val){try{localStorage.setItem(key,JSON.stringify(val));return true;}catch(e){console.warn("Storage:",e);return false;}}
 
+// ── Shared input style ────────────────────────────────────────────────────────
 const IS = {width:"100%", minWidth:0, background:C.bg, border:`1px solid ${C.border}`, borderRadius:10, padding:"10px 12px", color:C.text, fontSize:15, outline:"none", boxSizing:"border-box", fontFamily:"'DM Sans', sans-serif", display:"block", WebkitAppearance:"none"};
 
+// ── UI primitives ─────────────────────────────────────────────────────────────
 function Pill({color,children,style}){return <span style={{background:color+"22",color,border:`1px solid ${color}44`,borderRadius:99,padding:"2px 10px",fontSize:11,fontWeight:700,...style}}>{children}</span>;}
 
 function Card({children,style,onClick,...props}){
@@ -132,8 +158,10 @@ function ProgressBar({value,max,color,allowOver}){
 
 function EmptyState({icon,message}){return <div style={{textAlign:"center",padding:"60px 20px",opacity:0.5}}><div style={{fontSize:38,marginBottom:12}}>{icon}</div><div style={{color:C.muted,fontSize:14,fontWeight:500}}>{message}</div></div>;}
 
+// ── MonthSelect with yearly grouping ──────────────────────────────────────────
 function MonthSelect({value,onChange,availMonths}){
   const months = availMonths.length>0?availMonths:[new Date().toISOString().slice(0,7)];
+  // Group by year
   const byYear = {};
   months.forEach(m=>{const[y,mo]=m.split("-");if(!byYear[y])byYear[y]=[];byYear[y].push({m,mo});});
   const years = Object.keys(byYear).sort().reverse();
@@ -152,6 +180,7 @@ function MonthSelect({value,onChange,availMonths}){
   );
 }
 
+// ── Modal ─────────────────────────────────────────────────────────────────────
 function Modal({title,onClose,children,center}){
   const align=center?"center":"flex-end",radius=center?"20px":"20px 20px 0 0",anim=center?"popCenter 0.25s cubic-bezier(0.175,0.885,0.32,1.275)":"slideUp 0.3s ease-out";
   return (
@@ -185,46 +214,28 @@ function AlertModal({title,message,onClose,btnColor=C.accent}){
   </Modal>;
 }
 
-function GoalCelebrationModal({ message, onClose }) {
-  useEffect(() => {
-    const t = setTimeout(onClose, 3000); 
-    return () => clearTimeout(t);
-  }, [onClose]);
-
-  return (
-    <div onClick={onClose} style={{
-        position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", 
-        display: "flex", alignItems: "center", justifyContent: "center", 
-        zIndex: 999, padding: 20, animation: "fadeIn 0.3s ease"
-    }}>
-      <style>{`@keyframes fadeIn{from{opacity:0}to{opacity:1}}`}</style>
-      <div onClick={(e) => e.stopPropagation()} style={{
-          background: C.card, padding: "40px 20px", borderRadius: 24, 
-          border: `2px solid ${C.accent}`, width: "100%", maxWidth: 350,
-          textAlign: "center", position: "relative", boxShadow: "0 20px 50px rgba(0,0,0,0.5)"
-      }}>
-        <button onClick={onClose} style={{
-            position: "absolute", top: 15, right: 15, background: "none", 
-            border: "none", color: C.muted, fontSize: 24, cursor: "pointer"
-        }}>✕</button>
-        <div style={{ fontSize: 70, marginBottom: 20 }}>🎯</div>
-        <div style={{ color: C.text, fontSize: 24, fontWeight: 800, marginBottom: 15 }}>Goal Updated!</div>
-        <div style={{ color: C.muted, fontSize: 16, lineHeight: 1.5 }}>{message}</div>
-      </div>
-    </div>
-  );
+// ── GoalToast ─────────────────────────────────────────────────────────────────
+function GoalToast({message,onClose}){
+  useEffect(()=>{const t=setTimeout(onClose,4000);return()=>clearTimeout(t);},[onClose]);
+  return <div style={{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",background:C.accentDim,border:`1px solid ${C.accent}`,borderRadius:14,padding:"12px 16px",zIndex:200,maxWidth:320,width:"calc(100% - 40px)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,boxShadow:"0 8px 24px rgba(0,0,0,0.4)",animation:"toastIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275)",fontFamily:"'DM Sans', sans-serif"}}>
+    <style>{`@keyframes toastIn{from{opacity:0;transform:translate(-50%,-16px) scale(0.95)}to{opacity:1;transform:translate(-50%,0) scale(1)}}`}</style>
+    <span style={{color:C.accent,fontSize:13,fontWeight:600,lineHeight:1.4}}>{message}</span>
+    <button onClick={onClose} style={{background:"transparent",border:"none",color:C.accent,fontSize:16,cursor:"pointer",padding:0,flexShrink:0}}>✕</button>
+  </div>;
 }
 
 function AppFooter({navigateTo,onPrivacyClick}){
   return <div style={{textAlign:"center",marginTop:40,marginBottom:20,width:"100%"}}>
     <div style={{marginBottom:"6px",display:"flex",justifyContent:"center",alignItems:"center",gap:"8px"}}>
-      <span style={{color:"#60a5fa",opacity:0.8,fontSize:"13px",fontWeight:"700"}}>Saver One V1.0</span>
+      <span style={{color:"#60a5fa",opacity:0.8,fontSize:"13px",fontWeight:"700"}}>Saver One V1.2</span>
       {(navigateTo||onPrivacyClick)&&<><span style={{color:"#444460"}}>|</span><span onClick={()=>onPrivacyClick?onPrivacyClick():(navigateTo&&navigateTo("privacy"))} style={{color:"#6ee7b7",fontWeight:"700",fontSize:"13px",cursor:"pointer"}}>Privacy Policy</span></>}
     </div>
     <div style={{color:"#60a5fa",opacity:0.6,fontSize:"10px",fontWeight:"500"}}>Offline & 100% Private · Powered by Mahmoud © 2026</div>
   </div>;
 }
 
+// ── SwipeRow ──────────────────────────────────────────────────────────────────
+let globalActiveSwipeClose = null;
 function SwipeRow({onEdit,onDelete,children}){
   const [slide,setSlide]=useState(0);
   const rowRef=useRef(null),startX=useRef(0),startY=useRef(0),currentX=useRef(0);
@@ -251,6 +262,7 @@ function SwipeRow({onEdit,onDelete,children}){
   </div>;
 }
 
+// ── SortableList ──────────────────────────────────────────────────────────────
 function SortableItem({id,children}){
   const{attributes,listeners,setNodeRef,transform,transition,isDragging}=useSortable({id:String(id)});
   return <div ref={setNodeRef} style={{transform:transform?`translate3d(${transform.x}px,${transform.y}px,0)`:undefined,transition,opacity:isDragging?0.6:1,zIndex:isDragging?100:"auto",position:isDragging?"relative":"static",touchAction:isDragging?"none":"auto"}} {...attributes} {...listeners}>{children}</div>;
@@ -268,6 +280,7 @@ function SortableList({items,onReorder,renderItem,grid,gap=10}){
   </DndContext>;
 }
 
+// ── Platform ──────────────────────────────────────────────────────────────────
 function detectPlatform(){const ua=navigator.userAgent||"";return{isIOS:/iphone|ipad|ipod/i.test(ua),isAndroid:/android/i.test(ua),isInStandaloneMode:window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true};}
 
 function AddToHomeModal({onClose}){
@@ -310,10 +323,13 @@ function SplashScreen(){
     <div style={{color:"#e8e8f0",fontSize:32,fontWeight:800,letterSpacing:10,textTransform:"uppercase",marginBottom:6,animation:"saverLogoIn 1.0s 0.15s both"}}>SAVER</div>
     <div style={{color:"#6ee7b7",fontSize:12,fontWeight:500,letterSpacing:3,opacity:phase>=1?1:0,animation:phase>=1?"saverFadeUp 0.6s ease forwards":"none",marginBottom:80}}>Easy come, easy go.</div>
     <div style={{display:"flex",gap:7,position:"absolute",bottom:70}}>{[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:99,background:"#6ee7b7",animation:`saverBounce 1.3s ease ${i*0.22}s infinite`}}/>)}</div>
-    <div style={{color:"#444460",fontSize:10,position:"absolute",bottom:24,fontWeight:700,letterSpacing:1}}>Saver One V1.0</div>
+    <div style={{color:"#444460",fontSize:10,position:"absolute",bottom:24,fontWeight:700,letterSpacing:1}}>Saver One V1.2</div>
   </div>;
 }
 
+// ════════════════════════════════════════════════════════════════════════════════
+// CORE ACCOUNTING ENGINE V1.3 (Fixed & Bulletproof)
+// ════════════════════════════════════════════════════════════════════════════════
 function calcBankBalance(bankId, txns){
   return txns.reduce((acc,t)=>{
     if(t.bankId===bankId && t.type==="income") return acc+t.amount;
@@ -343,6 +359,7 @@ function calcFrozenForBank(bankId, savings, txns){
   },0);
 }
 
+// ── SaverApp ──────────────────────────────────────────────────────────────────
 function SaverApp(){
   const[tab,setTab]=useState("dashboard");
   const[scrollState,setScrollState]=useState({y:0,restore:false});
@@ -410,11 +427,13 @@ function SaverApp(){
 
   const persist=useCallback(async(key,val)=>{await save(key,val);},[]);
 
+// ── Accounting helpers (memoized) ─────────────────────────────────────────────
   const bankBalance=useCallback((bankId)=>calcBankBalance(bankId,txns),[txns]);
   const goalSaved=useCallback((goalId)=>Math.max(0,calcGoalSaved(goalId,txns)),[txns]);
   const frozenForBank=useCallback((bankId)=>Math.max(0,calcFrozenForBank(bankId,savings,txns)),[savings,txns]);
   const safeToSpend=useCallback((bankId)=>bankBalance(bankId)-frozenForBank(bankId),[bankBalance,frozenForBank]);
 
+  // دالة لمعرفة نصيب كل بنك داخل الهدف المفتوح
   const getGoalBalancesPerBank = (goalId) => {
     const balances = {};
     txns.forEach(t => {
@@ -426,6 +445,7 @@ function SaverApp(){
     return balances;
   };
 
+  // ── Transactions Engine (Add, Delete, Update) ───────────────────────────────
   const processingRef=useRef(false);
   const addTxn=async(t)=>{
     if(processingRef.current)return false;
@@ -441,6 +461,7 @@ function SaverApp(){
         if(avail<t.amount){HAPTICS.warning();setAppAlert({title:"Insufficient Balance",message:`⚠️ Available balance is ${fmt(avail)}. Not enough to save.`,color:C.red});return false;}
       }
 
+      // Auto-Split Logic
       if(t.type==="goal_withdraw" || t.type==="goal_return"){
         const saved=goalSaved(t.goalId);
         if(t.amount>saved){HAPTICS.warning();setAppAlert({title:"Insufficient Goal Balance",message:`⚠️ Goal only has ${fmt(saved)}.`,color:C.red});return false;}
@@ -495,13 +516,16 @@ function SaverApp(){
     }
 
     if(data.amount && data.amount !== orig.amount){
+        // حماية عمليات الإيداع (التقليل أو الزيادة)
         if(orig.type==="saving"){
+            // حالة التقليل: نمنعه لو الفلوس اتصرفت بالفعل
             if(data.amount < orig.amount){
                 const diff = orig.amount - data.amount;
                 if(goalSaved(orig.goalId) - diff < 0) {
                     HAPTICS.warning(); setAppAlert({title: "Action Blocked", message: "❌ Cannot reduce this amount. Funds have already been spent.", color: C.red}); return false;
                 }
             } 
+            // حالة الزيادة: نمنعه لو البنك مفيهوش رصيد يغطي الزيادة
             else if(data.amount > orig.amount){
                 const extraNeeded = data.amount - orig.amount;
                 const avail = safeToSpend(orig.bankId);
@@ -511,6 +535,7 @@ function SaverApp(){
             }
         }
 
+        // حماية عمليات الصرف والتحويل (كما هي)
         if(orig.type==="expense"||orig.type==="transfer"){
           const checkId=orig.type==="transfer"?orig.fromBankId:orig.bankId;
           const availWithout=safeToSpend(checkId)+orig.amount;
@@ -570,7 +595,7 @@ function SaverApp(){
 
   return <div style={{background:C.bg,minHeight:"100vh",color:C.text,fontFamily:"'DM Sans', sans-serif",maxWidth:520,margin:"0 auto",paddingBottom:isSubPageActive?0:130,position:"relative",userSelect:"none",WebkitUserSelect:"none"}}>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet"/>
-    {goalToast&&<GoalCelebrationModal message={goalToast} onClose={()=>setGoalToast(null)}/>}
+    {goalToast&&<GoalToast message={goalToast} onClose={()=>setGoalToast(null)}/>}
     {showBackupAlert&&tab==="dashboard"&&!isSubPageActive&&<div style={{background:C.yellowDim,color:C.yellow,padding:"10px 16px",fontSize:12,fontWeight:700,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span>⚠️ {lastBackup?"Over 3 days since last backup!":"Back up your data to keep it safe!"}</span><button onClick={()=>navigateTo("settings")} style={{background:"transparent",border:`1px solid ${C.yellow}`,color:C.yellow,borderRadius:8,padding:"4px 8px",fontSize:10,cursor:"pointer"}}>Backup Now</button></div>}
 
     {!ledgerBank&&!ledgerGroup&&!ledgerSaving&&!ledgerBudget?(
@@ -600,6 +625,7 @@ function SaverApp(){
   </div>;
 }
 
+// ── BottomNav ─────────────────────────────────────────────────────────────────
 function BottomNav({tab,navigateTo,expCats,banks,savings,onAdd,currency,safeToSpend,goalSaved,setAppAlert,quickActions,txns}){
   const[showQuick,setShowQuick]=useState(false);
   const[quickForm,setQuickForm]=useState(null);
@@ -610,6 +636,7 @@ function BottomNav({tab,navigateTo,expCats,banks,savings,onAdd,currency,safeToSp
   const pStart=(e)=>{e.preventDefault();pressTimer.current=setTimeout(()=>{HAPTICS.medium();setShowQuick(true);},450);};
   const pEnd=(e)=>{e.preventDefault();clearTimeout(pressTimer.current);if(!showQuick&&!quickForm)navigateTo("add");};
 
+  // دمج البنوك مع الأهداف اللي متفعل فيها الصرف
   const spendingGoals=savings.filter(s=>s.spendingMode&&s.status!=="archived");
   const sources=[
     ...banks.map(b=>({id:b.id,label:b.name})),
@@ -636,6 +663,7 @@ function BottomNav({tab,navigateTo,expCats,banks,savings,onAdd,currency,safeToSp
     if(!quickForm.amount||isNaN(amt)||amt<=0){setAppAlert({title:"Invalid Amount",message:"Please enter a valid amount.",color:C.red});return;}
     const cat=expCats.find(c=>c.id===quickForm.catId);
 
+    // ذكاء الدفع من الأهداف في الإدخال السريع
     if(quickForm.bankId.startsWith("goal_")){
         const goalId = quickForm.bankId.replace("goal_", "");
         const goal = savings.find(g=>g.id===goalId);
@@ -669,17 +697,19 @@ function BottomNav({tab,navigateTo,expCats,banks,savings,onAdd,currency,safeToSp
         return;
     }
 
+    // الدفع من بنك عادي
     const bank=banks.find(b=>b.id===quickForm.bankId);
     const ok=await onAdd({type:"expense",amount:amt,date:quickForm.date,bankId:quickForm.bankId,bankName:bank?.name,catId:quickForm.catId,catName:cat?.name,catIcon:cat?.icon,note:quickForm.note});
     if(ok!==false) finishQuickSave();
   };
 
+  // ── ستايل الحقول الجديد النظيف ──
   const fieldStyle = {
       width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, 
       padding: "16px", color: C.text, fontSize: 16, fontWeight: 600, appearance: "none", 
       outline: "none", boxSizing: "border-box", marginBottom: 14, colorScheme: "dark"
   };
-  const theme = "#FF6B6B"; 
+  const theme = "#FF6B6B"; // لون المصروفات الهادي
 
   return <>
     <nav style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:520,zIndex:50}}>
@@ -700,6 +730,7 @@ function BottomNav({tab,navigateTo,expCats,banks,savings,onAdd,currency,safeToSp
       {showQuick&&active.length>0&&<div style={{position:"fixed",bottom:135,left:"50%",transform:"translateX(-50%)",background:C.card,border:`1px solid ${C.border}`,borderRadius:24,padding:"12px",maxWidth:"90%",boxShadow:"0 12px 32px rgba(0,0,0,0.7)",animation:"popIn 0.15s ease",zIndex:60,display:"flex",justifyContent:"center"}}><style>{`@keyframes popIn{from{opacity:0;transform:translate(-50%,14px) scale(0.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}`}</style><div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"nowrap"}}>{active.map(q=>{const cat=expCats.find(c=>c.id===q.catId);return <button key={q.id} onClick={()=>handleQuickSelect(q)} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,width:90,height:90,color:C.text,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,cursor:"pointer",padding:"4px",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif"}}><span style={{fontSize:26,display:"block",lineHeight:1}}>{ICONS[cat?.icon]||"📌"}</span><span style={{fontSize:10,fontWeight:700,textAlign:"center",width:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{cat?.name}</span></button>;})}</div></div>}
     </nav>
     
+    {/* ── شاشة Quick Add بالتصميم الجديد ── */}
     {quickForm&&<Modal title="Quick Add" onClose={()=>setQuickForm(null)} center={false}>
       
       <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:24,padding:"16px",background:C.card,borderRadius:16,border:`1px solid ${C.border}`}}>
@@ -726,7 +757,7 @@ function BottomNav({tab,navigateTo,expCats,banks,savings,onAdd,currency,safeToSp
               {sources.map(s=>{
                   const isGoal = String(s.id).startsWith("goal_");
                   const icon = isGoal ? "🎯" : (s.label.toLowerCase().includes("cash") ? "💵" : "🏦");
-                  const cleanLabel = s.label.replace("💳 ", "");
+                  const cleanLabel = s.label.replace("💳 ", ""); // تنظيف الاسم من الإيموجي القديم
                   return <option key={s.id} value={s.id}>{icon} {cleanLabel}</option>;
               })}
           </select>
@@ -748,6 +779,7 @@ function NavBtn({id,icon,label,tab,navigateTo}){
   return <button onClick={()=>navigateTo(id,false)} style={{background:"none",border:"none",color:a?C.accent:C.muted,display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"4px 0",cursor:"pointer",transition:"color .2s",width:55,fontFamily:"'DM Sans', sans-serif"}}><span style={{fontSize:22}}>{icon}</span><span style={{fontSize:10,fontWeight:700,letterSpacing:.5,textTransform:"uppercase"}}>{label}</span></button>;
 }
 
+// ── TxnRow ────────────────────────────────────────────────────────────────────
 function TxnRow({txn,hideTotal,onClick,isTrulyLinked}){
   const isExp=txn.type==="expense"||txn.type==="goal_withdraw";
   const isInc=txn.type==="income"||txn.type==="goal_return";
@@ -756,13 +788,16 @@ function TxnRow({txn,hideTotal,onClick,isTrulyLinked}){
   const bg=isExp?C.redDim:isInc?C.accentDim:isTrans?C.blueDim:C.yellowDim;
   const ic=isSav?ICONS.saving:isTrans?ICONS.transfer:txn.type==="goal_withdraw"?"💳":txn.type==="goal_return"?"🏦":ICONS[txn.catIcon]||"📌";
   
+  // السطر الأول: العنوان النظيف
   const baseLabel = isTrans ? "Transfer" : 
                     txn.type === "goal_return" ? "Returned to Bank" : 
                     txn.type === "saving" ? "Goal Deposit" : 
                     txn.catName || txn.type;
   
+  // السطر التاني: البنك
   const sub=isTrans?`${txn.bankName} ➔ ${txn.toBankName}`:txn.bankName;
   
+  // السطر التالت: سطر الهدف (يظهر فقط لو العملية مرتبطة بهدف)
   let goalLine = null;
   if (txn.type === "saving" && txn.goalName) {
       goalLine = `To Goal: ${txn.goalName}`;
@@ -779,6 +814,7 @@ function TxnRow({txn,hideTotal,onClick,isTrulyLinked}){
       <div>
         <div style={{color:C.text,fontWeight:600,fontSize:14,display:"flex",alignItems:"center"}}>
             {baseLabel} 
+            {/* اللينك بخط صغير 11px وعادي مش عريض */}
             {isTrulyLinked && <span title="Linked Transaction" style={{fontSize:11, fontWeight:"normal", color:C.faint, marginLeft:6}}>🔗 #{splitId}</span>}
         </div>
         <div style={{color:C.muted,fontSize:11, marginTop: 2}}>{sub} · {fmtDate(txn.date)}</div>
@@ -790,6 +826,7 @@ function TxnRow({txn,hideTotal,onClick,isTrulyLinked}){
   </div>;
 }
 
+// ── Dashboard ─────────────────────────────────────────────────────────────────
 function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filterMonth,setFilterMonth,availMonths,username,bankBalance,safeToSpend,frozenForBank,goalSaved,onDeleteTxn,onUpdateTxn,onOpenBank,onOpenGroup,onOpenSaving,onOpenBudget,hideTotal,setHideTotal,navigateTo,scrollState,setScrollState,onBanks,onBudgets,onSavings,onGroups}){
   useEffect(()=>{if(scrollState.restore){setTimeout(()=>window.scrollTo(0,scrollState.y),50);setScrollState(s=>({...s,restore:false}));}else window.scrollTo(0,0);},[]);
   const[recentFilter,setRecentFilter]=useState("all");
@@ -848,6 +885,7 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
       if(!totals[key]) totals[key] = {name, icon, amount: 0};
       totals[key].amount += t.amount;
     });
+    // تم التعديل لـ 5 تصنيفات بدل 3
     return Object.values(totals).sort((a,b)=>b.amount-a.amount).slice(0,5).map(c=>({...c, pct: totalAmt>0?Math.round((c.amount/totalAmt)*100):0}));
   };
 
@@ -929,6 +967,7 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
           <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Monthly Budgets</div>
           <div style={{marginBottom:20}}>
             <SortableList items={budgets} onReorder={onBudgets} renderItem={(bdg)=>{
+              // تم إصلاح فلتر الشهور للميزانية هنا
               const targetMonth = filterMonth === "all" ? curMonth : filterMonth;
               const allExp=txnsAll.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&bdg.cats.includes(t.catId));
               const spent=allExp.filter(t=>t.date.startsWith(targetMonth)).reduce((a,t)=>a+t.amount,0);
@@ -946,8 +985,8 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
               const rem=Math.max(0,bdg.amount-spent);const pct=bdg.amount>0?Math.min(100,Math.round((spent/bdg.amount)*100)):0;const barColor=pct>=90?C.red:pct>=70?C.yellow:C.accent;
               return <Card onClick={()=>onOpenBudget(bdg)} className="ic" style={{padding:"14px",cursor:"pointer",transition:"transform 0.1s ease"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{color:C.text,fontSize:14,fontWeight:700}}>{bdg.name}</span><Pill color={barColor}>{pct}%</Pill></div>
-                <div style={{color:C.muted,fontSize:11,marginBottom:8}}>Spent <span style={{color:C.text,fontWeight:700}}>{hideTotal?"••••":fmt(spent)}</span> of {hideTotal?"••••":fmt(bdg.amount)}</div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{color:rem===0?C.red:C.accent,fontSize:18,fontWeight:800}}>{fmt(rem)} left</span><span style={{color:C.muted,fontSize:11}}>Daily: {fmt(rem/daysLeft)}</span></div>
+                <div style={{color:C.muted,fontSize:11,marginBottom:6}}>Spent <span style={{color:C.text,fontWeight:700}}>{hideTotal?"••••":fmt(spent)}</span> of {hideTotal?"••••":fmt(bdg.amount)}</div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{color:rem===0?C.red:C.accent,fontSize:18,fontWeight:800}}>{hideTotal?"••••":fmt(rem)} left</span><span style={{color:C.muted,fontSize:11}}>Daily: {fmt(rem/daysLeft)}</span></div>
                 <ProgressBar value={spent} max={bdg.amount} color={barColor}/>
               </Card>;
             }}/>
@@ -961,13 +1000,14 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
           <div style={{marginBottom:20}}>
             <SortableList items={savings} onReorder={onSavings} renderItem={(s)=>{
               const saved=goalSaved(s.id),pct=s.goal?Math.min(110,Math.round((saved/s.goal)*100)):0,isSpending=s.spendingMode;
+              // تم توحيد اللون للبرتقالي (Orange) هنا
               const mainColor = isSpending ? C.orange : C.yellow;
               return <Card onClick={()=>onOpenSaving(s)} className="ic" style={{padding:"14px 14px 12px",cursor:"pointer",transition:"transform 0.1s ease",border:`1px solid ${isSpending?C.orange+"66":C.border}`}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
                   <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{color:C.text,fontWeight:700,fontSize:14}}>{isSpending?"💳":"🎯"} {s.name}</span>{isSpending&&<Pill color={C.orange} style={{fontSize:10}}>Spending</Pill>}</div>
                   <Pill color={pct>=100?C.accent:mainColor}>{pct}%</Pill>
                 </div>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{color:mainColor,fontSize:17,fontWeight:800}}>{hideTotal?"••••":fmt(saved)}</span><span style={{color:C.muted,fontSize:13}}>of {fmt(s.goal)}</span></div>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{color:mainColor,fontSize:18,fontWeight:800}}>{hideTotal?"••••":fmt(saved)}</span><span style={{color:C.muted,fontSize:13}}>of {fmt(s.goal)}</span></div>
                 <ProgressBar value={saved} max={s.goal} color={mainColor} allowOver/>
               </Card>;
             }}/>
@@ -1079,6 +1119,7 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
   </div>;
 }
 
+// ── LedgerHeader ──────────────────────────────────────────────────────────────
 function LedgerHeader({type,data}){
   if(!type||!data)return null;
   if(type==="bank"){const neg=data.safe<0,hF=data.frozen>0;return <div style={{marginBottom:20,padding:"16px 18px",background:C.card,border:`1px solid ${C.border}`,borderRadius:16}}><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",marginBottom:6}}>Available Balance</div><div style={{color:neg?C.red:C.accent,fontSize:32,fontWeight:800,letterSpacing:-1}}>{fmt(data.safe??data.balance)}</div>{hF&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:6,padding:"8px 10px",background:C.yellowDim,borderRadius:8}}><span style={{color:C.yellow,fontSize:12}}>{fmt(data.frozen)}</span><div style={{display:"flex",alignItems:"center",gap:4}}><span style={{fontSize:12}}>🔒</span><span style={{color:C.yellow,fontSize:11,fontWeight:600}}>Saving</span></div></div>}</div>;}
@@ -1088,13 +1129,15 @@ function LedgerHeader({type,data}){
   return null;
 }
 
+// ── DeepLedgerView ────────────────────────────────────────────────────────────
 function DeepLedgerView({title,headerType,headerData,txns,onDelete,onUpdate,banks,expCats,onClose}){
   const[filter,setFilter]=useState("all");const[confirmId,setConfirmId]=useState(null);const[editTxn,setEditTxn]=useState(null);const[viewTxn,setViewTxn]=useState(null);
-  const[localAlert,setLocalAlert]=useState(null);
+  const[localAlert,setLocalAlert]=useState(null); // هنا ضفنا نظام التنبيهات
 
   useEffect(()=>{requestAnimationFrame(()=>window.scrollTo(0,0));},[title]);
   const list=txns.filter(t=>{if(filter==="in")return t.type==="income"||t.type==="goal_return";if(filter==="out")return t.type==="expense"||t.type==="saving"||t.type==="goal_withdraw";return true;});
   
+  // نفس نظام حماية التعديل اللي في الهيستوري
   const handleEditClick = (t) => {
       if (t.splitGroupId) {
           setLocalAlert({title: "Linked Transaction 🔗", message: "Cannot edit a split transaction. Please delete and recreate it.", color: C.yellow});
@@ -1126,6 +1169,7 @@ function DeepLedgerView({title,headerType,headerData,txns,onDelete,onUpdate,bank
   </div>;
 }
 
+// ── SavingDetailView — goal detail page with controls ─────────────────────────
 function SavingDetailView({goal,saved,txns,onDelete,addTxn,banks,savings,onSave,onGoalToast,setAppAlert,goalSaved,onClose}){
   useEffect(()=>{window.scrollTo(0,0);},[]);
   const[confirmAction,setConfirmAction]=useState(null); 
@@ -1133,6 +1177,7 @@ function SavingDetailView({goal,saved,txns,onDelete,addTxn,banks,savings,onSave,
   const[withdrawAmt,setWithdrawAmt]=useState("");
   const[viewTxn,setViewTxn]=useState(null);
 
+  // تحديث حالة الهدف فورياً لمنع التهنيج في الألوان
   const currentGoal = savings.find(s => s.id === goal.id) || goal;
   const isArchived = currentGoal.status === "archived";
   const isSpending = currentGoal.spendingMode;
@@ -1257,6 +1302,7 @@ function SavingDetailView({goal,saved,txns,onDelete,addTxn,banks,savings,onSave,
   </div>;
 }
 
+// ── AddTransaction (النسخة الاحترافية بالأيقونات المالية) ────────────────
 function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,safeToSpend,goalSaved,setAppAlert,txns}){
   const[type,setType]=useState("expense");
   const[amount,setAmount]=useState("");
@@ -1276,6 +1322,7 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
                 type==="saving" ? "#F4B942" :  
                 "#4D96FF";                     
 
+  // دالة تحديد الأيقونة (كاش أو بنك)
   const getBankIcon = (name) => {
       if(!name) return "🏦";
       return name.toLowerCase().includes("cash") ? "💵" : "🏦";
@@ -1388,10 +1435,13 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
   </div>;
 }
 
+
+// ── History ───────────────────────────────────────────────────────────────────
 function History({txns,onDelete,onUpdate,banks,expCats,incCats,currency,availMonths,savings,setAppAlert}){
   useEffect(()=>{window.scrollTo(0,0);},[]);
   const[search,setSearch]=useState("");const[filterType,setFilterType]=useState("all");const[filterMonth,setFilterMonth]=useState("all");const[confirmTxn,setConfirmTxn]=useState(null);const[editTxn,setEditTxn]=useState(null);const[viewTxn,setViewTxn]=useState(null);
 
+  // حساب ذكي لعدد العمليات المربوطة ببعض
   const splitCounts = useMemo(() => {
     const counts = {};
     txns.forEach(t => {
@@ -1401,6 +1451,7 @@ function History({txns,onDelete,onUpdate,banks,expCats,incCats,currency,availMon
   }, [txns]);
 
   const filtered=useMemo(()=>txns.filter(t=>{
+    // دمج مصاريف وإرجاع الهدف مع فلاتر المصاريف والدخل
     if(filterType !== "all") {
         if(filterType === "expense" && t.type !== "expense" && t.type !== "goal_withdraw") return false;
         else if(filterType === "income" && t.type !== "income" && t.type !== "goal_return") return false;
@@ -1411,6 +1462,7 @@ function History({txns,onDelete,onUpdate,banks,expCats,incCats,currency,availMon
     return true;
   }),[txns,filterType,filterMonth,search]);
 
+  // التحكم في التعديل والرسايل الإنجليزي
   const handleEditClick = (t) => {
       const isTrulyLinked = t.splitGroupId && splitCounts[t.splitGroupId] > 1;
       
@@ -1432,6 +1484,7 @@ function History({txns,onDelete,onUpdate,banks,expCats,incCats,currency,availMon
       setEditTxn(t);
   };
 
+  // التحكم في الحذف
   const handleDeleteClick = (t) => {
       if (t.goalId && savings) {
           const goal = savings.find(s => s.id === t.goalId);
@@ -1454,6 +1507,7 @@ function History({txns,onDelete,onUpdate,banks,expCats,incCats,currency,availMon
     <div style={{display:"flex",flexDirection:"column"}}>
       {filtered.length===0&&<EmptyState icon="💸" message="No transactions found."/>}
       {filtered.map(t=>{
+        // نبعت الذكاء للسطر عشان يعرف يظهر اللينك ولا لأ
         const isTrulyLinked = t.splitGroupId && splitCounts[t.splitGroupId] > 1;
         return <SwipeRow key={t.id} onEdit={()=>handleEditClick(t)} onDelete={()=>handleDeleteClick(t)}>
           <TxnRow txn={t} hideTotal={false} onClick={()=>setViewTxn(t)} isTrulyLinked={isTrulyLinked}/>
@@ -1471,12 +1525,14 @@ function History({txns,onDelete,onUpdate,banks,expCats,incCats,currency,availMon
   </div>;
 }
 
+// ── TxnViewModal ──────────────────────────────────────────────────────────────
 function TxnViewModal({txn, onClose}) {
   const isExp = txn.type === "expense" || txn.type === "goal_withdraw";
   const isInc = txn.type === "income" || txn.type === "goal_return";
   const isTrans = txn.type === "transfer";
   const isSav = txn.type === "saving";
   
+  // تصغير حجم الحقول عشان الشاشة تكون ملمومة وشيك
   const roStyle = {
     width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8,
     padding:"8px 10px", color:C.text, fontSize:13, display:"flex", alignItems:"center",
@@ -1490,12 +1546,15 @@ function TxnViewModal({txn, onClose}) {
     </div>
   );
 
+  // اختصار التاريخ عشان يكفي في نص سطر
   const d = new Date(txn.date + "T12:00:00");
   const shortDate = `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 
   return (
     <Modal title="Transaction Details" onClose={onClose} center={false}>
       <div style={{display: "flex", flexDirection: "column", gap: 12}}>
+        
+        {/* السطر الأول: المبلغ والتاريخ جنب بعض */}
         <div style={{display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10}}>
             <Field label="Amount">
               <span style={{color: isExp ? C.red : isInc ? C.accent : isTrans ? C.blue : C.yellow, fontWeight: 700}}>
@@ -1506,6 +1565,8 @@ function TxnViewModal({txn, onClose}) {
               {shortDate}
             </Field>
         </div>
+
+        {/* السطر التاني: الحساب والتصنيف جنب بعض */}
         <div style={{display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10}}>
             <Field label={isTrans ? "Transfer" : "Account"}>
               <span style={{whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>
@@ -1522,6 +1583,8 @@ function TxnViewModal({txn, onClose}) {
                </span>
             </Field>
         </div>
+
+        {/* السطر التالت: الأهداف واللينكات (لو موجودين) */}
         {(txn.goalName || txn.splitGroupId) && (
           <div style={{display: "grid", gridTemplateColumns: txn.goalName && txn.splitGroupId ? "1fr 1fr" : "1fr", gap: 10}}>
             {txn.goalName && (
@@ -1536,17 +1599,21 @@ function TxnViewModal({txn, onClose}) {
             )}
           </div>
         )}
+
+        {/* السطر الرابع: الملاحظة */}
         <Field label="Note">
           <span style={{whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>
             {txn.note || <span style={{color: C.faint}}>No note</span>}
           </span>
         </Field>
+
       </div>
       <Btn full onClick={onClose} style={{marginTop: 16}}>Close</Btn>
     </Modal>
   );
 }
 
+// ── EditTxnModal ──────────────────────────────────────────────────────────────
 function EditTxnModal({txn,banks,expCats,incCats,currency,onSave,onClose}){
   const[amount,setAmount]=useState(String(txn.amount));
   const[date,setDate]=useState(txn.date);
@@ -1568,18 +1635,21 @@ function EditTxnModal({txn,banks,expCats,incCats,currency,onSave,onClose}){
   return <Modal title="Edit Transaction" onClose={onClose} center={false}>
     <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Amount</div><Input type="number" step="any" value={amount} onChange={e=>setAmount(e.target.value)}/></div>
     <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Date</div><Input type="date" value={date} onChange={e=>setDate(e.target.value)}/></div>
+    
     <div style={{ opacity: isSav ? 0.6 : 1, pointerEvents: isSav ? "none" : "auto", marginBottom: isSav ? 4 : 0 }}>
       <Select label="Account" value={bankId} onChange={e=>setBankId(e.target.value)}>
         {banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
       </Select>
     </div>
     {isSav && <div style={{color:C.orange,fontSize:11,marginBottom:14,fontWeight:600,lineHeight:1.4}}>⚠️ To change the account, please delete this transaction and create a new one.</div>}
+
     {cats.length>0&&<Select label="Category" value={catId} onChange={e=>setCatId(e.target.value)}>{cats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]} {c.name}</option>)}</Select>}
     <Input label="Note (optional)" value={note} onChange={e=>setNote(e.target.value)}/>
     <Btn full onClick={handleSave}>Save Changes</Btn>
   </Modal>;
 }
 
+// ── SavingsPage ───────────────────────────────────────────────────────────────
 function SavingsPage({savings,onSave,txns,banks,onBack,addTxn,delTxn,onGoalToast,bankBalance,safeToSpend,frozenForBank,goalSaved,setAppAlert, onOpenSaving}){
   useEffect(()=>{window.scrollTo(0,0);},[]);
   const[activeTab,setActiveTab]=useState("active");const[showAdd,setShowAdd]=useState(false);const[name,setName]=useState("");const[goal,setGoal]=useState("");const[editId,setEditId]=useState(null);
@@ -1634,6 +1704,7 @@ function SavingsPage({savings,onSave,txns,banks,onBack,addTxn,delTxn,onGoalToast
   </div>;
 }
 
+// ── BudgetsPage ───────────────────────────────────────────────────────────────
 function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[]}){
   useEffect(()=>{window.scrollTo(0,0);},[]);
 
@@ -1645,9 +1716,11 @@ function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[]}){
   const curMonth = getLocalMonth();
 
   const[filterMonth,setFilterMonth]=useState(curMonth);
+  // قراءة الشهور من العمليات وإضافة الشهر الحالي
   const availMonths=[...new Set([curMonth, ...txns.map(t=>t.date.slice(0,7))])].sort().reverse();
 
   const[showAdd,setShowAdd]=useState(false);const[editId,setEditId]=useState(null);const[name,setName]=useState("");const[amount,setAmount]=useState("");const[selectedCats,setSelectedCats]=useState([]);const[confirmId,setConfirmId]=useState(null);
+  // إضافة حالة لشهر البداية للميزانية
   const[startMonth,setStartMonth]=useState(curMonth);
 
   const startEdit=(b)=>{setEditId(b.id);setName(b.name);setAmount(b.amount);setSelectedCats(b.cats||[]);setStartMonth(b.startMonth||curMonth);setShowAdd(true);};
@@ -1663,8 +1736,11 @@ function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[]}){
 
   const now2=new Date(),daysLeft=Math.max(1,new Date(now2.getFullYear(),now2.getMonth()+1,0).getDate()-now2.getDate()+1);
 
+  // ── فلترة الميزانيات حسب شهر البداية ──
+  // لو الفلتر "الكل"، هنعرض كل الميزانيات، لو شهر معين، هنعرض بس اللي اتولدت في الشهر ده أو قبله
   const displayBudgets = filterMonth === "all" ? budgets : budgets.filter(b => !b.startMonth || b.startMonth <= filterMonth);
 
+  // ── تحليلات ذكية لفلتر "الكل" (Insights Engine) ──
   let mostSaved = null;
   let mostOverspent = null;
   
@@ -1674,12 +1750,13 @@ function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[]}){
 
      budgets.forEach(bdg => {
         const allExp = txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&bdg.cats.includes(t.catId));
+        // حساب عدد الشهور الفعالة للميزانية دي
         const activeMonths = availMonths.filter(m => !bdg.startMonth || m >= bdg.startMonth);
         const monthsCount = activeMonths.length || 1;
         const totalSpent = allExp.filter(t => activeMonths.includes(t.date.slice(0,7))).reduce((a,t)=>a+t.amount,0);
         
         const avgSpent = totalSpent / monthsCount;
-        const diff = bdg.amount - avgSpent;
+        const diff = bdg.amount - avgSpent; // موجب = توفير، سالب = خرم الميزانية
 
         if (diff > 0 && diff > maxSaveAmt) { maxSaveAmt = diff; mostSaved = { ...bdg, avgSpent, diff }; }
         if (diff < 0 && Math.abs(diff) > maxOverAmt) { maxOverAmt = Math.abs(diff); mostOverspent = { ...bdg, avgSpent, diff: Math.abs(diff) }; }
@@ -1805,6 +1882,7 @@ function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[]}){
   </div>;
 }
 
+// ── QuickActionsSetup ─────────────────────────────────────────────────────────
 function QuickActionsSetup({quickActions,expCats,banks,onSave,onBack}){
   useEffect(()=>{window.scrollTo(0,0);},[]);
   const[editingId,setEditingId]=useState(null);const[catId,setCatId]=useState("");const[amount,setAmount]=useState("");const[bankId,setBankId]=useState("");
@@ -1819,14 +1897,18 @@ function QuickActionsSetup({quickActions,expCats,banks,onSave,onBack}){
   </div>;
 }
 
+// ── MonthlyBills ──────────────────────────────────────────────────────────────
 function MonthlyBills({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,setAppAlert}){
   useEffect(()=>{window.scrollTo(0,0);},[]);
+
+  // ضبط الزمن المحلي لضمان الوقوف دايماً على الشهر الفعلي
   const getLocalMonth = () => {
     const d = new Date();
     const offset = d.getTimezoneOffset() * 60000;
     return new Date(d.getTime() - offset).toISOString().slice(0,7);
   };
   const curMonth = getLocalMonth();
+
   const[showAdd,setShowAdd]=useState(false);const[editItem,setEditItem]=useState(null);const[confirmDelete,setConfirmDelete]=useState(null);const[confirmUndo,setConfirmUndo]=useState(null);
   const[name,setName]=useState("");const[amount,setAmount]=useState("");const[bankId,setBankId]=useState(banks[0]?.id||"");const[catId,setCatId]=useState(expCats[0]?.id||"");const[dueDay,setDueDay]=useState("1");const[reminderDays,setReminderDays]=useState("2");
   
@@ -1839,6 +1921,7 @@ function MonthlyBills({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,setAp
 
   const getReminderStatus=(bill)=>{
     if(!bill.dueDay)return null;
+    // التنبيهات بتظهر بس في الشهر الحالي مش في السجل القديم
     if(isPaid(bill)||filterMonth!==curMonth)return null;
     const now=new Date();
     const due=new Date(now.getFullYear(),now.getMonth(),bill.dueDay);
@@ -1882,6 +1965,7 @@ function MonthlyBills({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,setAp
   const totalMonthly=bills.reduce((a,b)=>a+b.amount,0);
   const paidAmount=isReportMode?0:bills.filter(b=>isPaid(b)).reduce((a,b)=>a+b.amount,0);
 
+  // ── تجهيز بيانات السجل الزمني (Timeline) ──
   const yearsMap = {};
   availMonths.forEach(m => {
       const y = m.split("-")[0];
@@ -1890,6 +1974,7 @@ function MonthlyBills({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,setAp
   });
   const sortedYears = Object.keys(yearsMap).sort().reverse();
 
+  // ── مصنع كروت الفواتير (ذكي بيعرف لو الكارت للقراءة بس ولا تفاعلي) ──
   const renderBillCard = (bill, mStr, isReadOnly, idx) => {
       const paid = isPaid(bill, mStr);
       const bank = banks.find(b=>b.id===bill.bankId);
@@ -1933,6 +2018,7 @@ function MonthlyBills({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,setAp
 
     {bills.length>0&&(
       isReportMode ? (
+        // ── عرض السجل الزمني (All Time Timeline) ──
         <div style={{display:"flex", flexDirection:"column", gap:24, paddingBottom: 40}}>
           {sortedYears.map(year => (
             <div key={year}>
@@ -1956,6 +2042,7 @@ function MonthlyBills({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,setAp
           ))}
         </div>
       ) : (
+        // ── عرض الشهر المحدد (تفاعلي) ──
         <>
           <div style={{color:C.muted,fontSize:13,marginBottom:16}}>{paidCount}/{bills.length} paid</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
@@ -1985,26 +2072,34 @@ function MonthlyBills({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,setAp
   </div>;
 }
 
+// ── UserManual  ──────────────────────────────────
 function UserManual({ onBack, navigateTo }) {
   useEffect(() => { window.scrollTo(0, 0); }, []);
   const scrollToSection = (id) => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); };
   const handleFeedback = () => { window.location.href = "mailto:hello@savertrack.app?subject=Saver%20App%20Feedback"; };
+
   const sectionStyle = { marginBottom: 40 };
   const iconBoxStyle = (bg, c) => ({ background: bg, color: c, width: 40, height: 40, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 });
   const guideBoxStyle = { padding: "20px", background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, marginTop: 14 };
 
   return (
     <div style={{ padding: "24px 16px 130px", minHeight: "100vh", background: C.bg, boxSizing: "border-box" }}>
+      
+      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
         <button onClick={onBack} style={{ background: "transparent", border: "none", color: C.muted, fontSize: 24, cursor: "pointer", padding: "10px" }}>❮</button>
         <div style={{ color: C.text, fontSize: 24, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
           Manual Guide <span style={{ fontSize: 20 }}>💡</span>
         </div>
       </div>
+
       <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>Everything is stored locally on your device — 100% private.</p>
+
       <div style={{ marginBottom: 32 }}>
         <Btn full outline color={C.accent} onClick={handleFeedback} style={{ padding: "14px", borderRadius: 12, fontWeight: 700 }}>🐞 Report a Bug / Suggestion</Btn>
       </div>
+
+      {/* Tabs */}
       <div style={{ display: "flex", gap: 8, marginBottom: 30, overflowX: "auto", paddingBottom: 10 }}>
         {["Home", "Adding", "Bills", "History", "Settings", "Tips"].map((item, idx) => (
           <button key={item} onClick={() => scrollToSection(`guide-sec-${idx}`)} style={{ whiteSpace: "nowrap", padding: "10px 20px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.surface, color: C.text, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
@@ -2012,7 +2107,13 @@ function UserManual({ onBack, navigateTo }) {
           </button>
         ))}
       </div>
-      <style>{`.guide-pointer-up { animation: float-up 1.5s infinite ease-in-out; font-size: 24px; text-align: center; margin-top: 8px; } @keyframes float-up { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }`}</style>
+
+      <style>{`
+        .guide-pointer-up { animation: float-up 1.5s infinite ease-in-out; font-size: 24px; text-align: center; margin-top: 8px; }
+        @keyframes float-up { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+      `}</style>
+
+      {/* Sections */}
       <div id="guide-sec-0" style={sectionStyle}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
           <div style={iconBoxStyle(C.blueDim, C.blue)}>◈</div>
@@ -2027,6 +2128,7 @@ function UserManual({ onBack, navigateTo }) {
           <div className="guide-pointer-up" style={{ color: C.accent }}>👆</div>
         </div>
       </div>
+
       <div id="guide-sec-1" style={sectionStyle}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
           <div style={iconBoxStyle(C.accentDim, C.accent)}>＋</div>
@@ -2039,6 +2141,7 @@ function UserManual({ onBack, navigateTo }) {
           <div style={{ textAlign: "center", color: C.yellow, fontSize: 12, fontWeight: 700 }}>Quick Add: Long press for Shortcuts.</div>
         </div>
       </div>
+
       <div id="guide-sec-2" style={sectionStyle}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
           <div style={iconBoxStyle(C.redDim, C.red)}>☷</div>
@@ -2052,6 +2155,7 @@ function UserManual({ onBack, navigateTo }) {
           </ul>
         </div>
       </div>
+
       <div id="guide-sec-3" style={sectionStyle}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
           <div style={iconBoxStyle(C.purpleDim, C.purple)}>☰</div>
@@ -2065,6 +2169,7 @@ function UserManual({ onBack, navigateTo }) {
           </ul>
         </div>
       </div>
+
       <div id="guide-sec-4" style={sectionStyle}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
           <div style={iconBoxStyle(C.surface, C.text)}>⚙</div>
@@ -2078,6 +2183,7 @@ function UserManual({ onBack, navigateTo }) {
           </ul>
         </div>
       </div>
+
       <div id="guide-sec-5" style={sectionStyle}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
           <div style={iconBoxStyle(C.yellowDim, C.yellow)}>💡</div>
@@ -2091,11 +2197,13 @@ function UserManual({ onBack, navigateTo }) {
           </ul>
         </div>
       </div>
+
       <AppFooter navigateTo={navigateTo} />
     </div>
   );
 }
 
+// ── Settings ──────────────────────────────────────────────────────────────────
 function Settings({banks,expCats,incCats,groups,onBanks,onExpCats,onIncCats,onGroups,currency,onCurrency,username,onUsername,bankBalance,safeToSpend,frozenForBank,onOpenSavings,onOpenBudgets,onOpenQuickActions,onOpenManual,setLastBackup,txns,bills,savings,budgets,onRestore,setAppAlert,navigateTo}){
   useEffect(()=>{window.scrollTo(0,0);},[]);
   const[section,setSection]=useState("profile");const[modal,setModal]=useState(null);
@@ -2131,8 +2239,10 @@ function Settings({banks,expCats,incCats,groups,onBanks,onExpCats,onIncCats,onGr
     return null;
   };
 
+  // التعديل هنا: إجبار المتصفح على التحميل المباشر بدون فتح شاشة المعاينة
   const handleBackup=async()=>{
     const data={txns,banks,expCats,incCats,groups,savings,bills,budgets,currency,username};
+    // استخدام octet-stream يجبر الـ iOS على تنزيل الملف فوراً
     const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/octet-stream"});
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a");
@@ -2142,7 +2252,7 @@ function Settings({banks,expCats,incCats,groups,onBanks,onExpCats,onIncCats,onGr
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(url); // تنظيف الذاكرة
     
     const now=Date.now();await save(KEYS.lastBackup,now);setLastBackup(now);
     HAPTICS.success();setAppAlert({title:"Backup Complete",message:"🔄 Backup saved directly to your device.",color:C.accent});
@@ -2152,12 +2262,15 @@ function Settings({banks,expCats,incCats,groups,onBanks,onExpCats,onIncCats,onGr
   const iconKeys=Object.keys(ICONS).filter(k=>!["dashboard","add","settings","saving","bills_nav","income","expense","transfer","close","check","trash","edit","bank","cash","goal","budget"].includes(k));
 
   return <div style={{padding:"24px 16px 0"}}>
+    
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
         <div style={{color:C.text,fontSize:28,fontWeight:800}}>Settings</div>
         <button onClick={onOpenManual} style={{background:C.accent+"22", border:`1px solid ${C.accent}44`, color:C.accent, fontWeight:800, fontSize:15, cursor:"pointer", display:"flex", alignItems:"center", gap:8, padding:"10px 20px", borderRadius:14, transition:"all 0.2s ease"}}>
             <span>Guide</span> <span style={{fontSize:18}}>💡</span>
         </button>
     </div>
+
+    {/* التعديل هنا: تكبير الزراير ومساحاتها لتكون مريحة وشيك */}
     <div style={{display:"flex",gap:10,marginBottom:24,overflowX:"auto",paddingBottom:10,paddingTop:4}}>
       {[{id:"profile",label:"👤 General"},{id:"currency",label:"💱 Currency"},{id:"banks",label:"🏦 Accounts"},{id:"expCats",label:"📤 Exp. Cat."},{id:"incCats",label:"💰 Inc. Cat."},{id:"groups",label:"📊 Groups"}].map(s=><button key={s.id} onClick={()=>setSection(s.id)} style={{whiteSpace:"nowrap",padding:"12px 18px",borderRadius:12,border:`1px solid ${section===s.id?C.accent:C.border}`,background:section===s.id?C.accentDim:"transparent",color:section===s.id?C.accent:C.muted,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",transition:"all 0.2s ease"}}>{s.label}</button>)}
     </div>
@@ -2169,10 +2282,12 @@ function Settings({banks,expCats,incCats,groups,onBanks,onExpCats,onIncCats,onGr
       <Card style={{marginBottom:16}}><p style={{color:C.muted,fontSize:12,marginBottom:14,lineHeight:1.4}}>Download a backup or restore from a previous file.</p><div style={{display:"flex",gap:10,width:"100%"}}><Btn style={{flex:1,padding:"11px 5px"}} onClick={handleBackup} color={C.blue}>⬇️ Backup</Btn><Btn style={{flex:1,padding:"11px 5px"}} onClick={()=>fileRef.current.click()} color={C.purple} outline>⬆️ Restore</Btn></div><input type="file" ref={fileRef} accept=".json" onChange={handleFileChange} style={{display:"none"}}/></Card>
       <AppFooter navigateTo={navigateTo}/>
     </div>}
+
     {section==="currency"&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
       <div style={{background:C.yellowDim,border:`1px solid ${C.yellow}44`,borderRadius:12,padding:"12px 14px",marginBottom:4}}><span style={{color:C.yellow,fontSize:12,fontWeight:600}}>⚠️ Changing currency only changes display. Numbers are not converted.</span></div>
       {CURRENCIES.map(cur=><button key={cur.code} onClick={()=>onCurrency(cur.code)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:currency===cur.code?C.accentDim:C.card,border:`1.5px solid ${currency===cur.code?C.accent:C.border}`,borderRadius:12,padding:"14px 16px",cursor:"pointer",textAlign:"left",fontFamily:"'DM Sans', sans-serif"}}><div><div style={{color:currency===cur.code?C.accent:C.text,fontWeight:700,fontSize:15}}>{cur.code}</div><div style={{color:C.muted,fontSize:12,marginTop:2}}>{cur.name}</div></div>{currency===cur.code&&<span style={{color:C.accent,fontSize:20}}>✓</span>}</button>)}
     </div>}
+
     {section==="banks"&&<><div style={{display:"flex",flexDirection:"column"}}>
       {banks.map(b=><SwipeRow key={b.id} onEdit={()=>openAdd("bank",b)} onDelete={()=>{const err=getBankDeleteError(b);if(err)setAppAlert({title:"Cannot Delete",message:err,color:C.red});else setConfirmDel({type:"bank",item:b});}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px"}}>
@@ -2181,9 +2296,13 @@ function Settings({banks,expCats,incCats,groups,onBanks,onExpCats,onIncCats,onGr
         </div>
       </SwipeRow>)}
     </div><Btn outline full onClick={()=>openAdd("bank")} style={{marginTop:8}}>+ Add Account</Btn></>}
+
     {section==="expCats"&&<><div style={{display:"flex",flexDirection:"column"}}>{expCats.map(c=><SwipeRow key={c.id} onEdit={()=>openAdd("expCat",c)} onDelete={()=>setConfirmDel({type:"expCat",item:c})}><div style={{display:"flex",alignItems:"center",padding:"14px 16px"}}><span style={{fontSize:18,marginRight:10}}>{ICONS[c.icon]||"📌"}</span><span style={{color:C.text,fontWeight:600,fontSize:14}}>{c.name}</span></div></SwipeRow>)}</div><Btn outline full onClick={()=>openAdd("expCat")} style={{marginTop:8}}>+ Add Expense Category</Btn></>}
+
     {section==="incCats"&&<><div style={{display:"flex",flexDirection:"column"}}>{incCats.map(c=><SwipeRow key={c.id} onEdit={()=>openAdd("incCat",c)} onDelete={()=>setConfirmDel({type:"incCat",item:c})}><div style={{display:"flex",alignItems:"center",padding:"14px 16px"}}><span style={{fontSize:18,marginRight:10}}>{ICONS[c.icon]||"💰"}</span><span style={{color:C.text,fontWeight:600,fontSize:14}}>{c.name}</span></div></SwipeRow>)}</div><Btn outline full onClick={()=>openAdd("incCat")} style={{marginTop:8}}>+ Add Income Category</Btn></>}
+
     {section==="groups"&&<><div style={{display:"flex",flexDirection:"column",gap:0}}>{groups.map(g=><SwipeRow key={g.id} onEdit={()=>openAdd("group",g)} onDelete={()=>setConfirmDel({type:"group",item:g})}><div style={{padding:"12px 16px"}}><div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}><div style={{width:10,height:10,borderRadius:99,background:g.color,flexShrink:0}}/><span style={{color:C.text,fontWeight:700,fontSize:14}}>{g.name}</span></div><div style={{display:"flex",flexWrap:"wrap",gap:5,paddingLeft:20}}>{g.cats.map(cid=>{const cat=expCats.find(c=>c.id===cid);return cat?<span key={cid} style={{background:g.color+"22",color:g.color,border:`1px solid ${g.color}44`,borderRadius:99,padding:"2px 8px",fontSize:11,fontWeight:700}}>{cat.name}</span>:null;})}</div></div></SwipeRow>)}</div><Btn outline full onClick={()=>openAdd("group")} style={{marginTop:8}}>+ Add Group</Btn></>}
+
     {modal&&<Modal title={`${modal.item?"Edit":"Add"} ${modal.type==="bank"?"Account":modal.type==="expCat"?"Expense Cat.":modal.type==="incCat"?"Income Cat.":"Group"}`} onClose={()=>setModal(null)} center={false}>
       <Input label="Name" value={iN} onChange={e=>setIN(e.target.value)}/>
       {modal.type==="bank"&&<><div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:"uppercase"}}>Color</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{[C.accent,C.red,C.blue,C.yellow,C.purple,"#fb923c","#34d399","#f472b6"].map(col=><button key={col} onClick={()=>setIC(col)} style={{width:28,height:28,borderRadius:99,background:col,border:iC===col?"3px solid white":"3px solid transparent",cursor:"pointer"}}/>)}</div></div><div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>Low Balance Alert</div><input type="number" min="0" placeholder="e.g. 200" value={iT} onChange={e=>setIT(e.target.value)} style={IS}/><div style={{color:C.faint,fontSize:11,marginTop:4}}>Show 🔻 below this (0 = off)</div></div></>}
@@ -2197,6 +2316,7 @@ function Settings({banks,expCats,incCats,groups,onBanks,onExpCats,onIncCats,onGr
   </div>;
 }
 
+// ── Error Boundary ────────────────────────────────────────────────────────────
 class ErrorBoundary extends React.Component{
   constructor(props){super(props);this.state={hasError:false};}
   static getDerivedStateFromError(){return{hasError:true};}
