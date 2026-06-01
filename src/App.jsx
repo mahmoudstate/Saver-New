@@ -1261,7 +1261,7 @@ function SavingDetailView({goal,saved,txns,onDelete,addTxn,banks,savings,onSave,
   </div>;
 }
 
-// ── AddTransaction ─────────────
+// ── AddTransaction ────────────────────
 function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,safeToSpend,goalSaved,setAppAlert,txns}){
   const[type,setType]=useState("expense");
   const[amount,setAmount]=useState("");
@@ -1273,15 +1273,12 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
   const[txnDate,setTxnDate]=useState(today());
   
   const cats = type==="expense" ? expCats : type==="income" ? incCats : [];
-  
-  // قراءة كل الأهداف (النشطة فقط) بدون الاعتماد على الـ Spending Mode
   const activeGoals = savings.filter(s=>s.status!=="archived");
 
-  // ألوان الباستيل الاحترافية والمريحة للعين
-  const theme = type==="expense" ? "#FF6B6B" : // Soft Coral
-                type==="income" ? "#48C78E" :  // Mint Green
-                type==="saving" ? "#F4B942" :  // Warm Gold
-                "#4D96FF";                     // Soft Sky Blue
+  const theme = type==="expense" ? "#FF6B6B" : 
+                type==="income" ? "#48C78E" :  
+                type==="saving" ? "#F4B942" :  
+                "#4D96FF";                     
 
   const getBankIcon = (name) => name.toLowerCase().includes("cash") ? "💵" : "🏦";
 
@@ -1289,10 +1286,8 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
     const amt=parseFloat(amount);
     if(!amount||isNaN(amt)||amt<=0){setAppAlert({title:"Invalid Amount",message:"Please enter a valid amount.",color:C.red}); return;}
     
-    // حماية السيفنج
     if(type==="saving" && !savingId) {setAppAlert({title:"No Goal",message:"Please select a savings goal.",color:C.red}); return;}
 
-    // حماية الرصيد (بدون الخروج من الشاشة)
     const bank=banks.find(b=>b.id===sourceId);
     if(type==="expense" && bank && amt > safeToSpend(bank.id)) {
         setAppAlert({title:"Insufficient Funds",message:`Available: ${fmt(safeToSpend(bank.id))}`,color:C.red});
@@ -1313,22 +1308,12 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
     if(ok!==false){setAmount("");onDone();}
   };
 
-  // كومبوننت مخصص للقوائم المنسدلة (Clean Dropdown Hack)
-  const CustomField = ({ label, icon, value, onChange, children, isSelect=true }) => (
-    <div style={{background:C.card, border:`1px solid ${C.border}`, borderRadius:14, display:"flex", alignItems:"center", position:"relative", height:56}}>
-       <div style={{color:C.muted, fontSize:13, fontWeight:700, paddingLeft:16, display:"flex", alignItems:"center", gap:6, width:85}}>
-          <span style={{fontSize:16}}>{icon}</span> {label}
-       </div>
-       {isSelect ? (
-           <>
-               <select value={value} onChange={onChange} style={{flex:1, background:"transparent", border:"none", color:C.text, fontSize:15, padding:"0 36px 0 12px", height:"100%", outline:"none", appearance:"none", cursor:"pointer", fontWeight:600}}>
-                  {children}
-               </select>
-               <div style={{position:"absolute", right:16, pointerEvents:"none", color:C.muted}}>▾</div>
-           </>
-       ) : children}
-    </div>
-  );
+  // ستايل الحقول النظيف بدون أسهم أو زحمة
+  const fieldStyle = {
+      width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, 
+      padding: "16px", color: C.text, fontSize: 16, fontWeight: 600, appearance: "none", 
+      outline: "none", boxSizing: "border-box", marginBottom: 14, colorScheme: "dark"
+  };
 
   return <div style={{position:"fixed", inset:0, background:C.bg, zIndex:100, display:"flex", flexDirection:"column"}}>
     
@@ -1346,73 +1331,59 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
           {["expense","income","saving","transfer"].map(t=><button key={t} onClick={()=>setType(t)} style={{flex:1,textTransform:"capitalize",padding:"12px 0",borderRadius:12,border:`1px solid ${type===t?theme:C.border}`,background:type===t?theme+"22":"transparent",color:type===t?theme:C.muted,fontWeight:700,fontSize:13,cursor:"pointer", transition:"all 0.2s ease"}}>{t}</button>)}
         </div>
 
-        {/* Big Amount Area (Hero Section with Breathing Room) */}
-        <div style={{textAlign:"center", padding:"40px 0 50px"}}>
+        {/* Big Amount Area */}
+        <div style={{textAlign:"center", padding:"40px 0 50px", position:"relative"}}>
             <div style={{color:C.muted,fontSize:12,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12}}>Amount ({currency})</div>
             <input type="number" inputMode="decimal" placeholder="0.00" value={amount} onChange={e=>setAmount(e.target.value)} 
                    style={{background:"transparent", border:"none", color:amount?theme:C.faint, fontSize:64, fontWeight:800, textAlign:"center", width:"100%", outline:"none", caretColor:"transparent"}} />
-            {/* التلميح البصري لعلامة السالب */}
-            {amount && type==="expense" && <div style={{position:"absolute", left:"50%", transform:"translateX(-50%)", marginTop:-58, marginLeft:-((amount.length*18)+10), fontSize:40, fontWeight:800, color:theme, pointerEvents:"none"}}>−</div>}
+            {amount && type==="expense" && <div style={{position:"absolute", top:70, left:"50%", transform:"translateX(-50%)", marginLeft:-((amount.length*18)+10), fontSize:40, fontWeight:800, color:theme, pointerEvents:"none"}}>−</div>}
         </div>
 
-        {/* Clean Fields Section */}
-        <div style={{display:"flex", flexDirection:"column", gap:14}}>
+        {/* Clean Minimalist Fields */}
+        <div>
+            <input type="date" value={txnDate} onChange={e=>setTxnDate(e.target.value)} style={fieldStyle} />
             
-            {/* Date Field */}
-            <CustomField label="Date" icon="📅" isSelect={false}>
-                <input type="date" value={txnDate} onChange={e=>setTxnDate(e.target.value)} style={{flex:1, background:"transparent", border:"none", color:C.text, fontSize:15, padding:"0 12px", height:"100%", outline:"none", fontWeight:600, colorScheme:"dark"}} />
-            </CustomField>
-            
-            {/* Dynamic Selectors */}
             {type==="transfer" ? (
                 <>
-                    <CustomField label="From" icon="📤" value={sourceId} onChange={e=>setSourceId(e.target.value)}>
-                        {banks.map(b=><option key={b.id} value={b.id}>{getBankIcon(b.name)} {b.name}</option>)}
-                    </CustomField>
-                    <CustomField label="To" icon="📥" value={toBankId} onChange={e=>setToBankId(e.target.value)}>
-                        {banks.map(b=><option key={b.id} value={b.id}>{getBankIcon(b.name)} {b.name}</option>)}
-                    </CustomField>
+                    <select value={sourceId} onChange={e=>setSourceId(e.target.value)} style={fieldStyle}>
+                        {banks.map(b=><option key={b.id} value={b.id}>📤 {getBankIcon(b.name)} {b.name} (From)</option>)}
+                    </select>
+                    <select value={toBankId} onChange={e=>setToBankId(e.target.value)} style={fieldStyle}>
+                        {banks.map(b=><option key={b.id} value={b.id}>📥 {getBankIcon(b.name)} {b.name} (To)</option>)}
+                    </select>
                 </>
             ) : type==="saving" ? (
                 <>
-                    <CustomField label="From" icon="📤" value={sourceId} onChange={e=>setSourceId(e.target.value)}>
+                    <select value={sourceId} onChange={e=>setSourceId(e.target.value)} style={fieldStyle}>
                         {banks.map(b=><option key={b.id} value={b.id}>{getBankIcon(b.name)} {b.name}</option>)}
-                    </CustomField>
-                    
+                    </select>
                     {activeGoals.length > 0 ? (
-                        <CustomField label="Goal" icon="🎯" value={savingId} onChange={e=>setSavingId(e.target.value)}>
+                        <select value={savingId} onChange={e=>setSavingId(e.target.value)} style={fieldStyle}>
                             {activeGoals.map(s=><option key={s.id} value={s.id}>🎯 {s.name}</option>)}
-                        </CustomField>
+                        </select>
                     ) : (
-                        <div style={{background:C.card, border:`1px solid ${C.border}`, borderRadius:14, display:"flex", alignItems:"center", height:56, padding:"0 16px", color:C.muted, fontSize:14, fontWeight:600}}>
-                            <span style={{marginRight:10, fontSize:16}}>🎯</span> No active goals available
-                        </div>
+                        <div style={{...fieldStyle, display:"flex", alignItems:"center", color:C.muted}}>🎯 No active goals</div>
                     )}
                 </>
             ) : (
-                <CustomField label={type==="income"?"To":"From"} icon={type==="income"?"📥":"📤"} value={sourceId} onChange={e=>setSourceId(e.target.value)}>
+                <select value={sourceId} onChange={e=>setSourceId(e.target.value)} style={fieldStyle}>
                     {banks.map(b=><option key={b.id} value={b.id}>{getBankIcon(b.name)} {b.name}</option>)}
-                </CustomField>
+                </select>
             )}
 
-            {/* Category */}
             {type!=="transfer" && type!=="saving" && (
-                <CustomField label="Catg." icon="📌" value={catId} onChange={e=>setCatId(e.target.value)}>
+                <select value={catId} onChange={e=>setCatId(e.target.value)} style={fieldStyle}>
                     {cats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]||"📌"} {c.name}</option>)}
-                </CustomField>
+                </select>
             )}
 
-            {/* Note Field */}
-            <CustomField label="Note" icon="📝" isSelect={false}>
-                <input placeholder="Add details..." value={note} onChange={e=>setNote(e.target.value)} style={{flex:1, background:"transparent", border:"none", color:C.text, fontSize:15, padding:"0 12px", height:"100%", outline:"none", fontWeight:600}} />
-            </CustomField>
-
+            <input placeholder="Add a note..." value={note} onChange={e=>setNote(e.target.value)} style={fieldStyle} />
         </div>
     </div>
 
-    {/* Footer with Safe Area */}
-    <div style={{padding:"16px 16px 40px", background:C.bg}}>
-        <button onClick={handleSubmit} style={{width:"100%", background:theme, border:"none", padding:"16px", borderRadius:16, color:C.bg==="#000000"||C.bg==="#111"?"#111":"#fff", fontWeight:800, fontSize:17, cursor:"pointer", transition:"all 0.2s ease"}}>
+    {/* Footer - الزرار اترفع لفوق بـ padding-bottom: 60px */}
+    <div style={{padding:"16px 16px 60px", background:C.bg}}>
+        <button onClick={handleSubmit} style={{width:"100%", background:theme, border:"none", padding:"18px", borderRadius:16, color:C.bg==="#000000"||C.bg==="#111"?"#111":"#fff", fontWeight:800, fontSize:17, cursor:"pointer", transition:"all 0.2s ease"}}>
             Save Transaction
         </button>
     </div>
