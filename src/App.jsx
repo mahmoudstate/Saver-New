@@ -1261,14 +1261,15 @@ function SavingDetailView({goal,saved,txns,onDelete,addTxn,banks,savings,onSave,
   </div>;
 }
 
-// ── AddTransaction ──────────────────────────────
-function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,safeToSpend,goalSaved,setAppAlert,onGoalToast,txns}){
+// ── AddTransaction (النسخة النهائية المنقحة) ──────────────────────────────
+function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,safeToSpend,goalSaved,setAppAlert,txns}){
   const[type,setType]=useState("expense");
   const[amount,setAmount]=useState("");
   const[sourceId,setSourceId]=useState(banks[0]?.id||"");
   const[toBankId,setToBankId]=useState(banks.length>1?banks[1]?.id:banks[0]?.id||"");
   const[catId,setCatId]=useState(expCats[0]?.id||"");
   const[note,setNote]=useState("");
+  const[savingId,setSavingId]=useState(savings[0]?.id||"");
   const[txnDate,setTxnDate]=useState(today());
   
   const cats = type==="expense" ? expCats : type==="income" ? incCats : [];
@@ -1277,17 +1278,31 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
 
   const handleSubmit=async()=>{
     const amt=parseFloat(amount);
-    if(!amount||isNaN(amt)||amt<=0){setAppAlert({title:"Invalid Amount",message:"Please enter a valid amount.",color:C.red});return;}
+    if(!amount||isNaN(amt)||amt<=0){setAppAlert({title:"Invalid Amount",message:"Please enter a valid amount.",color:C.red}); return;}
     
+    // 1. حماية الـ Saving
+    if(type==="saving" && !savingId) {setAppAlert({title:"No Goal",message:"Please select a savings goal.",color:C.red}); return;}
+
+    // 2. التحقق من الرصيد قبل التنفيذ (Logically)
+    const bank=banks.find(b=>b.id===sourceId);
+    if(type==="expense" && bank && amt > safeToSpend(bank.id)) {
+        setAppAlert({title:"Insufficient Funds",message:`Available: ${fmt(safeToSpend(bank.id))}`,color:C.red});
+        return; // هنا الشاشة مش هتقفل وهتفضل مفتوحة
+    }
+
+    let ok = false;
     if(type==="transfer"){
         if(sourceId===toBankId){setAppAlert({title:"Error",message:"Cannot transfer to same account",color:C.red}); return;}
-        await onAdd({type:"transfer",amount:amt,date:txnDate,bankId:sourceId,toBankId,note});
+        ok = await onAdd({type:"transfer",amount:amt,date:txnDate,bankId:sourceId,toBankId,note});
+    } else if(type==="saving"){
+        ok = await onAdd({type:"saving",amount:amt,date:txnDate,bankId:sourceId,bankName:bank?.name,goalId:savingId,catName:savings.find(s=>s.id===savingId)?.name,catIcon:"saving",note});
     } else {
-        const bank=banks.find(b=>b.id===sourceId);
         const cat=cats.find(c=>c.id===catId);
-        await onAdd({type,amount:amt,date:txnDate,bankId:sourceId,bankName:bank?.name,catId,catName:cat?.name,catIcon:cat?.icon,note});
+        ok = await onAdd({type,amount:amt,date:txnDate,bankId:sourceId,bankName:bank?.name,catId,catName:cat?.name,catIcon:cat?.icon,note});
     }
-    setAmount("");onDone();
+    
+    // الشاشة مش هتقفل إلا لو العملية نجحت فعلاً
+    if(ok!==false){setAmount("");onDone();}
   };
 
   const selectStyle = {...IS, background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:"12px", appearance:"none", cursor:"pointer", color:C.text};
@@ -1303,10 +1318,10 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
           {["expense","income","saving","transfer"].map(t=><button key={t} onClick={()=>setType(t)} style={{flex:1,textTransform:"capitalize",padding:"10px 0",borderRadius:12,border:`1px solid ${type===t?theme:C.border}`,background:type===t?theme+"22":"transparent",color:type===t?theme:C.muted,fontWeight:700,fontSize:13,cursor:"pointer"}}>{t}</button>)}
         </div>
 
-        <div style={{textAlign:"center", marginBottom:32}}>
+        <div style={{textAlign:"center", marginBottom:32, marginTop:20}}>
             <div style={{color:C.muted,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:8}}>Amount ({currency})</div>
             <input type="number" inputMode="decimal" placeholder="0.00" value={amount} onChange={e=>setAmount(e.target.value)} 
-                   style={{background:"transparent", border:"none", color:amount?theme:C.faint, fontSize:56, fontWeight:800, textAlign:"center", width:"100%", outline:"none"}} />
+                   style={{background:"transparent", border:"none", color:amount?theme:C.faint, fontSize:56, fontWeight:800, textAlign:"center", width:"100%", outline:"none", caretColor:"transparent"}} />
         </div>
 
         <div style={{display:"flex", flexDirection:"column", gap:16}}>
@@ -1317,14 +1332,20 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
                     <select value={sourceId} onChange={e=>setSourceId(e.target.value)} style={selectStyle}>{banks.map(b=><option key={b.id} value={b.id}>From: {b.name}</option>)}</select>
                     <select value={toBankId} onChange={e=>setToBankId(e.target.value)} style={selectStyle}>{banks.map(b=><option key={b.id} value={b.id}>To: {b.name}</option>)}</select>
                 </>
+            ) : type==="saving" ? (
+                <>
+                    <select value={sourceId} onChange={e=>setSourceId(e.target.value)} style={selectStyle}>{banks.map(b=><option key={b.id} value={b.id}>Pay from: {b.name}</option>)}</select>
+                    {spendingGoals.length > 0 ? (
+                        <select value={savingId} onChange={e=>setSavingId(e.target.value)} style={selectStyle}>{spendingGoals.map(s=><option key={s.id} value={s.id}>🎯 Goal: {s.name}</option>)}</select>
+                    ) : <div style={{color:C.red, fontSize:12, padding:10}}>No active goals found.</div>}
+                </>
             ) : (
                 <select value={sourceId} onChange={e=>setSourceId(e.target.value)} style={selectStyle}>
                     {banks.map(b=><option key={b.id} value={b.id}>🏦 {b.name}</option>)}
-                    {spendingGoals.map(g=><option key={"goal_"+g.id} value={"goal_"+g.id}>🎯 {g.name}</option>)}
                 </select>
             )}
 
-            {type!=="transfer" && (
+            {type!=="transfer" && type!=="saving" && (
                 <select value={catId} onChange={e=>setCatId(e.target.value)} style={selectStyle}>
                     {cats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]||"📌"} {c.name}</option>)}
                 </select>
@@ -1334,7 +1355,7 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
         </div>
     </div>
 
-    <div style={{padding:"16px", borderTop:`1px solid ${C.border}`}}>
+    <div style={{padding:"16px", borderTop:`1px solid ${C.border}`, background:C.bg}}>
         <button onClick={handleSubmit} style={{width:"100%", background:theme, border:"none", padding:"16px", borderRadius:16, color:"#fff", fontWeight:700, fontSize:16, cursor:"pointer"}}>Save Transaction</button>
     </div>
   </div>;
