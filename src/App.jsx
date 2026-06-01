@@ -1260,8 +1260,7 @@ function SavingDetailView({goal,saved,txns,onDelete,addTxn,banks,savings,onSave,
     {viewTxn&&<TxnViewModal txn={viewTxn} onClose={()=>setViewTxn(null)}/>}
   </div>;
 }
-
-// ── AddTransaction ────────────────────
+// ── AddTransaction ────────────────
 function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,safeToSpend,goalSaved,setAppAlert,txns}){
   const[type,setType]=useState("expense");
   const[amount,setAmount]=useState("");
@@ -1280,7 +1279,18 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
                 type==="saving" ? "#F4B942" :  
                 "#4D96FF";                     
 
-  const getBankIcon = (name) => name.toLowerCase().includes("cash") ? "💵" : "🏦";
+  // دالة ذكية لتحويل لون البنك لنقطة ملونة (عشان القوائم تقبلها)
+  const getBankDot = (bank) => {
+      if(!bank || !bank.color) return "⚫";
+      const c = bank.color.toLowerCase();
+      if(c.includes("red")||c.includes("ff3")||c.includes("f44")||c.includes("ff6")) return "🔴";
+      if(c.includes("blue")||c.includes("007")||c.includes("4d9")||c.includes("219")) return "🔵";
+      if(c.includes("green")||c.includes("34c")||c.includes("48c")||c.includes("4ca")) return "🟢";
+      if(c.includes("yellow")||c.includes("ffc")||c.includes("f4b")||c.includes("f1c")) return "🟡";
+      if(c.includes("orange")||c.includes("ff9")||c.includes("f39")) return "🟠";
+      if(c.includes("purple")||c.includes("af5")||c.includes("9c2")) return "🟣";
+      return "⚫"; 
+  };
 
   const handleSubmit=async()=>{
     const amt=parseFloat(amount);
@@ -1308,7 +1318,6 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
     if(ok!==false){setAmount("");onDone();}
   };
 
-  // ستايل الحقول النظيف بدون أسهم أو زحمة
   const fieldStyle = {
       width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, 
       padding: "16px", color: C.text, fontSize: 16, fontWeight: 600, appearance: "none", 
@@ -1326,36 +1335,42 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
     {/* Scrollable Content */}
     <div style={{flex:1, overflowY:"auto", padding:"0 16px"}}>
         
-        {/* Tabs */}
         <div style={{display:"flex",gap:8,marginBottom:10}}>
           {["expense","income","saving","transfer"].map(t=><button key={t} onClick={()=>setType(t)} style={{flex:1,textTransform:"capitalize",padding:"12px 0",borderRadius:12,border:`1px solid ${type===t?theme:C.border}`,background:type===t?theme+"22":"transparent",color:type===t?theme:C.muted,fontWeight:700,fontSize:13,cursor:"pointer", transition:"all 0.2s ease"}}>{t}</button>)}
         </div>
 
-        {/* Big Amount Area */}
-        <div style={{textAlign:"center", padding:"40px 0 50px", position:"relative"}}>
+        {/* Amount Area - تنسيق جديد يمنع تداخل السالب مع الرقم */}
+        <div style={{textAlign:"center", padding:"40px 0 50px", position:"relative", display:"flex", flexDirection:"column", alignItems:"center"}}>
             <div style={{color:C.muted,fontSize:12,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12}}>Amount ({currency})</div>
-            <input type="number" inputMode="decimal" placeholder="0.00" value={amount} onChange={e=>setAmount(e.target.value)} 
-                   style={{background:"transparent", border:"none", color:amount?theme:C.faint, fontSize:64, fontWeight:800, textAlign:"center", width:"100%", outline:"none", caretColor:"transparent"}} />
-            {amount && type==="expense" && <div style={{position:"absolute", top:70, left:"50%", transform:"translateX(-50%)", marginLeft:-((amount.length*18)+10), fontSize:40, fontWeight:800, color:theme, pointerEvents:"none"}}>−</div>}
+            
+            {/* الشاشة الوهمية اللي بتعرض الرقم بشكل متناسق */}
+            <div style={{display:"flex", alignItems:"center", justifyContent:"center", fontSize:64, fontWeight:800, color: amount?theme:C.faint}}>
+                {amount && type==="expense" && <span style={{marginRight: 10, color:theme}}>−</span>}
+                <span>{amount || "0.00"}</span>
+            </div>
+
+            {/* الـ Input الشفاف اللي بيستقبل الكتابة */}
+            <input type="number" inputMode="decimal" placeholder="" value={amount} onChange={e=>setAmount(e.target.value)} 
+                   style={{position:"absolute", inset:0, opacity:0, width:"100%", height:"100%", outline:"none"}} />
         </div>
 
-        {/* Clean Minimalist Fields */}
         <div>
             <input type="date" value={txnDate} onChange={e=>setTxnDate(e.target.value)} style={fieldStyle} />
             
+            {/* القوائم المنسدلة النظيفة جداً */}
             {type==="transfer" ? (
                 <>
                     <select value={sourceId} onChange={e=>setSourceId(e.target.value)} style={fieldStyle}>
-                        {banks.map(b=><option key={b.id} value={b.id}>📤 {getBankIcon(b.name)} {b.name} (From)</option>)}
+                        {banks.map(b=><option key={b.id} value={b.id}>← {getBankDot(b)} {b.name}</option>)}
                     </select>
                     <select value={toBankId} onChange={e=>setToBankId(e.target.value)} style={fieldStyle}>
-                        {banks.map(b=><option key={b.id} value={b.id}>📥 {getBankIcon(b.name)} {b.name} (To)</option>)}
+                        {banks.map(b=><option key={b.id} value={b.id}>→ {getBankDot(b)} {b.name}</option>)}
                     </select>
                 </>
             ) : type==="saving" ? (
                 <>
                     <select value={sourceId} onChange={e=>setSourceId(e.target.value)} style={fieldStyle}>
-                        {banks.map(b=><option key={b.id} value={b.id}>{getBankIcon(b.name)} {b.name}</option>)}
+                        {banks.map(b=><option key={b.id} value={b.id}>{getBankDot(b)} {b.name}</option>)}
                     </select>
                     {activeGoals.length > 0 ? (
                         <select value={savingId} onChange={e=>setSavingId(e.target.value)} style={fieldStyle}>
@@ -1367,7 +1382,7 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
                 </>
             ) : (
                 <select value={sourceId} onChange={e=>setSourceId(e.target.value)} style={fieldStyle}>
-                    {banks.map(b=><option key={b.id} value={b.id}>{getBankIcon(b.name)} {b.name}</option>)}
+                    {banks.map(b=><option key={b.id} value={b.id}>{getBankDot(b)} {b.name}</option>)}
                 </select>
             )}
 
@@ -1381,7 +1396,6 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
         </div>
     </div>
 
-    {/* Footer - الزرار اترفع لفوق بـ padding-bottom: 60px */}
     <div style={{padding:"16px 16px 60px", background:C.bg}}>
         <button onClick={handleSubmit} style={{width:"100%", background:theme, border:"none", padding:"18px", borderRadius:16, color:C.bg==="#000000"||C.bg==="#111"?"#111":"#fff", fontWeight:800, fontSize:17, cursor:"pointer", transition:"all 0.2s ease"}}>
             Save Transaction
