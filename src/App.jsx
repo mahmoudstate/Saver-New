@@ -733,11 +733,28 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
   useEffect(()=>{if(scrollState.restore){setTimeout(()=>window.scrollTo(0,scrollState.y),50);setScrollState(s=>({...s,restore:false}));}else window.scrollTo(0,0);},[]);
   const[recentFilter,setRecentFilter]=useState("all");
   const[viewTxn,setViewTxn]=useState(null);
+  const[showCustomize,setShowCustomize]=useState(false);
+
+  // إعدادات ترتيب السكاشن (التخصيص)
+  const defaultOrder = [
+      {id: "accounts", label: "🏦 Accounts & Balance"},
+      {id: "overview", label: "📊 Income & Cash Flow"},
+      {id: "bills", label: "⚡ Monthly Bills"},
+      {id: "budgets", label: "📈 Monthly Budgets"},
+      {id: "savings", label: "🎯 Savings Goals"},
+      {id: "spending", label: "🛍️ Spending Groups"}
+  ];
+  const [dashOrder, setDashOrder] = useState(defaultOrder);
+  useEffect(() => { load("et_dash_order", defaultOrder).then(setDashOrder); }, []);
 
   const totalBalance=banks.reduce((s,b)=>s+bankBalance(b.id),0);
   const totalIncome=txns.filter(t=>t.type==="income").reduce((a,t)=>a+t.amount,0);
   const totalExp=txns.filter(t=>t.type==="expense"||t.type==="goal_withdraw").reduce((a,t)=>a+t.amount,0);
   const curMonth=new Date().toISOString().slice(0,7);
+
+  // حساب الـ Cash Flow
+  const cashFlowPct = totalIncome > 0 ? Math.min(100, Math.round((totalExp / totalIncome) * 100)) : 0;
+  const cashFlowColor = cashFlowPct >= 90 ? C.red : cashFlowPct >= 70 ? C.yellow : C.accent;
 
   const getPrev=(m)=>{const[y,mo]=m.split("-");const d=new Date(+y,+mo-2,1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;};
   const prevMonth=filterMonth==="all"?null:getPrev(filterMonth);
@@ -756,135 +773,185 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
   const spendingGroups=groups.filter(g=>txns.filter(tx=>(tx.type==="expense"||tx.type==="goal_withdraw")&&g.cats.includes(tx.catId)).reduce((a,tx)=>a+tx.amount,0)>0);
   const upcomingBills=filterMonth==="all"?bills.filter(b=>!b.payments?.some(p=>p.month===curMonth)).sort((a,b)=>(a.dueDay||99)-(b.dueDay||99)).slice(0,3):null;
 
+  // حساب اللينكات عشان الكراش
+  const splitCounts = {};
+  txnsAll.forEach(t => {
+      if (t.splitGroupId) splitCounts[t.splitGroupId] = (splitCounts[t.splitGroupId] || 0) + 1;
+  });
+
   return <div style={{padding:"24px 16px 0"}}>
     {username&&<div style={{marginBottom:18}}><div style={{color:C.muted,fontSize:13,fontWeight:500}}>{(()=>{const h=new Date().getHours();return <>{h<12?"☀️":h<18?"👋":"🌙"} {h<12?"Good morning":h<18?"Good afternoon":"Good evening"},</>; })()}</div><div style={{color:C.text,fontSize:24,fontWeight:800,letterSpacing:-0.5}}>{username} 💰</div></div>}
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><div style={{color:C.text,fontSize:20,fontWeight:800}}>Overview</div><MonthSelect value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} availMonths={availMonths}/></div>
 
     {txns.length===0&&<div style={{background:C.accentDim,border:`1px solid ${C.accent}44`,borderRadius:16,padding:"20px",marginBottom:20,textAlign:"center"}}><div style={{fontSize:32,marginBottom:10}}>👋</div><div style={{color:C.accent,fontWeight:800,fontSize:16,marginBottom:6}}>Welcome to Saver!</div><div style={{color:C.muted,fontSize:13,lineHeight:1.6}}>Tap <strong style={{color:C.accent}}>＋</strong> to add your first transaction.</div></div>}
 
-    {/* Accounts */}
-    <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Accounts</div>
-    <Card style={{padding:"16px 18px",marginBottom:10,background:"linear-gradient(135deg,#1e1e28 0%,#23232f 100%)",borderColor:C.faint}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <div><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Total Balance</div><div style={{color:C.text,fontSize:30,fontWeight:800,letterSpacing:-1}}>{hideTotal?"••••••":fmt(totalBalance)}</div></div>
-        <button onClick={()=>setHideTotal(v=>!v)} style={{background:C.border,border:"none",color:C.muted,width:36,height:36,borderRadius:99,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>{hideTotal?"🙈":"🐵"}</button>
-      </div>
-    </Card>
-
-    <div style={{marginBottom:20}}>
-      <SortableList grid items={banks} onReorder={onBanks} renderItem={(b)=>{
-        const bal=bankBalance(b.id),safe=safeToSpend(b.id),frozen=frozenForBank(b.id),hasFrozen=frozen>0;
-        return <Card onClick={()=>onOpenBank(b)} className="ic" style={{padding:"14px 14px 12px",cursor:"pointer",transition:"transform 0.1s ease",height:"100%",boxSizing:"border-box"}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:hasFrozen?4:8}}>
-            <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:8,height:8,borderRadius:99,background:b.color,flexShrink:0}}/><span style={{color:C.muted,fontSize:12,fontWeight:600}}>{b.name}</span></div>
-            {b.lowBalanceThreshold&&safe<=b.lowBalanceThreshold&&safe>=0&&<span style={{fontSize:12}}>🔻</span>}
-            {safe<0&&<span style={{fontSize:12}}>🔴</span>}
-          </div>
-          <div style={{color:safe<0?C.red:b.lowBalanceThreshold&&safe<=b.lowBalanceThreshold?C.yellow:C.text,fontSize:17,fontWeight:800}}>{hideTotal?"••••":fmt(safe)}</div>
-          {hasFrozen&&!hideTotal&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:5}}>
-            <span style={{color:C.muted,fontSize:11}}>{fmt(frozen)}</span>
-            <div style={{display:"flex",alignItems:"center",gap:3}}><span style={{fontSize:11}}>🔒</span><span style={{color:C.muted,fontSize:10,fontWeight:600}}>Saving</span></div>
-          </div>}
-        </Card>;
-      }}/>
-    </div>
-    <style>{`.ic:active{transform:scale(0.97);opacity:0.9}`}</style>
-
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
-      <Card style={{padding:"14px 14px 12px"}}><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Income</div><div style={{color:C.accent,fontSize:20,fontWeight:800,marginBottom:4}}>{hideTotal?"••••":fmt(totalIncome)}</div>{incomeDiff!==null&&!hideTotal&&<div style={{fontSize:10,fontWeight:700,color:incomeDiff>=0?C.accent:C.red}}>{incomeDiff>=0?"▲":"▼"} {Math.abs(incomeDiff)}% vs last month</div>}</Card>
-      <Card style={{padding:"14px 14px 12px"}}><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Expenses</div><div style={{color:C.red,fontSize:20,fontWeight:800,marginBottom:4}}>{hideTotal?"••••":fmt(totalExp)}</div>{expDiff!==null&&!hideTotal&&<div style={{fontSize:10,fontWeight:700,color:expDiff<=0?C.accent:C.red}}>{expDiff<=0?"▼":"▲"} {Math.abs(expDiff)}% vs last month</div>}</Card>
-    </div>
-
-    {/* Bills */}
-    {bills.length>0&&<>
-      <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Monthly Bills</div>
-      <Card onClick={()=>navigateTo("monthly",true)} className="ic" style={{padding:"14px 14px 12px",marginBottom:20,cursor:"pointer",transition:"transform 0.1s ease"}}>
-        {filterMonth==="all"&&upcomingBills!==null?(
-          upcomingBills.length===0?<div style={{color:C.accent,fontWeight:700,fontSize:14}}>✅ All bills paid this month!</div>:(
-            <><div style={{color:C.text,fontWeight:700,fontSize:14,marginBottom:10}}>⚡ Upcoming Bills</div>
-            {upcomingBills.map(b=><div key={b.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingBottom:8,marginBottom:8,borderBottom:`1px solid ${C.border}`}}><div><div style={{color:C.text,fontSize:13,fontWeight:600}}>{b.name}</div>{b.dueDay&&<div style={{color:C.muted,fontSize:11}}>Due {b.dueDay}{b.dueDay===1?"st":b.dueDay===2?"nd":b.dueDay===3?"rd":"th"}</div>}</div><span style={{color:C.red,fontWeight:800,fontSize:14}}>{hideTotal?"••••":fmt(b.amount)}</span></div>)}</>
-          )
-        ):(()=>{const allPaid=paidCount===bills.length,col=allPaid?C.accent:C.red;return <><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{color:C.text,fontWeight:700,fontSize:14}}>{allPaid?"✅":"⚡"} {allPaid?"All Bills Paid":"Upcoming Payments"}</span><Pill color={col}>{paidCount}/{bills.length} Paid</Pill></div><div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{color:col,fontSize:18,fontWeight:800}}>{hideTotal?"••••":allPaid?fmt(0):fmt(remainingAmt)}</span><span style={{color:C.muted,fontSize:13}}>{allPaid?"cleared ✓":"remaining"}</span></div><ProgressBar value={paidCount} max={bills.length} color={col}/></>;})()}
-      </Card>
-    </>}
-
-    {/* Budgets */}
-    {budgets.length>0&&<>
-      <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Monthly Budgets</div>
-      <div style={{marginBottom:20}}>
-        <SortableList items={budgets} onReorder={onBudgets} renderItem={(bdg)=>{
-          const allExp=txnsAll.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&bdg.cats.includes(t.catId));
-          const spent=allExp.filter(t=>t.date.startsWith(curMonth)).reduce((a,t)=>a+t.amount,0);
-          if(filterMonth==="all"){
-            const months=[...new Set(allExp.map(t=>t.date.slice(0,7)))];
-            const avg=months.length>0?allExp.reduce((a,t)=>a+t.amount,0)/months.length:0;
-            const totalAllExp=txnsAll.filter(t=>t.type==="expense"||t.type==="goal_withdraw").reduce((a,t)=>a+t.amount,0);
-            const histPct=totalAllExp>0?Math.round((allExp.reduce((a,t)=>a+t.amount,0)/totalAllExp)*100):0;
-            return <Card onClick={()=>onOpenBudget(bdg)} className="ic" style={{padding:"14px",cursor:"pointer",transition:"transform 0.1s ease"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{color:C.text,fontSize:14,fontWeight:700}}>{bdg.name}</span><Pill color={C.blue}>{histPct}% of all expenses</Pill></div>
-              <div style={{color:C.muted,fontSize:11}}>Monthly avg: <span style={{color:C.text,fontWeight:700}}>{hideTotal?"••••":fmt(avg)}</span></div>
-            </Card>;
-          }
-          const rem=Math.max(0,bdg.amount-spent);const pct=bdg.amount>0?Math.min(100,Math.round((spent/bdg.amount)*100)):0;const barColor=pct>=90?C.red:pct>=70?C.yellow:C.accent;
-          return <Card onClick={()=>onOpenBudget(bdg)} className="ic" style={{padding:"14px",cursor:"pointer",transition:"transform 0.1s ease"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{color:C.text,fontSize:14,fontWeight:700}}>{bdg.name}</span><Pill color={barColor}>{pct}%</Pill></div>
-            <div style={{color:C.muted,fontSize:11,marginBottom:6}}>Spent <span style={{color:C.text,fontWeight:700}}>{hideTotal?"••••":fmt(spent)}</span> of {hideTotal?"••••":fmt(bdg.amount)}</div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{color:rem===0?C.red:C.accent,fontSize:18,fontWeight:800}}>{hideTotal?"••••":fmt(rem)} left</span><span style={{color:C.muted,fontSize:11}}>Daily: {fmt(rem/daysLeft)}</span></div>
-            <ProgressBar value={spent} max={bdg.amount} color={barColor}/>
-          </Card>;
-        }}/>
-      </div>
-    </>}
-
-    {/* Savings */}
-    {savings.length>0&&<>
-      <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Savings Goals</div>
-      <div style={{marginBottom:20}}>
-        <SortableList items={savings} onReorder={onSavings} renderItem={(s)=>{
-          const saved=goalSaved(s.id),pct=s.goal?Math.min(110,Math.round((saved/s.goal)*100)):0,isSpending=s.spendingMode;
-          return <Card onClick={()=>onOpenSaving(s)} className="ic" style={{padding:"14px 14px 12px",cursor:"pointer",transition:"transform 0.1s ease",border:`1px solid ${isSpending?C.orange+"66":C.border}`}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-              <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{color:C.text,fontWeight:700,fontSize:14}}>{isSpending?"💳":"🎯"} {s.name}</span>{isSpending&&<Pill color={C.orange} style={{fontSize:10}}>Spending</Pill>}</div>
-              <Pill color={pct>=100?C.accent:C.yellow}>{pct}%</Pill>
+    {/* Dynamic Sections Engine */}
+    {dashOrder.map(section => {
+      if (section.id === "accounts") return (
+        <div key="accounts">
+          <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Accounts</div>
+          <Card style={{padding:"16px 18px",marginBottom:10,background:"linear-gradient(135deg,#1e1e28 0%,#23232f 100%)",borderColor:C.faint}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Total Balance</div><div style={{color:C.text,fontSize:30,fontWeight:800,letterSpacing:-1}}>{hideTotal?"••••••":fmt(totalBalance)}</div></div>
+              <button onClick={()=>setHideTotal(v=>!v)} style={{background:C.border,border:"none",color:C.muted,width:36,height:36,borderRadius:99,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>{hideTotal?"🙈":"🐵"}</button>
             </div>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{color:isSpending?C.orange:C.yellow,fontSize:18,fontWeight:800}}>{hideTotal?"••••":fmt(saved)}</span><span style={{color:C.muted,fontSize:13}}>of {fmt(s.goal)}</span></div>
-            <ProgressBar value={saved} max={s.goal} color={isSpending?C.orange:C.yellow} allowOver/>
-          </Card>;
-        }}/>
-      </div>
-    </>}
+          </Card>
+          <div style={{marginBottom:20}}>
+            <SortableList grid items={banks} onReorder={onBanks} renderItem={(b)=>{
+              const bal=bankBalance(b.id),safe=safeToSpend(b.id),frozen=frozenForBank(b.id),hasFrozen=frozen>0;
+              return <Card onClick={()=>onOpenBank(b)} className="ic" style={{padding:"14px 14px 12px",cursor:"pointer",transition:"transform 0.1s ease",height:"100%",boxSizing:"border-box"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:hasFrozen?4:8}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:8,height:8,borderRadius:99,background:b.color,flexShrink:0}}/><span style={{color:C.muted,fontSize:12,fontWeight:600}}>{b.name}</span></div>
+                  {b.lowBalanceThreshold&&safe<=b.lowBalanceThreshold&&safe>=0&&<span style={{fontSize:12}}>🔻</span>}
+                  {safe<0&&<span style={{fontSize:12}}>🔴</span>}
+                </div>
+                <div style={{color:safe<0?C.red:b.lowBalanceThreshold&&safe<=b.lowBalanceThreshold?C.yellow:C.text,fontSize:17,fontWeight:800}}>{hideTotal?"••••":fmt(safe)}</div>
+                {hasFrozen&&!hideTotal&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:5}}>
+                  <span style={{color:C.muted,fontSize:11}}>{fmt(frozen)}</span>
+                  <div style={{display:"flex",alignItems:"center",gap:3}}><span style={{fontSize:11}}>🔒</span><span style={{color:C.muted,fontSize:10,fontWeight:600}}>Saving</span></div>
+                </div>}
+              </Card>;
+            }}/>
+          </div>
+          <style>{`.ic:active{transform:scale(0.97);opacity:0.9}`}</style>
+        </div>
+      );
 
-    {/* Spending groups */}
-    {spendingGroups.length>0&&<>
-      <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Spending</div>
-      <div style={{marginBottom:20}}>
-        <SortableList grid items={spendingGroups} onReorder={(ord)=>{const m=[...groups];ord.forEach((og,i)=>{const idx=m.findIndex(g=>g.id===og.id);if(idx>-1){m.splice(idx,1);m.splice(i,0,og);}});onGroups(m);}} renderItem={(g)=>{
-          const gtxns=txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&g.cats.includes(t.catId));
-          const total=gtxns.reduce((a,t)=>a+t.amount,0);
-          const pct=totalExp?Math.round((total/totalExp)*100):0;
-          const months=filterMonth==="all"?[...new Set(gtxns.map(t=>t.date.slice(0,7)))].length||1:1;
-          const display=filterMonth==="all"?total/months:total;
-          return <Card onClick={()=>onOpenGroup(g)} className="ic" style={{padding:"14px 14px 12px",cursor:"pointer",transition:"transform 0.1s ease",height:"100%",boxSizing:"border-box"}}>
-            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><div style={{width:8,height:8,borderRadius:99,background:g.color}}/><span style={{color:C.muted,fontSize:12,fontWeight:600}}>{g.name}</span></div>
-            <div style={{color:g.color,fontSize:17,fontWeight:800,marginBottom:2}}>{hideTotal?"••••":fmt(display)}</div>
-            {filterMonth==="all"&&<div style={{color:C.faint,fontSize:10,marginBottom:4}}>Average / month</div>}
-            {filterMonth!=="all"&&<><ProgressBar value={total} max={totalExp} color={g.color}/><div style={{color:C.faint,fontSize:10,fontWeight:700,marginTop:4}}>{pct}% of total</div></>}
-          </Card>;
-        }}/>
-      </div>
-    </>}
+      if (section.id === "overview") return (
+        <div key="overview" style={{marginBottom:20}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:totalIncome>0?10:0}}>
+            <Card onClick={()=>navigateTo("history")} className="ic" style={{padding:"14px 14px 12px", cursor:"pointer"}}><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Income</div><div style={{color:C.accent,fontSize:20,fontWeight:800,marginBottom:4}}>{hideTotal?"••••":fmt(totalIncome)}</div>{incomeDiff!==null&&!hideTotal&&<div style={{fontSize:10,fontWeight:700,color:incomeDiff>=0?C.accent:C.red}}>{incomeDiff>=0?"▲":"▼"} {Math.abs(incomeDiff)}% vs last month</div>}</Card>
+            <Card onClick={()=>navigateTo("history")} className="ic" style={{padding:"14px 14px 12px", cursor:"pointer"}}><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Expenses</div><div style={{color:C.red,fontSize:20,fontWeight:800,marginBottom:4}}>{hideTotal?"••••":fmt(totalExp)}</div>{expDiff!==null&&!hideTotal&&<div style={{fontSize:10,fontWeight:700,color:expDiff<=0?C.accent:C.red}}>{expDiff<=0?"▼":"▲"} {Math.abs(expDiff)}% vs last month</div>}</Card>
+          </div>
+          {totalIncome>0&&!hideTotal&&<div style={{background:C.card, padding:"12px 16px", borderRadius:14, border:`1px solid ${C.border}`}}>
+            <div style={{display:"flex", justifyContent:"space-between", marginBottom:8}}>
+                <span style={{color:C.muted, fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:1}}>Cash Flow</span>
+                <span style={{color:cashFlowColor, fontSize:12, fontWeight:700}}>{cashFlowPct}% Spent</span>
+            </div>
+            <ProgressBar value={totalExp} max={totalIncome} color={cashFlowColor} allowOver/>
+          </div>}
+        </div>
+      );
 
-    {/* Recent transactions */}
+      if (section.id === "bills" && bills.length > 0) return (
+        <div key="bills">
+          <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Monthly Bills</div>
+          <Card onClick={()=>navigateTo("monthly",true)} className="ic" style={{padding:"14px 14px 12px",marginBottom:20,cursor:"pointer",transition:"transform 0.1s ease"}}>
+            {filterMonth==="all"&&upcomingBills!==null?(
+              upcomingBills.length===0?<div style={{color:C.accent,fontWeight:700,fontSize:14}}>✅ All bills paid this month!</div>:(
+                <><div style={{color:C.text,fontWeight:700,fontSize:14,marginBottom:10}}>⚡ Upcoming Bills</div>
+                {upcomingBills.map(b=><div key={b.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingBottom:8,marginBottom:8,borderBottom:`1px solid ${C.border}`}}><div><div style={{color:C.text,fontSize:13,fontWeight:600}}>{b.name}</div>{b.dueDay&&<div style={{color:C.muted,fontSize:11}}>Due {b.dueDay}{b.dueDay===1?"st":b.dueDay===2?"nd":b.dueDay===3?"rd":"th"}</div>}</div><span style={{color:C.red,fontWeight:800,fontSize:14}}>{hideTotal?"••••":fmt(b.amount)}</span></div>)}</>
+              )
+            ):(()=>{const allPaid=paidCount===bills.length,col=allPaid?C.accent:C.red;return <><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{color:C.text,fontWeight:700,fontSize:14}}>{allPaid?"✅":"⚡"} {allPaid?"All Bills Paid":"Upcoming Payments"}</span><Pill color={col}>{paidCount}/{bills.length} Paid</Pill></div><div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{color:col,fontSize:18,fontWeight:800}}>{hideTotal?"••••":allPaid?fmt(0):fmt(remainingAmt)}</span><span style={{color:C.muted,fontSize:13}}>{allPaid?"cleared ✓":"remaining"}</span></div><ProgressBar value={paidCount} max={bills.length} color={col}/></>;})()}
+          </Card>
+        </div>
+      );
+
+      if (section.id === "budgets" && budgets.length > 0) return (
+        <div key="budgets">
+          <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Monthly Budgets</div>
+          <div style={{marginBottom:20}}>
+            <SortableList items={budgets} onReorder={onBudgets} renderItem={(bdg)=>{
+              const allExp=txnsAll.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&bdg.cats.includes(t.catId));
+              const spent=allExp.filter(t=>t.date.startsWith(curMonth)).reduce((a,t)=>a+t.amount,0);
+              if(filterMonth==="all"){
+                const months=[...new Set(allExp.map(t=>t.date.slice(0,7)))];
+                const avg=months.length>0?allExp.reduce((a,t)=>a+t.amount,0)/months.length:0;
+                const totalAllExp=txnsAll.filter(t=>t.type==="expense"||t.type==="goal_withdraw").reduce((a,t)=>a+t.amount,0);
+                const histPct=totalAllExp>0?Math.round((allExp.reduce((a,t)=>a+t.amount,0)/totalAllExp)*100):0;
+                return <Card onClick={()=>onOpenBudget(bdg)} className="ic" style={{padding:"14px",cursor:"pointer",transition:"transform 0.1s ease"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{color:C.text,fontSize:14,fontWeight:700}}>{bdg.name}</span><Pill color={C.blue}>{histPct}% of all expenses</Pill></div>
+                  <div style={{color:C.muted,fontSize:11}}>Monthly avg: <span style={{color:C.text,fontWeight:700}}>{hideTotal?"••••":fmt(avg)}</span></div>
+                </Card>;
+              }
+              const rem=Math.max(0,bdg.amount-spent);const pct=bdg.amount>0?Math.min(100,Math.round((spent/bdg.amount)*100)):0;const barColor=pct>=90?C.red:pct>=70?C.yellow:C.accent;
+              return <Card onClick={()=>onOpenBudget(bdg)} className="ic" style={{padding:"14px",cursor:"pointer",transition:"transform 0.1s ease"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{color:C.text,fontSize:14,fontWeight:700}}>{bdg.name}</span><Pill color={barColor}>{pct}%</Pill></div>
+                <div style={{color:C.muted,fontSize:11,marginBottom:6}}>Spent <span style={{color:C.text,fontWeight:700}}>{hideTotal?"••••":fmt(spent)}</span> of {hideTotal?"••••":fmt(bdg.amount)}</div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><span style={{color:rem===0?C.red:C.accent,fontSize:18,fontWeight:800}}>{hideTotal?"••••":fmt(rem)} left</span><span style={{color:C.muted,fontSize:11}}>Daily: {fmt(rem/daysLeft)}</span></div>
+                <ProgressBar value={spent} max={bdg.amount} color={barColor}/>
+              </Card>;
+            }}/>
+          </div>
+        </div>
+      );
+
+      if (section.id === "savings" && savings.length > 0) return (
+        <div key="savings">
+          <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Savings Goals</div>
+          <div style={{marginBottom:20}}>
+            <SortableList items={savings} onReorder={onSavings} renderItem={(s)=>{
+              const saved=goalSaved(s.id),pct=s.goal?Math.min(110,Math.round((saved/s.goal)*100)):0,isSpending=s.spendingMode;
+              const mainColor = isSpending ? C.accent : C.yellow;
+              return <Card onClick={()=>onOpenSaving(s)} className="ic" style={{padding:"14px 14px 12px",cursor:"pointer",transition:"transform 0.1s ease",border:`1px solid ${isSpending?C.accent+"66":C.border}`}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{color:C.text,fontWeight:700,fontSize:14}}>{isSpending?"💳":"🎯"} {s.name}</span>{isSpending&&<Pill color={C.accent} style={{fontSize:10}}>Ready</Pill>}</div>
+                  <Pill color={pct>=100?C.accent:mainColor}>{pct}%</Pill>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{color:mainColor,fontSize:18,fontWeight:800}}>{hideTotal?"••••":fmt(saved)}</span><span style={{color:C.muted,fontSize:13}}>of {fmt(s.goal)}</span></div>
+                <ProgressBar value={saved} max={s.goal} color={mainColor} allowOver/>
+              </Card>;
+            }}/>
+          </div>
+        </div>
+      );
+
+      if (section.id === "spending" && spendingGroups.length > 0) return (
+        <div key="spending">
+          <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Spending</div>
+          <div style={{marginBottom:20}}>
+            <SortableList grid items={spendingGroups} onReorder={(ord)=>{const m=[...groups];ord.forEach((og,i)=>{const idx=m.findIndex(g=>g.id===og.id);if(idx>-1){m.splice(idx,1);m.splice(i,0,og);}});onGroups(m);}} renderItem={(g)=>{
+              const gtxns=txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&g.cats.includes(t.catId));
+              const total=gtxns.reduce((a,t)=>a+t.amount,0);
+              const pct=totalExp?Math.round((total/totalExp)*100):0;
+              const months=filterMonth==="all"?[...new Set(gtxns.map(t=>t.date.slice(0,7)))].length||1:1;
+              const display=filterMonth==="all"?total/months:total;
+              return <Card onClick={()=>onOpenGroup(g)} className="ic" style={{padding:"14px 14px 12px",cursor:"pointer",transition:"transform 0.1s ease",height:"100%",boxSizing:"border-box"}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><div style={{width:8,height:8,borderRadius:99,background:g.color}}/><span style={{color:C.muted,fontSize:12,fontWeight:600}}>{g.name}</span></div>
+                <div style={{color:g.color,fontSize:17,fontWeight:800,marginBottom:2}}>{hideTotal?"••••":fmt(display)}</div>
+                {filterMonth==="all"&&<div style={{color:C.faint,fontSize:10,marginBottom:4}}>Average / month</div>}
+                {filterMonth!=="all"&&<><ProgressBar value={total} max={totalExp} color={g.color}/><div style={{color:C.faint,fontSize:10,fontWeight:700,marginTop:4}}>{pct}% of total</div></>}
+              </Card>;
+            }}/>
+          </div>
+        </div>
+      );
+
+      return null;
+    })}
+
+    {/* Recent transactions (ثابتة في النهاية) */}
     <div style={{marginBottom:10,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Recent Transactions</div>
       <div style={{display:"flex",gap:4}}>{["all","expenses","income"].map(f=><button key={f} onClick={()=>setRecentFilter(f)} style={{background:"none",border:"none",padding:"2px 6px",color:recentFilter===f?C.accent:C.muted,fontSize:10,fontWeight:700,cursor:"pointer",textTransform:"uppercase",fontFamily:"'DM Sans', sans-serif"}}>{f}</button>)}</div>
     </div>
     {recents.length>0?(
       <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
-        {recents.map(t=><div key={t.id} style={{borderRadius:12,overflow:"hidden"}}><TxnRow txn={t} hideTotal={hideTotal} onClick={()=>setViewTxn(t)}/></div>)}
+        {recents.map(t=>{
+          const isTrulyLinked = t.splitGroupId && splitCounts[t.splitGroupId] > 1;
+          return <div key={t.id} style={{borderRadius:12,overflow:"hidden"}}><TxnRow txn={t} hideTotal={hideTotal} onClick={()=>setViewTxn(t)} isTrulyLinked={isTrulyLinked}/></div>;
+        })}
       </div>
-    ):<div style={{padding:"20px 0",textAlign:"center",color:C.faint,fontSize:12}}>No transactions match.</div>}
+    ):<div style={{padding:"20px 0",textAlign:"center",color:C.faint,fontSize:12,marginBottom:20}}>No transactions match.</div>}
+    
+    <div style={{textAlign:"center", marginBottom: 20}}>
+        <button onClick={()=>setShowCustomize(true)} style={{background:"transparent", border:`1px solid ${C.border}`, color:C.text, padding:"10px 20px", borderRadius:99, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans', sans-serif"}}>⚙️ Customize Layout</button>
+    </div>
+
     {viewTxn&&<TxnViewModal txn={viewTxn} onClose={()=>setViewTxn(null)}/>}
+
+    {showCustomize&&<Modal title="Customize Dashboard" onClose={()=>setShowCustomize(false)} center={false}>
+      <p style={{color:C.muted, fontSize:13, marginBottom:16}}>Drag and drop to reorder the sections on your home screen.</p>
+      <div style={{marginBottom: 20}}>
+        <SortableList items={dashOrder} onReorder={setDashOrder} renderItem={(item) => (
+            <div style={{padding:"14px 16px", background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, marginBottom:8, display:"flex", alignItems:"center", gap:14, cursor:"grab"}}>
+               <span style={{color:C.faint, fontSize:20}}>≡</span>
+               <span style={{color:C.text, fontWeight:700, fontSize:15}}>{item.label}</span>
+            </div>
+        )} />
+      </div>
+      <Btn full onClick={async () => { await save("et_dash_order", dashOrder); setShowCustomize(false); HAPTICS.success(); }}>Save Layout</Btn>
+    </Modal>}
   </div>;
 }
 
