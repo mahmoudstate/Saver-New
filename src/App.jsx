@@ -1261,7 +1261,7 @@ function SavingDetailView({goal,saved,txns,onDelete,addTxn,banks,savings,onSave,
   </div>;
 }
 
-// ── AddTransaction ─────────
+// ── AddTransaction (النسخة الاحترافية بالأيقونات المالية) ────────────────
 function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,safeToSpend,goalSaved,setAppAlert,txns}){
   const[type,setType]=useState("expense");
   const[amount,setAmount]=useState("");
@@ -1273,10 +1273,7 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
   const[txnDate,setTxnDate]=useState(today());
   
   const cats = type==="expense" ? expCats : type==="income" ? incCats : [];
-  
-  // كل الأهداف النشطة (للقسم الخاص بالادخار)
   const activeGoals = savings.filter(s=>s.status!=="archived");
-  // الأهداف المفعلة للصرف فقط (عشان تظهر في المصاريف)
   const spendingGoals = activeGoals.filter(s=>s.spendingMode);
 
   const theme = type==="expense" ? "#FF6B6B" : 
@@ -1284,24 +1281,10 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
                 type==="saving" ? "#F4B942" :  
                 "#4D96FF";                     
 
-  // خوارزمية تحويل لون البنك لأقرب إيموجي ملون (عشان القوائم المنسدلة تقرأها)
-  const getBankDot = (bank) => {
-      if(!bank || !bank.color) return "🏦";
-      let hex = bank.color.replace("#", "").trim();
-      if(hex.length === 3) hex = hex.split("").map(c=>c+c).join("");
-      if(hex.length !== 6) return "🏦";
-      
-      const r = parseInt(hex.substring(0,2), 16);
-      const g = parseInt(hex.substring(2,4), 16);
-      const b = parseInt(hex.substring(4,6), 16);
-
-      if (r > 200 && g > 150 && b < 100) return "🟡"; // Yellow
-      if (r > 200 && g > 100 && b < 100) return "🟠"; // Orange
-      if (r > 150 && g < 100 && b < 100) return "🔴"; // Red
-      if (g > 150 && r < 150 && b < 150) return "🟢"; // Green
-      if (b > 150 && r < 150 && g < 200) return "🔵"; // Blue
-      if (r > 100 && b > 100 && g < 150) return "🟣"; // Purple
-      return "⚫"; // Fallback for very dark colors
+  // دالة تحديد الأيقونة (كاش أو بنك)
+  const getBankIcon = (name) => {
+      if(!name) return "🏦";
+      return name.toLowerCase().includes("cash") ? "💵" : "🏦";
   };
 
   const handleSubmit=async()=>{
@@ -1311,7 +1294,6 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
     if(type==="saving" && !savingId) {setAppAlert({title:"No Goal",message:"Please select a savings goal.",color:C.red}); return;}
 
     const bank=banks.find(b=>b.id===sourceId);
-    // لو بنك عادي (مش هدف) رصيده مش مكفي
     if(type==="expense" && bank && amt > safeToSpend(bank.id)) {
         setAppAlert({title:"Insufficient Funds",message:`Available: ${fmt(safeToSpend(bank.id))}`,color:C.red});
         return; 
@@ -1368,16 +1350,16 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
             {type==="transfer" ? (
                 <>
                     <select value={sourceId} onChange={e=>setSourceId(e.target.value)} style={fieldStyle}>
-                        {banks.map(b=><option key={b.id} value={b.id}>← {getBankDot(b)} {b.name}</option>)}
+                        {banks.map(b=><option key={b.id} value={b.id}>← {getBankIcon(b.name)} {b.name}</option>)}
                     </select>
                     <select value={toBankId} onChange={e=>setToBankId(e.target.value)} style={fieldStyle}>
-                        {banks.map(b=><option key={b.id} value={b.id}>→ {getBankDot(b)} {b.name}</option>)}
+                        {banks.map(b=><option key={b.id} value={b.id}>→ {getBankIcon(b.name)} {b.name}</option>)}
                     </select>
                 </>
             ) : type==="saving" ? (
                 <>
                     <select value={sourceId} onChange={e=>setSourceId(e.target.value)} style={fieldStyle}>
-                        {banks.map(b=><option key={b.id} value={b.id}>{getBankDot(b)} {b.name}</option>)}
+                        {banks.map(b=><option key={b.id} value={b.id}>{getBankIcon(b.name)} {b.name}</option>)}
                     </select>
                     {activeGoals.length > 0 ? (
                         <select value={savingId} onChange={e=>setSavingId(e.target.value)} style={fieldStyle}>
@@ -1389,8 +1371,7 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
                 </>
             ) : (
                 <select value={sourceId} onChange={e=>setSourceId(e.target.value)} style={fieldStyle}>
-                    {banks.map(b=><option key={b.id} value={b.id}>{getBankDot(b)} {b.name}</option>)}
-                    {/* هنا ضفت الأهداف الخاصة بالصرف عشان تظهر في قائمة المصاريف */}
+                    {banks.map(b=><option key={b.id} value={b.id}>{getBankIcon(b.name)} {b.name}</option>)}
                     {type==="expense" && spendingGoals.map(g=><option key={"goal_"+g.id} value={"goal_"+g.id}>🎯 {g.name}</option>)}
                 </select>
             )}
@@ -1412,6 +1393,7 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
     </div>
   </div>;
 }
+
 
 // ── History ───────────────────────────────────────────────────────────────────
 function History({txns,onDelete,onUpdate,banks,expCats,incCats,currency,availMonths,savings,setAppAlert}){
