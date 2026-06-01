@@ -703,6 +703,14 @@ function BottomNav({tab,navigateTo,expCats,banks,savings,onAdd,currency,safeToSp
     if(ok!==false) finishQuickSave();
   };
 
+  // ── ستايل الحقول الجديد النظيف ──
+  const fieldStyle = {
+      width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, 
+      padding: "16px", color: C.text, fontSize: 16, fontWeight: 600, appearance: "none", 
+      outline: "none", boxSizing: "border-box", marginBottom: 14, colorScheme: "dark"
+  };
+  const theme = "#FF6B6B"; // لون المصروفات الهادي
+
   return <>
     <nav style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:520,zIndex:50}}>
       <div style={{position:"absolute",bottom:0,width:"100%",height:95,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",padding:"0 12px"}}>
@@ -721,14 +729,47 @@ function BottomNav({tab,navigateTo,expCats,banks,savings,onAdd,currency,safeToSp
       {showQuick&&active.length===0&&<div style={{position:"fixed",bottom:135,left:"50%",transform:"translateX(-50%)",background:C.card,border:`1px solid ${C.border}`,borderRadius:18,padding:"16px 20px",maxWidth:"85%",boxShadow:"0 12px 32px rgba(0,0,0,0.7)",zIndex:60,textAlign:"center"}}><div style={{fontSize:24,marginBottom:8}}>⚡</div><div style={{color:C.text,fontWeight:700,fontSize:14,marginBottom:4}}>No shortcuts configured</div><div style={{color:C.muted,fontSize:12}}>Go to Settings → Quick Actions.</div></div>}
       {showQuick&&active.length>0&&<div style={{position:"fixed",bottom:135,left:"50%",transform:"translateX(-50%)",background:C.card,border:`1px solid ${C.border}`,borderRadius:24,padding:"12px",maxWidth:"90%",boxShadow:"0 12px 32px rgba(0,0,0,0.7)",animation:"popIn 0.15s ease",zIndex:60,display:"flex",justifyContent:"center"}}><style>{`@keyframes popIn{from{opacity:0;transform:translate(-50%,14px) scale(0.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}`}</style><div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"nowrap"}}>{active.map(q=>{const cat=expCats.find(c=>c.id===q.catId);return <button key={q.id} onClick={()=>handleQuickSelect(q)} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,width:90,height:90,color:C.text,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,cursor:"pointer",padding:"4px",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif"}}><span style={{fontSize:26,display:"block",lineHeight:1}}>{ICONS[cat?.icon]||"📌"}</span><span style={{fontSize:10,fontWeight:700,textAlign:"center",width:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{cat?.name}</span></button>;})}</div></div>}
     </nav>
+    
+    {/* ── شاشة Quick Add بالتصميم الجديد ── */}
     {quickForm&&<Modal title="Quick Add" onClose={()=>setQuickForm(null)} center={false}>
-      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20,padding:"12px",background:C.card,borderRadius:12,border:`1px solid ${C.border}`}}><span style={{fontSize:28}}>{ICONS[expCats.find(c=>c.id===quickForm.catId)?.icon]||"📌"}</span><span style={{fontSize:16,fontWeight:700,color:C.text}}>{expCats.find(c=>c.id===quickForm.catId)?.name}</span></div>
-      <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>Amount ({currency})</div><input type="number" step="any" value={quickForm.amount} onChange={e=>setQuickForm({...quickForm,amount:e.target.value})} style={IS}/></div>
-      <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>Date</div><input type="date" value={quickForm.date} onChange={e=>setQuickForm({...quickForm,date:e.target.value})} style={{...IS,colorScheme:"dark"}}/></div>
-      <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>Account</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{sources.map(s=><button key={s.id} onClick={()=>setQuickForm({...quickForm,bankId:s.id})} style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${quickForm.bankId===s.id?C.accent:C.border}`,background:quickForm.bankId===s.id?C.accentDim:"transparent",color:quickForm.bankId===s.id?C.accent:C.text,fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>{s.label}</button>)}</div></div>
-      <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>Note (Optional)</div><input placeholder="Add a note..." value={quickForm.note} onChange={e=>setQuickForm({...quickForm,note:e.target.value})} style={IS}/></div>
-      <Btn full onClick={handleQuickSave} style={{marginTop:8}}>Save</Btn>
+      
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:24,padding:"16px",background:C.card,borderRadius:16,border:`1px solid ${C.border}`}}>
+          <span style={{fontSize:28}}>{ICONS[expCats.find(c=>c.id===quickForm.catId)?.icon]||"📌"}</span>
+          <span style={{fontSize:18,fontWeight:700,color:C.text}}>{expCats.find(c=>c.id===quickForm.catId)?.name}</span>
+      </div>
+
+      <div style={{textAlign:"center",padding:"10px 0 30px",position:"relative",display:"flex",flexDirection:"column",alignItems:"center"}}>
+          <div style={{color:C.muted,fontSize:12,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12}}>Amount ({currency})</div>
+          
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",fontSize:60,fontWeight:800,color:quickForm.amount?theme:C.faint}}>
+              {quickForm.amount && <span style={{marginRight:10,color:theme}}>−</span>}
+              <span>{quickForm.amount || "0.00"}</span>
+          </div>
+
+          <input type="number" inputMode="decimal" value={quickForm.amount} onChange={e=>setQuickForm({...quickForm,amount:e.target.value})} 
+                 style={{position:"absolute",inset:0,opacity:0,width:"100%",height:"100%",outline:"none"}} />
+      </div>
+
+      <div>
+          <input type="date" value={quickForm.date} onChange={e=>setQuickForm({...quickForm,date:e.target.value})} style={fieldStyle} />
+          
+          <select value={quickForm.bankId} onChange={e=>setQuickForm({...quickForm,bankId:e.target.value})} style={fieldStyle}>
+              {sources.map(s=>{
+                  const isGoal = String(s.id).startsWith("goal_");
+                  const icon = isGoal ? "🎯" : (s.label.toLowerCase().includes("cash") ? "💵" : "🏦");
+                  const cleanLabel = s.label.replace("💳 ", ""); // تنظيف الاسم من الإيموجي القديم
+                  return <option key={s.id} value={s.id}>{icon} {cleanLabel}</option>;
+              })}
+          </select>
+          
+          <input placeholder="Add a note (optional)..." value={quickForm.note} onChange={e=>setQuickForm({...quickForm,note:e.target.value})} style={fieldStyle} />
+      </div>
+
+      <button onClick={handleQuickSave} style={{width:"100%",background:theme,border:"none",padding:"18px",borderRadius:16,color:C.bg==="#000000"||C.bg==="#111"?"#111":"#fff",fontWeight:800,fontSize:17,cursor:"pointer",transition:"all 0.2s ease",marginTop:8,marginBottom:20}}>
+          Save
+      </button>
     </Modal>}
+    
     {showQuick&&<div onClick={()=>setShowQuick(false)} style={{position:"fixed",inset:0,zIndex:40}}/>}
   </>;
 }
