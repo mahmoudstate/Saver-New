@@ -217,37 +217,26 @@ function AlertModal({title,message,onClose,btnColor=C.accent}){
 // ── GoalCelebrationModal ──────────────────────────────────────────────────────
 function GoalCelebrationModal({ message, onClose }) {
   useEffect(() => {
-    const t = setTimeout(onClose, 3000); // بيختفي بعد 3 ثواني
+    const t = setTimeout(onClose, 3000); 
     return () => clearTimeout(t);
   }, [onClose]);
 
   return (
-    <div 
-      onClick={onClose} // عشان يقفل لو دوست في أي مكان بره
-      style={{
+    <div onClick={onClose} style={{
         position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", 
         display: "flex", alignItems: "center", justifyContent: "center", 
         zIndex: 999, padding: 20, animation: "fadeIn 0.3s ease"
-      }}
-    >
+    }}>
       <style>{`@keyframes fadeIn{from{opacity:0}to{opacity:1}}`}</style>
-      
-      <div 
-        onClick={(e) => e.stopPropagation()} // عشان ما يقفلش لو دوست على المربع نفسه
-        style={{
+      <div onClick={(e) => e.stopPropagation()} style={{
           background: C.card, padding: "40px 20px", borderRadius: 24, 
           border: `2px solid ${C.accent}`, width: "100%", maxWidth: 350,
           textAlign: "center", position: "relative", boxShadow: "0 20px 50px rgba(0,0,0,0.5)"
-        }}
-      >
-        <button 
-          onClick={onClose}
-          style={{
+      }}>
+        <button onClick={onClose} style={{
             position: "absolute", top: 15, right: 15, background: "none", 
             border: "none", color: C.muted, fontSize: 24, cursor: "pointer"
-          }}
-        >✕</button>
-        
+        }}>✕</button>
         <div style={{ fontSize: 70, marginBottom: 20 }}>🎯</div>
         <div style={{ color: C.text, fontSize: 24, fontWeight: 800, marginBottom: 15 }}>Goal Updated!</div>
         <div style={{ color: C.muted, fontSize: 16, lineHeight: 1.5 }}>{message}</div>
