@@ -2072,54 +2072,135 @@ function MonthlyBills({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,setAp
   </div>;
 }
 
-// ── UserManual ────────────────────────────────────────────────────────────────
-function UserManual({onBack,navigateTo}){
-  useEffect(()=>{window.scrollTo(0,0);},[]);
-  return <div style={{padding:"24px 16px 130px",minHeight:"100vh",background:C.bg,boxSizing:"border-box"}}>
-    
-    {/* Header with Lightbulb Icon */}
-    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-        <button onClick={onBack} style={{background:"transparent",border:"none",color:C.muted,fontSize:22,cursor:"pointer",padding:"10px 15px 10px 0",display:"flex",alignItems:"center",transition:"color 0.2s"}}>
-            <span style={{display:"block",transform:"translateY(-1px)"}}>❮</span>
-        </button>
-        <div style={{color:C.text,fontSize:24,fontWeight:800,display:"flex",alignItems:"center",gap:8}}>
-            Manual Guide <span style={{fontSize:22}}>💡</span>
+// ── UserManual  ──────────────────────────────────
+function UserManual({ onBack, navigateTo }) {
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+  const scrollToSection = (id) => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); };
+  const handleFeedback = () => { window.location.href = "mailto:hello@savertrack.app?subject=Saver%20App%20Feedback"; };
+
+  const sectionStyle = { marginBottom: 40 };
+  const iconBoxStyle = (bg, c) => ({ background: bg, color: c, width: 40, height: 40, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 });
+  const guideBoxStyle = { padding: "20px", background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, marginTop: 14 };
+
+  return (
+    <div style={{ padding: "24px 16px 130px", minHeight: "100vh", background: C.bg, boxSizing: "border-box" }}>
+      
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+        <button onClick={onBack} style={{ background: "transparent", border: "none", color: C.muted, fontSize: 24, cursor: "pointer", padding: "10px" }}>❮</button>
+        <div style={{ color: C.text, fontSize: 24, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
+          Manual Guide <span style={{ fontSize: 20 }}>💡</span>
         </div>
-    </div>
-    
-    <p style={{color:C.muted,fontSize:14,lineHeight:1.6,marginBottom:20,fontWeight:500}}>Everything is stored locally on your device — 100% private.</p>
-    
-    <div style={{marginBottom:32}}>
-        <Btn full outline color={C.accent} onClick={()=>{window.location.href="mailto:hello@savertrack.app?subject=Saver%20App%20Feedback";}} style={{padding:"14px",fontSize:15,fontWeight:700,borderRadius:12}}>
-            🐞 Report a Bug / Suggestion
-        </Btn>
-    </div>
-    
-    {/* Guide Sections */}
-    {[
-      {icon:"◈",bg:C.blueDim,c:C.blue,title:"Home Screen",body:"Total Balance, Account cards (with frozen savings shown), Income vs Expenses, Budgets, Saving Goals, and Spending Groups."},
-      {icon:"＋",bg:C.accentDim,c:C.accent,title:"Adding Transactions",body:"Tap + for Income, Expense, Saving, or Transfer. Long-press + for Quick Action shortcuts. For expenses, you can pay from a Bank or from a Goal in Spending Mode."},
-      {icon:"🎯",bg:C.yellowDim,c:C.yellow,title:"Savings Goals",body:"Create goals and save toward them. Tap a goal card from Home to: activate Spending Mode, do an Emergency Withdrawal, or Archive the goal. All actions are transaction-based — editing/deleting any transaction updates balances everywhere instantly."},
-      {icon:"☷",bg:C.redDim,c:C.red,title:"Monthly Bills",body:"Add recurring bills. Pay with one tap. Use 'All Time' filter for a historical report showing total paid, consistency score, and last payment date."},
-      {icon:"☰",bg:C.purpleDim,c:C.purple,title:"History",body:"Full log. Tap any row to view details. Swipe to Edit or Delete. Changes reflect everywhere instantly."},
-      {icon:"⚙",bg:C.surface,c:C.text,title:"Settings",body:"Manage accounts, categories, currency, budgets, and quick actions. Backup & Restore your data as JSON."},
-    ].map((s,i)=>(
-        <div key={i} style={{marginBottom:36,background:C.card,padding:"20px",borderRadius:16,border:`1px solid ${C.border}`,boxShadow:"0 2px 8px rgba(0,0,0,0.05)"}}>
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
-                {/* تكبير الأيقونة وإعطائها مساحة */}
-                <div style={{background:s.bg,color:s.c,width:40,height:40,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>
-                    {s.icon}
-                </div>
-                <h3 style={{color:C.text,margin:0,fontSize:18,fontWeight:800}}>{s.title}</h3>
-            </div>
-            <p style={{color:C.muted,fontSize:14,lineHeight:1.6,margin:0,paddingLeft:52}}>
-                {s.body}
-            </p>
+      </div>
+
+      <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>Everything is stored locally on your device — 100% private.</p>
+
+      <div style={{ marginBottom: 32 }}>
+        <Btn full outline color={C.accent} onClick={handleFeedback} style={{ padding: "14px", borderRadius: 12, fontWeight: 700 }}>🐞 Report a Bug / Suggestion</Btn>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 30, overflowX: "auto", paddingBottom: 10 }}>
+        {["Home", "Adding", "Bills", "History", "Settings", "Tips"].map((item, idx) => (
+          <button key={item} onClick={() => scrollToSection(`guide-sec-${idx}`)} style={{ whiteSpace: "nowrap", padding: "10px 20px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.surface, color: C.text, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+            {item}
+          </button>
+        ))}
+      </div>
+
+      <style>{`
+        .guide-pointer-up { animation: float-up 1.5s infinite ease-in-out; font-size: 24px; text-align: center; margin-top: 8px; }
+        @keyframes float-up { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+      `}</style>
+
+      {/* Sections */}
+      <div id="guide-sec-0" style={sectionStyle}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+          <div style={iconBoxStyle(C.blueDim, C.blue)}>◈</div>
+          <h3 style={{ color: C.text, margin: 0, fontSize: 18, fontWeight: 800 }}>Home Screen</h3>
         </div>
-    ))}
-    
-    <AppFooter navigateTo={navigateTo}/>
-  </div>;
+        <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6 }}>Your Dashboard gives you a complete overview. See your Total Balance, Monthly Income/Expenses, Accounts, and Spending Groups.</p>
+        <div style={guideBoxStyle}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: C.bg, padding: "12px", borderRadius: 12 }}>
+            <div><div style={{ color: C.muted, fontSize: 10, fontWeight: 700 }}>Total Balance</div><div style={{ color: C.text, fontSize: 20, fontWeight: 800 }}>••••••</div></div>
+            <span style={{ fontSize: 20 }}>🐵</span>
+          </div>
+          <div className="guide-pointer-up" style={{ color: C.accent }}>👆</div>
+        </div>
+      </div>
+
+      <div id="guide-sec-1" style={sectionStyle}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+          <div style={iconBoxStyle(C.accentDim, C.accent)}>＋</div>
+          <h3 style={{ color: C.text, margin: 0, fontSize: 18, fontWeight: 800 }}>Adding Transactions</h3>
+        </div>
+        <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6 }}>Tap the center <strong>(+)</strong> button. <strong style={{ color: C.red }}>Protection:</strong> The app blocks transactions if your account balance is insufficient.</p>
+        <div style={{...guideBoxStyle, display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <div style={{ width: 68, height: 68, borderRadius: "50%", background: C.accent, color: C.bg, fontSize: 36, display: "flex", alignItems: "center", justifyContent: "center" }}>+</div>
+          <div className="guide-pointer-up" style={{ color: C.yellow }}>👆</div>
+          <div style={{ textAlign: "center", color: C.yellow, fontSize: 12, fontWeight: 700 }}>Quick Add: Long press for Shortcuts.</div>
+        </div>
+      </div>
+
+      <div id="guide-sec-2" style={sectionStyle}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+          <div style={iconBoxStyle(C.redDim, C.red)}>☷</div>
+          <h3 style={{ color: C.text, margin: 0, fontSize: 18, fontWeight: 800 }}>Monthly Bills</h3>
+        </div>
+        <div style={guideBoxStyle}>
+          <ul style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, paddingLeft: 18, margin: 0 }}>
+            <li>🟡 Due soon · 🔴 Overdue</li>
+            <li>Tap <strong>Pay Now</strong> to auto-record Expense</li>
+            <li>Swipe left to Edit or Delete</li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="guide-sec-3" style={sectionStyle}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+          <div style={iconBoxStyle(C.purpleDim, C.purple)}>☰</div>
+          <h3 style={{ color: C.text, margin: 0, fontSize: 18, fontWeight: 800 }}>History</h3>
+        </div>
+        <div style={guideBoxStyle}>
+          <ul style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, paddingLeft: 18, margin: 0 }}>
+            <li>Swipe left to Edit or Delete</li>
+            <li>Transfer logs show route: A ➔ B</li>
+            <li>Instant balance updates</li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="guide-sec-4" style={sectionStyle}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+          <div style={iconBoxStyle(C.surface, C.text)}>⚙</div>
+          <h3 style={{ color: C.text, margin: 0, fontSize: 18, fontWeight: 800 }}>Settings</h3>
+        </div>
+        <div style={guideBoxStyle}>
+          <ul style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, paddingLeft: 18, margin: 0 }}>
+            <li>Manage Goals, Budgets, Quick Actions</li>
+            <li>Currency switching</li>
+            <li>Backup & Restore (JSON)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="guide-sec-5" style={sectionStyle}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+          <div style={iconBoxStyle(C.yellowDim, C.yellow)}>💡</div>
+          <h3 style={{ color: C.text, margin: 0, fontSize: 18, fontWeight: 800 }}>Pro Tips</h3>
+        </div>
+        <div style={guideBoxStyle}>
+          <ul style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, paddingLeft: 18, margin: 0 }}>
+            <li>Swipe on any item to manage</li>
+            <li>Drag & Drop cards on Home</li>
+            <li>Long press (+) for shortcuts</li>
+          </ul>
+        </div>
+      </div>
+
+      <AppFooter navigateTo={navigateTo} />
+    </div>
+  );
 }
 
 // ── Settings ──────────────────────────────────────────────────────────────────
