@@ -214,24 +214,46 @@ function AlertModal({title,message,onClose,btnColor=C.accent}){
   </Modal>;
 }
 
-// ── GoalToast ─────────────────────────────────────────────────────────────────
-function GoalToast({message,onClose}){
-  useEffect(()=>{const t=setTimeout(onClose,4000);return()=>clearTimeout(t);},[onClose]);
-  return <div style={{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",background:C.accentDim,border:`1px solid ${C.accent}`,borderRadius:14,padding:"12px 16px",zIndex:200,maxWidth:320,width:"calc(100% - 40px)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,boxShadow:"0 8px 24px rgba(0,0,0,0.4)",animation:"toastIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275)",fontFamily:"'DM Sans', sans-serif"}}>
-    <style>{`@keyframes toastIn{from{opacity:0;transform:translate(-50%,-16px) scale(0.95)}to{opacity:1;transform:translate(-50%,0) scale(1)}}`}</style>
-    <span style={{color:C.accent,fontSize:13,fontWeight:600,lineHeight:1.4}}>{message}</span>
-    <button onClick={onClose} style={{background:"transparent",border:"none",color:C.accent,fontSize:16,cursor:"pointer",padding:0,flexShrink:0}}>✕</button>
-  </div>;
-}
+// ── GoalCelebrationModal ──────────────────────────────────────────────────────
+function GoalCelebrationModal({ message, onClose }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 3000); // بيختفي بعد 3 ثواني
+    return () => clearTimeout(t);
+  }, [onClose]);
 
-function AppFooter({navigateTo,onPrivacyClick}){
-  return <div style={{textAlign:"center",marginTop:40,marginBottom:20,width:"100%"}}>
-    <div style={{marginBottom:"6px",display:"flex",justifyContent:"center",alignItems:"center",gap:"8px"}}>
-      <span style={{color:"#60a5fa",opacity:0.8,fontSize:"13px",fontWeight:"700"}}>Saver One V1.0</span>
-      {(navigateTo||onPrivacyClick)&&<><span style={{color:"#444460"}}>|</span><span onClick={()=>onPrivacyClick?onPrivacyClick():(navigateTo&&navigateTo("privacy"))} style={{color:"#6ee7b7",fontWeight:"700",fontSize:"13px",cursor:"pointer"}}>Privacy Policy</span></>}
+  return (
+    <div 
+      onClick={onClose} // عشان يقفل لو دوست في أي مكان بره
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", 
+        display: "flex", alignItems: "center", justifyContent: "center", 
+        zIndex: 999, padding: 20, animation: "fadeIn 0.3s ease"
+      }}
+    >
+      <style>{`@keyframes fadeIn{from{opacity:0}to{opacity:1}}`}</style>
+      
+      <div 
+        onClick={(e) => e.stopPropagation()} // عشان ما يقفلش لو دوست على المربع نفسه
+        style={{
+          background: C.card, padding: "40px 20px", borderRadius: 24, 
+          border: `2px solid ${C.accent}`, width: "100%", maxWidth: 350,
+          textAlign: "center", position: "relative", boxShadow: "0 20px 50px rgba(0,0,0,0.5)"
+        }}
+      >
+        <button 
+          onClick={onClose}
+          style={{
+            position: "absolute", top: 15, right: 15, background: "none", 
+            border: "none", color: C.muted, fontSize: 24, cursor: "pointer"
+          }}
+        >✕</button>
+        
+        <div style={{ fontSize: 70, marginBottom: 20 }}>🎯</div>
+        <div style={{ color: C.text, fontSize: 24, fontWeight: 800, marginBottom: 15 }}>Goal Updated!</div>
+        <div style={{ color: C.muted, fontSize: 16, lineHeight: 1.5 }}>{message}</div>
+      </div>
     </div>
-    <div style={{color:"#60a5fa",opacity:0.6,fontSize:"10px",fontWeight:"500"}}>Offline & 100% Private · Powered by Mahmoud © 2026</div>
-  </div>;
+  );
 }
 
 // ── SwipeRow ──────────────────────────────────────────────────────────────────
@@ -595,7 +617,7 @@ function SaverApp(){
 
   return <div style={{background:C.bg,minHeight:"100vh",color:C.text,fontFamily:"'DM Sans', sans-serif",maxWidth:520,margin:"0 auto",paddingBottom:isSubPageActive?0:130,position:"relative",userSelect:"none",WebkitUserSelect:"none"}}>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet"/>
-    {goalToast&&<GoalToast message={goalToast} onClose={()=>setGoalToast(null)}/>}
+    {goalToast && <GoalCelebrationModal message={goalToast} onClose={() => setGoalToast(null)}/>}
     {showBackupAlert&&tab==="dashboard"&&!isSubPageActive&&<div style={{background:C.yellowDim,color:C.yellow,padding:"10px 16px",fontSize:12,fontWeight:700,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span>⚠️ {lastBackup?"Over 3 days since last backup!":"Back up your data to keep it safe!"}</span><button onClick={()=>navigateTo("settings")} style={{background:"transparent",border:`1px solid ${C.yellow}`,color:C.yellow,borderRadius:8,padding:"4px 8px",fontSize:10,cursor:"pointer"}}>Backup Now</button></div>}
 
     {!ledgerBank&&!ledgerGroup&&!ledgerSaving&&!ledgerBudget?(
