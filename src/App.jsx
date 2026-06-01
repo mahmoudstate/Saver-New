@@ -1254,57 +1254,83 @@ function TxnViewModal({txn, onClose}) {
   const isTrans = txn.type === "transfer";
   const isSav = txn.type === "saving";
   
-  // نفس ستايل حقول الإدخال بالظبط بس للقراءة فقط
-  const roStyle = {...IS, display: "flex", alignItems: "center", minHeight: 42, cursor: "default"};
+  // تصغير حجم الحقول عشان الشاشة تكون ملمومة وشيك
+  const roStyle = {
+    width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8,
+    padding:"8px 10px", color:C.text, fontSize:13, display:"flex", alignItems:"center",
+    minHeight:36, boxSizing:"border-box"
+  };
   
   const Field = ({label, children}) => (
-    <div style={{marginBottom:14}}>
-      <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>{label}</div>
+    <div>
+      <div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:4}}>{label}</div>
       <div style={roStyle}>{children}</div>
     </div>
   );
 
+  // اختصار التاريخ عشان يكفي في نص سطر
+  const d = new Date(txn.date + "T12:00:00");
+  const shortDate = `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+
   return (
     <Modal title="Transaction Details" onClose={onClose} center={false}>
-      <Field label="Amount">
-        <span style={{color: isExp ? C.red : isInc ? C.accent : isTrans ? C.blue : C.yellow, fontWeight: 700}}>
-          {isExp?"−":isInc?"+":""}{fmt(txn.amount)}
-        </span>
-      </Field>
-      
-      <Field label="Date">
-        {fmtDate(txn.date)}
-      </Field>
+      <div style={{display: "flex", flexDirection: "column", gap: 12}}>
+        
+        {/* السطر الأول: المبلغ والتاريخ جنب بعض */}
+        <div style={{display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10}}>
+            <Field label="Amount">
+              <span style={{color: isExp ? C.red : isInc ? C.accent : isTrans ? C.blue : C.yellow, fontWeight: 700}}>
+                {isExp?"−":isInc?"+":""}{fmt(txn.amount)}
+              </span>
+            </Field>
+            <Field label="Date">
+              {shortDate}
+            </Field>
+        </div>
 
-      <Field label={isTrans ? "Transfer Accounts" : "Account"}>
-        {isTrans ? `${txn.bankName} ➔ ${txn.toBankName}` : txn.bankName}
-      </Field>
+        {/* السطر التاني: الحساب والتصنيف جنب بعض */}
+        <div style={{display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10}}>
+            <Field label={isTrans ? "Transfer" : "Account"}>
+              <span style={{whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>
+                {isTrans ? `${txn.bankName} ➔ ${txn.toBankName}` : txn.bankName}
+              </span>
+            </Field>
+            <Field label={isTrans ? "Type" : "Category"}>
+               <span style={{whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>
+                {isTrans ? "🔁 Transfer" : 
+                 isSav ? "◎ Goal Deposit" : 
+                 txn.type === "goal_withdraw" ? "💳 Goal Spending" : 
+                 txn.type === "goal_return" ? "🏦 Return to Bank" : 
+                 <>{ICONS[txn.catIcon] || "📌"} {txn.catName}</>}
+               </span>
+            </Field>
+        </div>
 
-      <Field label={isTrans ? "Type" : "Category"}>
-        {isTrans ? "🔁 Transfer" : 
-         isSav ? "◎ Goal Deposit" : 
-         txn.type === "goal_withdraw" ? "💳 Goal Spending" : 
-         txn.type === "goal_return" ? "🏦 Return to Bank" : 
-         <>{ICONS[txn.catIcon] || "📌"} <span style={{marginLeft: 8}}>{txn.catName}</span></>}
-      </Field>
+        {/* السطر التالت: الأهداف واللينكات (لو موجودين) */}
+        {(txn.goalName || txn.splitGroupId) && (
+          <div style={{display: "grid", gridTemplateColumns: txn.goalName && txn.splitGroupId ? "1fr 1fr" : "1fr", gap: 10}}>
+            {txn.goalName && (
+              <Field label="Related Goal">
+                <span style={{whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>🎯 {txn.goalName}</span>
+              </Field>
+            )}
+            {txn.splitGroupId && (
+              <Field label="Linked Txn">
+                🔗 #{txn.splitGroupId.slice(-3)}
+              </Field>
+            )}
+          </div>
+        )}
 
-      {txn.goalName && (
-        <Field label="Related Goal">
-          🎯 {txn.goalName}
+        {/* السطر الرابع: الملاحظة */}
+        <Field label="Note">
+          <span style={{whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>
+            {txn.note || <span style={{color: C.faint}}>No note</span>}
+          </span>
         </Field>
-      )}
-      
-      {txn.splitGroupId && (
-         <Field label="Linked Transaction">
-           🔗 #{txn.splitGroupId.slice(-3)}
-         </Field>
-      )}
 
-      <Field label="Note (Optional)">
-        {txn.note || <span style={{color: C.faint}}>No note</span>}
-      </Field>
-
-      <Btn full onClick={onClose} style={{marginTop: 8}}>Close</Btn>
+      </div>
+      <Btn full onClick={onClose} style={{marginTop: 16}}>Close</Btn>
     </Modal>
   );
 }
