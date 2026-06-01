@@ -733,6 +733,11 @@ function BottomNav({tab,navigateTo,expCats,banks,savings,onAdd,currency,safeToSp
   </>;
 }
 
+function NavBtn({id,icon,label,tab,navigateTo}){
+  const a=tab===id;
+  return <button onClick={()=>navigateTo(id,false)} style={{background:"none",border:"none",color:a?C.accent:C.muted,display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"4px 0",cursor:"pointer",transition:"color .2s",width:55,fontFamily:"'DM Sans', sans-serif"}}><span style={{fontSize:22}}>{icon}</span><span style={{fontSize:10,fontWeight:700,letterSpacing:.5,textTransform:"uppercase"}}>{label}</span></button>;
+}
+
 // ── TxnRow ────────────────────────────────────────────────────────────────────
 function TxnRow({txn,hideTotal,onClick,isTrulyLinked}){
   const isExp=txn.type==="expense"||txn.type==="goal_withdraw";
