@@ -2072,14 +2072,30 @@ function MonthlyBills({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,setAp
   </div>;
 }
 
-
 // ── UserManual ────────────────────────────────────────────────────────────────
 function UserManual({onBack,navigateTo}){
   useEffect(()=>{window.scrollTo(0,0);},[]);
   return <div style={{padding:"24px 16px 130px",minHeight:"100vh",background:C.bg,boxSizing:"border-box"}}>
-    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}><button onClick={onBack} style={{background:"transparent",border:"none",color:C.muted,fontSize:22,cursor:"pointer",padding:"10px 15px 10px 0",display:"flex",alignItems:"center"}}><span style={{display:"block",transform:"translateY(-1px)"}}>❮</span></button><div style={{color:C.text,fontSize:22,fontWeight:800}}>Manual Guide</div></div>
-    <p style={{color:C.muted,fontSize:13,lineHeight:1.6,marginBottom:16}}>Everything is stored locally on your device — 100% private.</p>
-    <div style={{marginBottom:24}}><Btn full outline color={C.accent} onClick={()=>{window.location.href="mailto:hello@savertrack.app?subject=Saver%20App%20Feedback";}}>🐞 Report a Bug / Suggestion</Btn></div>
+    
+    {/* Header with Lightbulb Icon */}
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+        <button onClick={onBack} style={{background:"transparent",border:"none",color:C.muted,fontSize:22,cursor:"pointer",padding:"10px 15px 10px 0",display:"flex",alignItems:"center",transition:"color 0.2s"}}>
+            <span style={{display:"block",transform:"translateY(-1px)"}}>❮</span>
+        </button>
+        <div style={{color:C.text,fontSize:24,fontWeight:800,display:"flex",alignItems:"center",gap:8}}>
+            Manual Guide <span style={{fontSize:22}}>💡</span>
+        </div>
+    </div>
+    
+    <p style={{color:C.muted,fontSize:14,lineHeight:1.6,marginBottom:20,fontWeight:500}}>Everything is stored locally on your device — 100% private.</p>
+    
+    <div style={{marginBottom:32}}>
+        <Btn full outline color={C.accent} onClick={()=>{window.location.href="mailto:hello@savertrack.app?subject=Saver%20App%20Feedback";}} style={{padding:"14px",fontSize:15,fontWeight:700,borderRadius:12}}>
+            🐞 Report a Bug / Suggestion
+        </Btn>
+    </div>
+    
+    {/* Guide Sections */}
     {[
       {icon:"◈",bg:C.blueDim,c:C.blue,title:"Home Screen",body:"Total Balance, Account cards (with frozen savings shown), Income vs Expenses, Budgets, Saving Goals, and Spending Groups."},
       {icon:"＋",bg:C.accentDim,c:C.accent,title:"Adding Transactions",body:"Tap + for Income, Expense, Saving, or Transfer. Long-press + for Quick Action shortcuts. For expenses, you can pay from a Bank or from a Goal in Spending Mode."},
@@ -2087,7 +2103,21 @@ function UserManual({onBack,navigateTo}){
       {icon:"☷",bg:C.redDim,c:C.red,title:"Monthly Bills",body:"Add recurring bills. Pay with one tap. Use 'All Time' filter for a historical report showing total paid, consistency score, and last payment date."},
       {icon:"☰",bg:C.purpleDim,c:C.purple,title:"History",body:"Full log. Tap any row to view details. Swipe to Edit or Delete. Changes reflect everywhere instantly."},
       {icon:"⚙",bg:C.surface,c:C.text,title:"Settings",body:"Manage accounts, categories, currency, budgets, and quick actions. Backup & Restore your data as JSON."},
-    ].map((s,i)=><div key={i} style={{marginBottom:32}}><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><span style={{background:s.bg,color:s.c,padding:"4px 8px",borderRadius:8,fontSize:16}}>{s.icon}</span><h3 style={{color:C.text,margin:0,fontSize:17}}>{s.title}</h3></div><p style={{color:C.muted,fontSize:13,lineHeight:1.55,margin:0}}>{s.body}</p></div>)}
+    ].map((s,i)=>(
+        <div key={i} style={{marginBottom:36,background:C.card,padding:"20px",borderRadius:16,border:`1px solid ${C.border}`,boxShadow:"0 2px 8px rgba(0,0,0,0.05)"}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
+                {/* تكبير الأيقونة وإعطائها مساحة */}
+                <div style={{background:s.bg,color:s.c,width:40,height:40,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>
+                    {s.icon}
+                </div>
+                <h3 style={{color:C.text,margin:0,fontSize:18,fontWeight:800}}>{s.title}</h3>
+            </div>
+            <p style={{color:C.muted,fontSize:14,lineHeight:1.6,margin:0,paddingLeft:52}}>
+                {s.body}
+            </p>
+        </div>
+    ))}
+    
     <AppFooter navigateTo={navigateTo}/>
   </div>;
 }
