@@ -734,9 +734,8 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
   const[recentFilter,setRecentFilter]=useState("all");
   const[viewTxn,setViewTxn]=useState(null);
   const[showCustomize,setShowCustomize]=useState(false);
-  const[insightsType,setInsightsType]=useState(null); // 'income' or 'expense'
+  const[insightsType,setInsightsType]=useState(null); 
 
-  // إعدادات ترتيب السكاشن (التخصيص)
   const defaultOrder = [
       {id: "accounts", label: "🏦 Accounts & Balance"},
       {id: "overview", label: "📊 Income & Cash Flow"},
@@ -753,7 +752,6 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
   const totalExp=txns.filter(t=>t.type==="expense"||t.type==="goal_withdraw").reduce((a,t)=>a+t.amount,0);
   const curMonth=new Date().toISOString().slice(0,7);
 
-  // حساب الـ Cash Flow
   const cashFlowPct = totalIncome > 0 ? Math.min(100, Math.round((totalExp / totalIncome) * 100)) : 0;
   const cashFlowColor = cashFlowPct >= 90 ? C.red : cashFlowPct >= 70 ? C.yellow : C.accent;
 
@@ -777,7 +775,6 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
   const splitCounts = {};
   txnsAll.forEach(t => { if (t.splitGroupId) splitCounts[t.splitGroupId] = (splitCounts[t.splitGroupId] || 0) + 1; });
 
-  // ── Smart Insights Logic ──
   const expTxns = txns.filter(t => t.type === "expense" || t.type === "goal_withdraw");
   const incTxns = txns.filter(t => t.type === "income" || t.type === "goal_return");
 
@@ -790,7 +787,8 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
       if(!totals[key]) totals[key] = {name, icon, amount: 0};
       totals[key].amount += t.amount;
     });
-    return Object.values(totals).sort((a,b)=>b.amount-a.amount).slice(0,3).map(c=>({...c, pct: totalAmt>0?Math.round((c.amount/totalAmt)*100):0}));
+    // تم التعديل لـ 5 تصنيفات بدل 3
+    return Object.values(totals).sort((a,b)=>b.amount-a.amount).slice(0,5).map(c=>({...c, pct: totalAmt>0?Math.round((c.amount/totalAmt)*100):0}));
   };
 
   const topExpCats = getTopCats(expTxns, totalExp);
@@ -802,11 +800,9 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
     {username&&<div style={{marginBottom:18}}><div style={{color:C.muted,fontSize:13,fontWeight:500}}>{(()=>{const h=new Date().getHours();return <>{h<12?"☀️":h<18?"👋":"🌙"} {h<12?"Good morning":h<18?"Good afternoon":"Good evening"},</>; })()}</div><div style={{color:C.text,fontSize:24,fontWeight:800,letterSpacing:-0.5}}>{username} 💰</div></div>}
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><div style={{color:C.text,fontSize:20,fontWeight:800}}>Overview</div><MonthSelect value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} availMonths={availMonths}/></div>
 
-    {/* رسائل الترحيب وبداية الشهر (محدثة) */}
     {txnsAll.length===0&&<div style={{background:C.accentDim,border:`1px solid ${C.accent}44`,borderRadius:16,padding:"20px",marginBottom:20,textAlign:"center"}}><div style={{fontSize:32,marginBottom:10}}>👋</div><div style={{color:C.accent,fontWeight:800,fontSize:16,marginBottom:6}}>Welcome to Saver!</div><div style={{color:C.muted,fontSize:13,lineHeight:1.6}}>Tap <strong style={{color:C.accent}}>＋</strong> to add your first transaction.</div></div>}
     {txnsAll.length>0&&txns.length===0&&<div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,padding:"20px",marginBottom:20,textAlign:"center"}}><div style={{fontSize:32,marginBottom:10}}>✨</div><div style={{color:C.text,fontWeight:800,fontSize:16,marginBottom:6}}>Fresh start for {filterMonth!=="all"?MONTHS[+filterMonth.split("-")[1]-1]:"this period"}!</div><div style={{color:C.muted,fontSize:13,lineHeight:1.6}}>No transactions yet. Tap <strong style={{color:C.accent}}>＋</strong> to start tracking.</div></div>}
 
-    {/* Dynamic Sections Engine */}
     {dashOrder.map(section => {
       if (section.id === "accounts") return (
         <div key="accounts">
@@ -873,8 +869,11 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
           <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Monthly Budgets</div>
           <div style={{marginBottom:20}}>
             <SortableList items={budgets} onReorder={onBudgets} renderItem={(bdg)=>{
+              // تم إصلاح فلتر الشهور للميزانية هنا
+              const targetMonth = filterMonth === "all" ? curMonth : filterMonth;
               const allExp=txnsAll.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&bdg.cats.includes(t.catId));
-              const spent=allExp.filter(t=>t.date.startsWith(curMonth)).reduce((a,t)=>a+t.amount,0);
+              const spent=allExp.filter(t=>t.date.startsWith(targetMonth)).reduce((a,t)=>a+t.amount,0);
+              
               if(filterMonth==="all"){
                 const months=[...new Set(allExp.map(t=>t.date.slice(0,7)))];
                 const avg=months.length>0?allExp.reduce((a,t)=>a+t.amount,0)/months.length:0;
@@ -903,10 +902,11 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
           <div style={{marginBottom:20}}>
             <SortableList items={savings} onReorder={onSavings} renderItem={(s)=>{
               const saved=goalSaved(s.id),pct=s.goal?Math.min(110,Math.round((saved/s.goal)*100)):0,isSpending=s.spendingMode;
-              const mainColor = isSpending ? C.accent : C.yellow;
-              return <Card onClick={()=>onOpenSaving(s)} className="ic" style={{padding:"14px 14px 12px",cursor:"pointer",transition:"transform 0.1s ease",border:`1px solid ${isSpending?C.accent+"66":C.border}`}}>
+              // تم توحيد اللون للبرتقالي (Orange) هنا
+              const mainColor = isSpending ? C.orange : C.yellow;
+              return <Card onClick={()=>onOpenSaving(s)} className="ic" style={{padding:"14px 14px 12px",cursor:"pointer",transition:"transform 0.1s ease",border:`1px solid ${isSpending?C.orange+"66":C.border}`}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                  <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{color:C.text,fontWeight:700,fontSize:14}}>{isSpending?"💳":"🎯"} {s.name}</span>{isSpending&&<Pill color={C.accent} style={{fontSize:10}}>Ready</Pill>}</div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{color:C.text,fontWeight:700,fontSize:14}}>{isSpending?"💳":"🎯"} {s.name}</span>{isSpending&&<Pill color={C.orange} style={{fontSize:10}}>Spending</Pill>}</div>
                   <Pill color={pct>=100?C.accent:mainColor}>{pct}%</Pill>
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{color:mainColor,fontSize:18,fontWeight:800}}>{hideTotal?"••••":fmt(saved)}</span><span style={{color:C.muted,fontSize:13}}>of {fmt(s.goal)}</span></div>
@@ -941,7 +941,6 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
       return null;
     })}
 
-    {/* Recent transactions */}
     <div style={{marginBottom:10,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Recent Transactions</div>
       <div style={{display:"flex",gap:4}}>{["all","expenses","income"].map(f=><button key={f} onClick={()=>setRecentFilter(f)} style={{background:"none",border:"none",padding:"2px 6px",color:recentFilter===f?C.accent:C.muted,fontSize:10,fontWeight:700,cursor:"pointer",textTransform:"uppercase",fontFamily:"'DM Sans', sans-serif"}}>{f}</button>)}</div>
@@ -961,10 +960,8 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
 
     {viewTxn&&<TxnViewModal txn={viewTxn} onClose={()=>setViewTxn(null)}/>}
 
-    {/* Insights Modals */}
     {insightsType && (
       <Modal title={insightsType === "expense" ? "Expense Breakdown" : "Income Breakdown"} onClose={()=>setInsightsType(null)} center={false}>
-        {/* Highest Transaction */}
         {(insightsType === "expense" ? biggestExp : biggestInc) && (
           <div style={{marginBottom:24}}>
              <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>{insightsType === "expense" ? "Highest Expense" : "Highest Income"}</div>
@@ -983,7 +980,6 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
           </div>
         )}
         
-        {/* Top Categories */}
         {(insightsType === "expense" ? topExpCats : topIncCats).length > 0 && (
            <div>
              <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Top Categories</div>
