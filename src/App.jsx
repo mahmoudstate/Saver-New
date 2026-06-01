@@ -1253,79 +1253,58 @@ function TxnViewModal({txn, onClose}) {
   const isInc = txn.type === "income" || txn.type === "goal_return";
   const isTrans = txn.type === "transfer";
   const isSav = txn.type === "saving";
-
-  const bg = isExp ? C.redDim : isInc ? C.accentDim : isTrans ? C.blueDim : C.yellowDim;
-  const color = isExp ? C.red : isInc ? C.accent : isTrans ? C.blue : C.yellow;
-  const ic = isSav ? ICONS.saving : isTrans ? ICONS.transfer : txn.type === "goal_withdraw" ? "💳" : txn.type === "goal_return" ? "🏦" : (ICONS[txn.catIcon] || "📌");
-  const sign = isExp ? "−" : isInc ? "+" : "";
-
-  // تحديد عنوان الشاشة بناءً على نوع العملية
-  const title = isTrans ? "Transfer Details" :
-                txn.type === "goal_return" ? "Return to Bank" :
-                txn.type === "saving" ? "Goal Deposit" :
-                txn.type === "goal_withdraw" ? "Goal Spending" :
-                "Transaction Details";
+  
+  // نفس ستايل حقول الإدخال بالظبط بس للقراءة فقط
+  const roStyle = {...IS, display: "flex", alignItems: "center", minHeight: 42, cursor: "default"};
+  
+  const Field = ({label, children}) => (
+    <div style={{marginBottom:14}}>
+      <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>{label}</div>
+      <div style={roStyle}>{children}</div>
+    </div>
+  );
 
   return (
-    <Modal title={title} onClose={onClose} center={false}>
-      <div style={{display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24}}>
-        <div style={{width: 64, height: 64, borderRadius: 16, background: bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, marginBottom: 12}}>
-          {ic}
-        </div>
-        <div style={{color: color, fontSize: 32, fontWeight: 800, letterSpacing: -1}}>
-          {sign}{fmt(txn.amount)}
-        </div>
-        <div style={{color: C.text, fontSize: 16, fontWeight: 600, marginTop: 4}}>
-          {txn.catName || txn.type}
-        </div>
-        <div style={{color: C.muted, fontSize: 13, marginTop: 4}}>
-          {fmtDate(txn.date)}
-        </div>
-      </div>
+    <Modal title="Transaction Details" onClose={onClose} center={false}>
+      <Field label="Amount">
+        <span style={{color: isExp ? C.red : isInc ? C.accent : isTrans ? C.blue : C.yellow, fontWeight: 700}}>
+          {isExp?"−":isInc?"+":""}{fmt(txn.amount)}
+        </span>
+      </Field>
+      
+      <Field label="Date">
+        {fmtDate(txn.date)}
+      </Field>
 
-      <div style={{background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12}}>
-        {isTrans ? (
-          <>
-            <div style={{display: "flex", justifyContent: "space-between"}}>
-              <span style={{color: C.muted, fontSize: 13}}>From Account</span>
-              <span style={{color: C.text, fontWeight: 600, fontSize: 13}}>{txn.bankName}</span>
-            </div>
-            <div style={{display: "flex", justifyContent: "space-between"}}>
-              <span style={{color: C.muted, fontSize: 13}}>To Account</span>
-              <span style={{color: C.text, fontWeight: 600, fontSize: 13}}>{txn.toBankName}</span>
-            </div>
-          </>
-        ) : (
-          <div style={{display: "flex", justifyContent: "space-between"}}>
-            <span style={{color: C.muted, fontSize: 13}}>Account</span>
-            <span style={{color: C.text, fontWeight: 600, fontSize: 13}}>{txn.bankName}</span>
-          </div>
-        )}
+      <Field label={isTrans ? "Transfer Accounts" : "Account"}>
+        {isTrans ? `${txn.bankName} ➔ ${txn.toBankName}` : txn.bankName}
+      </Field>
 
-        {txn.goalName && (
-          <div style={{display: "flex", justifyContent: "space-between"}}>
-            <span style={{color: C.muted, fontSize: 13}}>Related Goal</span>
-            <span style={{color: C.text, fontWeight: 600, fontSize: 13}}>{txn.goalName}</span>
-          </div>
-        )}
+      <Field label={isTrans ? "Type" : "Category"}>
+        {isTrans ? "🔁 Transfer" : 
+         isSav ? "◎ Goal Deposit" : 
+         txn.type === "goal_withdraw" ? "💳 Goal Spending" : 
+         txn.type === "goal_return" ? "🏦 Return to Bank" : 
+         <>{ICONS[txn.catIcon] || "📌"} <span style={{marginLeft: 8}}>{txn.catName}</span></>}
+      </Field>
 
-        {txn.splitGroupId && (
-          <div style={{display: "flex", justifyContent: "space-between"}}>
-            <span style={{color: C.muted, fontSize: 13}}>Link ID</span>
-            <span style={{color: C.faint, fontWeight: 600, fontSize: 13}}>🔗 #{txn.splitGroupId.slice(-3)}</span>
-          </div>
-        )}
+      {txn.goalName && (
+        <Field label="Related Goal">
+          🎯 {txn.goalName}
+        </Field>
+      )}
+      
+      {txn.splitGroupId && (
+         <Field label="Linked Transaction">
+           🔗 #{txn.splitGroupId.slice(-3)}
+         </Field>
+      )}
 
-        {txn.note && (
-          <div style={{display: "flex", flexDirection: "column", gap: 4, marginTop: 4, paddingTop: 12, borderTop: `1px solid ${C.border}`}}>
-            <span style={{color: C.muted, fontSize: 13}}>Note</span>
-            <span style={{color: C.text, fontSize: 14, lineHeight: 1.5}}>{txn.note}</span>
-          </div>
-        )}
-      </div>
-      <div style={{marginTop: 20}}>
-        <Btn full onClick={onClose}>Close</Btn>
-      </div>
+      <Field label="Note (Optional)">
+        {txn.note || <span style={{color: C.faint}}>No note</span>}
+      </Field>
+
+      <Btn full onClick={onClose} style={{marginTop: 8}}>Close</Btn>
     </Modal>
   );
 }
