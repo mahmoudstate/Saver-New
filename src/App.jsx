@@ -41,7 +41,16 @@ const fmt = (n, ov) => {
 const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const fmtDate = (d) => { const dt=new Date(d+"T12:00:00"); return `${DAYS[dt.getDay()]}: ${dt.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}`; };
-const today = () => new Date().toISOString().split("T")[0];
+
+// الذكاء الجديد لمعرفة التوقيت المحلي وجلب الشهر الحالي بدقة
+const getLocalTime = () => {
+  const d = new Date();
+  const offset = d.getTimezoneOffset() * 60000;
+  const localISO = new Date(d.getTime() - offset).toISOString();
+  return { today: localISO.split("T")[0], month: localISO.slice(0,7) };
+};
+const today = () => getLocalTime().today;
+const currentMonth = () => getLocalTime().month;
 
 // ── Goal encouragement messages ───────────────────────────────────────────────
 const getGoalMessage = (pct) => {
@@ -392,8 +401,8 @@ function SaverApp(){
       setTxns(t);setBanks(b);setExpCats(ec);setIncCats(ic);setGroups(g);setSavings(s);
       setCurrencyState(cur);setCurrencyGlobal(cur);setUsernameState(uname);setBills(bl);setBudgets(bdg);setLastBackup(lb);
       setQuickActions(qa);setHasSeenWelcome(seen);
-      const curMonth=new Date().toISOString().slice(0,7);
-      setFilterMonth(t.some(tx=>tx.date.startsWith(curMonth))?curMonth:"all");
+      const localCurMonth = currentMonth();
+      setFilterMonth(localCurMonth);
       setTimeout(()=>setShowSplash(false),2700);
       if("Notification" in window&&Notification.permission==="granted"&&bl.length>0){
         bl.forEach(bill=>{
@@ -575,8 +584,9 @@ function SaverApp(){
     return <WelcomeScreen onStart={completeWelcome} onManual={()=>{completeWelcome();navigateTo("manual");}} onPrivacy={()=>setShowPrivacyBeforeWelcome(true)}/>;
   }
 
+  const curMonth = currentMonth();
   const filteredTxns=filterMonth==="all"?txns:txns.filter(t=>t.date.startsWith(filterMonth));
-  const availMonths=[...new Set(txns.map(t=>t.date.slice(0,7)))].sort().reverse();
+  const availMonths=[...new Set([curMonth, ...txns.map(t=>t.date.slice(0,7))])].sort().reverse();
   const showBackupAlert=!lastBackup||(Date.now()-lastBackup>3*24*60*60*1000);
   const isSubPageActive=ledgerBank||ledgerGroup||ledgerSaving||ledgerBudget||["savings","budgets","quickactions","manual","privacy"].includes(tab);
   const activeSavings=savings.filter(s=>s.status!=="archived");
