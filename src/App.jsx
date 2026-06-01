@@ -1261,7 +1261,7 @@ function SavingDetailView({goal,saved,txns,onDelete,addTxn,banks,savings,onSave,
   </div>;
 }
 
-// ── AddTransaction (النسخة النهائية المنقحة) ──────────────────────────────
+// ── AddTransaction ─────────────
 function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,safeToSpend,goalSaved,setAppAlert,txns}){
   const[type,setType]=useState("expense");
   const[amount,setAmount]=useState("");
@@ -1273,21 +1273,30 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
   const[txnDate,setTxnDate]=useState(today());
   
   const cats = type==="expense" ? expCats : type==="income" ? incCats : [];
-  const spendingGoals = savings.filter(s=>s.spendingMode&&s.status!=="archived");
-  const theme = type==="expense"?C.red:type==="income"?C.accent:type==="saving"?C.yellow:C.blue;
+  
+  // قراءة كل الأهداف (النشطة فقط) بدون الاعتماد على الـ Spending Mode
+  const activeGoals = savings.filter(s=>s.status!=="archived");
+
+  // ألوان الباستيل الاحترافية والمريحة للعين
+  const theme = type==="expense" ? "#FF6B6B" : // Soft Coral
+                type==="income" ? "#48C78E" :  // Mint Green
+                type==="saving" ? "#F4B942" :  // Warm Gold
+                "#4D96FF";                     // Soft Sky Blue
+
+  const getBankIcon = (name) => name.toLowerCase().includes("cash") ? "💵" : "🏦";
 
   const handleSubmit=async()=>{
     const amt=parseFloat(amount);
     if(!amount||isNaN(amt)||amt<=0){setAppAlert({title:"Invalid Amount",message:"Please enter a valid amount.",color:C.red}); return;}
     
-    // 1. حماية الـ Saving
+    // حماية السيفنج
     if(type==="saving" && !savingId) {setAppAlert({title:"No Goal",message:"Please select a savings goal.",color:C.red}); return;}
 
-    // 2. التحقق من الرصيد قبل التنفيذ (Logically)
+    // حماية الرصيد (بدون الخروج من الشاشة)
     const bank=banks.find(b=>b.id===sourceId);
     if(type==="expense" && bank && amt > safeToSpend(bank.id)) {
         setAppAlert({title:"Insufficient Funds",message:`Available: ${fmt(safeToSpend(bank.id))}`,color:C.red});
-        return; // هنا الشاشة مش هتقفل وهتفضل مفتوحة
+        return; 
     }
 
     let ok = false;
@@ -1301,62 +1310,111 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
         ok = await onAdd({type,amount:amt,date:txnDate,bankId:sourceId,bankName:bank?.name,catId,catName:cat?.name,catIcon:cat?.icon,note});
     }
     
-    // الشاشة مش هتقفل إلا لو العملية نجحت فعلاً
     if(ok!==false){setAmount("");onDone();}
   };
 
-  const selectStyle = {...IS, background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:"12px", appearance:"none", cursor:"pointer", color:C.text};
+  // كومبوننت مخصص للقوائم المنسدلة (Clean Dropdown Hack)
+  const CustomField = ({ label, icon, value, onChange, children, isSelect=true }) => (
+    <div style={{background:C.card, border:`1px solid ${C.border}`, borderRadius:14, display:"flex", alignItems:"center", position:"relative", height:56}}>
+       <div style={{color:C.muted, fontSize:13, fontWeight:700, paddingLeft:16, display:"flex", alignItems:"center", gap:6, width:85}}>
+          <span style={{fontSize:16}}>{icon}</span> {label}
+       </div>
+       {isSelect ? (
+           <>
+               <select value={value} onChange={onChange} style={{flex:1, background:"transparent", border:"none", color:C.text, fontSize:15, padding:"0 36px 0 12px", height:"100%", outline:"none", appearance:"none", cursor:"pointer", fontWeight:600}}>
+                  {children}
+               </select>
+               <div style={{position:"absolute", right:16, pointerEvents:"none", color:C.muted}}>▾</div>
+           </>
+       ) : children}
+    </div>
+  );
 
   return <div style={{position:"fixed", inset:0, background:C.bg, zIndex:100, display:"flex", flexDirection:"column"}}>
+    
+    {/* Header */}
     <div style={{padding:"24px 16px 16px", display:"flex",justifyContent:"space-between",alignItems:"center"}}>
        <div style={{color:C.text,fontSize:20,fontWeight:800}}>New Transaction</div>
        <button onClick={onDone} style={{background:C.card,border:`1px solid ${C.border}`,color:C.muted,width:36,height:36,borderRadius:99,cursor:"pointer"}}>✕</button>
     </div>
 
+    {/* Scrollable Content */}
     <div style={{flex:1, overflowY:"auto", padding:"0 16px"}}>
-        <div style={{display:"flex",gap:8,marginBottom:24}}>
-          {["expense","income","saving","transfer"].map(t=><button key={t} onClick={()=>setType(t)} style={{flex:1,textTransform:"capitalize",padding:"10px 0",borderRadius:12,border:`1px solid ${type===t?theme:C.border}`,background:type===t?theme+"22":"transparent",color:type===t?theme:C.muted,fontWeight:700,fontSize:13,cursor:"pointer"}}>{t}</button>)}
+        
+        {/* Tabs */}
+        <div style={{display:"flex",gap:8,marginBottom:10}}>
+          {["expense","income","saving","transfer"].map(t=><button key={t} onClick={()=>setType(t)} style={{flex:1,textTransform:"capitalize",padding:"12px 0",borderRadius:12,border:`1px solid ${type===t?theme:C.border}`,background:type===t?theme+"22":"transparent",color:type===t?theme:C.muted,fontWeight:700,fontSize:13,cursor:"pointer", transition:"all 0.2s ease"}}>{t}</button>)}
         </div>
 
-        <div style={{textAlign:"center", marginBottom:32, marginTop:20}}>
-            <div style={{color:C.muted,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:8}}>Amount ({currency})</div>
+        {/* Big Amount Area (Hero Section with Breathing Room) */}
+        <div style={{textAlign:"center", padding:"40px 0 50px"}}>
+            <div style={{color:C.muted,fontSize:12,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:12}}>Amount ({currency})</div>
             <input type="number" inputMode="decimal" placeholder="0.00" value={amount} onChange={e=>setAmount(e.target.value)} 
-                   style={{background:"transparent", border:"none", color:amount?theme:C.faint, fontSize:56, fontWeight:800, textAlign:"center", width:"100%", outline:"none", caretColor:"transparent"}} />
+                   style={{background:"transparent", border:"none", color:amount?theme:C.faint, fontSize:64, fontWeight:800, textAlign:"center", width:"100%", outline:"none", caretColor:"transparent"}} />
+            {/* التلميح البصري لعلامة السالب */}
+            {amount && type==="expense" && <div style={{position:"absolute", left:"50%", transform:"translateX(-50%)", marginTop:-58, marginLeft:-((amount.length*18)+10), fontSize:40, fontWeight:800, color:theme, pointerEvents:"none"}}>−</div>}
         </div>
 
-        <div style={{display:"flex", flexDirection:"column", gap:16}}>
-            <input type="date" value={txnDate} onChange={e=>setTxnDate(e.target.value)} style={selectStyle}/>
+        {/* Clean Fields Section */}
+        <div style={{display:"flex", flexDirection:"column", gap:14}}>
             
+            {/* Date Field */}
+            <CustomField label="Date" icon="📅" isSelect={false}>
+                <input type="date" value={txnDate} onChange={e=>setTxnDate(e.target.value)} style={{flex:1, background:"transparent", border:"none", color:C.text, fontSize:15, padding:"0 12px", height:"100%", outline:"none", fontWeight:600, colorScheme:"dark"}} />
+            </CustomField>
+            
+            {/* Dynamic Selectors */}
             {type==="transfer" ? (
                 <>
-                    <select value={sourceId} onChange={e=>setSourceId(e.target.value)} style={selectStyle}>{banks.map(b=><option key={b.id} value={b.id}>From: {b.name}</option>)}</select>
-                    <select value={toBankId} onChange={e=>setToBankId(e.target.value)} style={selectStyle}>{banks.map(b=><option key={b.id} value={b.id}>To: {b.name}</option>)}</select>
+                    <CustomField label="From" icon="📤" value={sourceId} onChange={e=>setSourceId(e.target.value)}>
+                        {banks.map(b=><option key={b.id} value={b.id}>{getBankIcon(b.name)} {b.name}</option>)}
+                    </CustomField>
+                    <CustomField label="To" icon="📥" value={toBankId} onChange={e=>setToBankId(e.target.value)}>
+                        {banks.map(b=><option key={b.id} value={b.id}>{getBankIcon(b.name)} {b.name}</option>)}
+                    </CustomField>
                 </>
             ) : type==="saving" ? (
                 <>
-                    <select value={sourceId} onChange={e=>setSourceId(e.target.value)} style={selectStyle}>{banks.map(b=><option key={b.id} value={b.id}>Pay from: {b.name}</option>)}</select>
-                    {spendingGoals.length > 0 ? (
-                        <select value={savingId} onChange={e=>setSavingId(e.target.value)} style={selectStyle}>{spendingGoals.map(s=><option key={s.id} value={s.id}>🎯 Goal: {s.name}</option>)}</select>
-                    ) : <div style={{color:C.red, fontSize:12, padding:10}}>No active goals found.</div>}
+                    <CustomField label="From" icon="📤" value={sourceId} onChange={e=>setSourceId(e.target.value)}>
+                        {banks.map(b=><option key={b.id} value={b.id}>{getBankIcon(b.name)} {b.name}</option>)}
+                    </CustomField>
+                    
+                    {activeGoals.length > 0 ? (
+                        <CustomField label="Goal" icon="🎯" value={savingId} onChange={e=>setSavingId(e.target.value)}>
+                            {activeGoals.map(s=><option key={s.id} value={s.id}>🎯 {s.name}</option>)}
+                        </CustomField>
+                    ) : (
+                        <div style={{background:C.card, border:`1px solid ${C.border}`, borderRadius:14, display:"flex", alignItems:"center", height:56, padding:"0 16px", color:C.muted, fontSize:14, fontWeight:600}}>
+                            <span style={{marginRight:10, fontSize:16}}>🎯</span> No active goals available
+                        </div>
+                    )}
                 </>
             ) : (
-                <select value={sourceId} onChange={e=>setSourceId(e.target.value)} style={selectStyle}>
-                    {banks.map(b=><option key={b.id} value={b.id}>🏦 {b.name}</option>)}
-                </select>
+                <CustomField label={type==="income"?"To":"From"} icon={type==="income"?"📥":"📤"} value={sourceId} onChange={e=>setSourceId(e.target.value)}>
+                    {banks.map(b=><option key={b.id} value={b.id}>{getBankIcon(b.name)} {b.name}</option>)}
+                </CustomField>
             )}
 
+            {/* Category */}
             {type!=="transfer" && type!=="saving" && (
-                <select value={catId} onChange={e=>setCatId(e.target.value)} style={selectStyle}>
+                <CustomField label="Catg." icon="📌" value={catId} onChange={e=>setCatId(e.target.value)}>
                     {cats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]||"📌"} {c.name}</option>)}
-                </select>
+                </CustomField>
             )}
 
-            <input placeholder="Add a note..." value={note} onChange={e=>setNote(e.target.value)} style={selectStyle}/>
+            {/* Note Field */}
+            <CustomField label="Note" icon="📝" isSelect={false}>
+                <input placeholder="Add details..." value={note} onChange={e=>setNote(e.target.value)} style={{flex:1, background:"transparent", border:"none", color:C.text, fontSize:15, padding:"0 12px", height:"100%", outline:"none", fontWeight:600}} />
+            </CustomField>
+
         </div>
     </div>
 
-    <div style={{padding:"16px", borderTop:`1px solid ${C.border}`, background:C.bg}}>
-        <button onClick={handleSubmit} style={{width:"100%", background:theme, border:"none", padding:"16px", borderRadius:16, color:"#fff", fontWeight:700, fontSize:16, cursor:"pointer"}}>Save Transaction</button>
+    {/* Footer with Safe Area */}
+    <div style={{padding:"16px 16px 40px", background:C.bg}}>
+        <button onClick={handleSubmit} style={{width:"100%", background:theme, border:"none", padding:"16px", borderRadius:16, color:C.bg==="#000000"||C.bg==="#111"?"#111":"#fff", fontWeight:800, fontSize:17, cursor:"pointer", transition:"all 0.2s ease"}}>
+            Save Transaction
+        </button>
     </div>
   </div>;
 }
