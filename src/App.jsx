@@ -1247,6 +1247,89 @@ function History({txns,onDelete,onUpdate,banks,expCats,incCats,currency,availMon
   </div>;
 }
 
+// ── TxnViewModal ──────────────────────────────────────────────────────────────
+function TxnViewModal({txn, onClose}) {
+  const isExp = txn.type === "expense" || txn.type === "goal_withdraw";
+  const isInc = txn.type === "income" || txn.type === "goal_return";
+  const isTrans = txn.type === "transfer";
+  const isSav = txn.type === "saving";
+
+  const bg = isExp ? C.redDim : isInc ? C.accentDim : isTrans ? C.blueDim : C.yellowDim;
+  const color = isExp ? C.red : isInc ? C.accent : isTrans ? C.blue : C.yellow;
+  const ic = isSav ? ICONS.saving : isTrans ? ICONS.transfer : txn.type === "goal_withdraw" ? "💳" : txn.type === "goal_return" ? "🏦" : (ICONS[txn.catIcon] || "📌");
+  const sign = isExp ? "−" : isInc ? "+" : "";
+
+  // تحديد عنوان الشاشة بناءً على نوع العملية
+  const title = isTrans ? "Transfer Details" :
+                txn.type === "goal_return" ? "Return to Bank" :
+                txn.type === "saving" ? "Goal Deposit" :
+                txn.type === "goal_withdraw" ? "Goal Spending" :
+                "Transaction Details";
+
+  return (
+    <Modal title={title} onClose={onClose} center={false}>
+      <div style={{display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24}}>
+        <div style={{width: 64, height: 64, borderRadius: 16, background: bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, marginBottom: 12}}>
+          {ic}
+        </div>
+        <div style={{color: color, fontSize: 32, fontWeight: 800, letterSpacing: -1}}>
+          {sign}{fmt(txn.amount)}
+        </div>
+        <div style={{color: C.text, fontSize: 16, fontWeight: 600, marginTop: 4}}>
+          {txn.catName || txn.type}
+        </div>
+        <div style={{color: C.muted, fontSize: 13, marginTop: 4}}>
+          {fmtDate(txn.date)}
+        </div>
+      </div>
+
+      <div style={{background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12}}>
+        {isTrans ? (
+          <>
+            <div style={{display: "flex", justifyContent: "space-between"}}>
+              <span style={{color: C.muted, fontSize: 13}}>From Account</span>
+              <span style={{color: C.text, fontWeight: 600, fontSize: 13}}>{txn.bankName}</span>
+            </div>
+            <div style={{display: "flex", justifyContent: "space-between"}}>
+              <span style={{color: C.muted, fontSize: 13}}>To Account</span>
+              <span style={{color: C.text, fontWeight: 600, fontSize: 13}}>{txn.toBankName}</span>
+            </div>
+          </>
+        ) : (
+          <div style={{display: "flex", justifyContent: "space-between"}}>
+            <span style={{color: C.muted, fontSize: 13}}>Account</span>
+            <span style={{color: C.text, fontWeight: 600, fontSize: 13}}>{txn.bankName}</span>
+          </div>
+        )}
+
+        {txn.goalName && (
+          <div style={{display: "flex", justifyContent: "space-between"}}>
+            <span style={{color: C.muted, fontSize: 13}}>Related Goal</span>
+            <span style={{color: C.text, fontWeight: 600, fontSize: 13}}>{txn.goalName}</span>
+          </div>
+        )}
+
+        {txn.splitGroupId && (
+          <div style={{display: "flex", justifyContent: "space-between"}}>
+            <span style={{color: C.muted, fontSize: 13}}>Link ID</span>
+            <span style={{color: C.faint, fontWeight: 600, fontSize: 13}}>🔗 #{txn.splitGroupId.slice(-3)}</span>
+          </div>
+        )}
+
+        {txn.note && (
+          <div style={{display: "flex", flexDirection: "column", gap: 4, marginTop: 4, paddingTop: 12, borderTop: `1px solid ${C.border}`}}>
+            <span style={{color: C.muted, fontSize: 13}}>Note</span>
+            <span style={{color: C.text, fontSize: 14, lineHeight: 1.5}}>{txn.note}</span>
+          </div>
+        )}
+      </div>
+      <div style={{marginTop: 20}}>
+        <Btn full onClick={onClose}>Close</Btn>
+      </div>
+    </Modal>
+  );
+}
+
 // ── EditTxnModal ──────────────────────────────────────────────────────────────
 function EditTxnModal({txn,banks,expCats,incCats,currency,onSave,onClose}){
   const[amount,setAmount]=useState(String(txn.amount));
