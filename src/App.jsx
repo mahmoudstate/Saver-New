@@ -2149,13 +2149,11 @@ function Settings({banks,expCats,incCats,groups,onBanks,onExpCats,onIncCats,onGr
     setConfirmDel(null);
   };
 
-  // Bank delete validation: check frozen funds
   const getBankDeleteError=(b)=>{
     const frozen=frozenForBank(b.id);
     if(frozen>0)return `Cannot delete "${b.name}" — it has ${fmt(frozen)} frozen in savings goals. Withdraw or archive those goals first.`;
     if(bankBalance(b.id)!==0)return `Cannot delete "${b.name}" — it has a remaining balance. Clear balance first.`;
     if(txns.some(t=>t.bankId===b.id||t.fromBankId===b.id||t.toBankId===b.id))return `Cannot delete "${b.name}" — it has existing transactions. Delete those first.`;
-    // Check if any bills use this bank
     if(bills.some(bl=>bl.bankId===b.id))return `Cannot delete "${b.name}" — it's used by a monthly bill. Update the bill first.`;
     return null;
   };
@@ -2172,7 +2170,15 @@ function Settings({banks,expCats,incCats,groups,onBanks,onExpCats,onIncCats,onGr
   const iconKeys=Object.keys(ICONS).filter(k=>!["dashboard","add","settings","saving","bills_nav","income","expense","transfer","close","check","trash","edit","bank","cash","goal","budget"].includes(k));
 
   return <div style={{padding:"24px 16px 0"}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><div style={{color:C.text,fontSize:22,fontWeight:800}}>Settings</div><Btn small outline color={C.accent} onClick={onOpenManual}>📖 Guide</Btn></div>
+    
+    {/* ── هنا التعديل بتاع زرار الـ Guide ── */}
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div style={{color:C.text,fontSize:22,fontWeight:800}}>Settings</div>
+        <button onClick={onOpenManual} style={{background:C.accent+"22", border:`1px solid ${C.accent}44`, color:C.accent, fontWeight:800, fontSize:14, cursor:"pointer", display:"flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:12, transition:"all 0.2s ease"}}>
+            <span>Guide</span> <span style={{fontSize:16}}>💡</span>
+        </button>
+    </div>
+
     <div style={{display:"flex",gap:8,marginBottom:20,overflowX:"auto",paddingBottom:4}}>
       {[{id:"profile",label:"👤 General"},{id:"currency",label:"💱 Currency"},{id:"banks",label:"🏦 Accounts"},{id:"expCats",label:"📤 Exp. Cat."},{id:"incCats",label:"💰 Inc. Cat."},{id:"groups",label:"📊 Groups"}].map(s=><button key={s.id} onClick={()=>setSection(s.id)} style={{whiteSpace:"nowrap",padding:"8px 14px",borderRadius:10,border:`1px solid ${section===s.id?C.accent:C.border}`,background:section===s.id?C.accentDim:"transparent",color:section===s.id?C.accent:C.muted,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>{s.label}</button>)}
     </div>
