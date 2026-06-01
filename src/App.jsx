@@ -1261,7 +1261,7 @@ function SavingDetailView({goal,saved,txns,onDelete,addTxn,banks,savings,onSave,
   </div>;
 }
 
-// ── AddTransaction ────────────────────────────────────────────────────────────────────────────────────────
+// ── AddTransaction ──────────────────────────────
 function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,safeToSpend,goalSaved,setAppAlert,onGoalToast,txns}){
   const[type,setType]=useState("expense");
   const[amount,setAmount]=useState("");
@@ -1273,62 +1273,69 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
   
   const cats = type==="expense" ? expCats : type==="income" ? incCats : [];
   const spendingGoals = savings.filter(s=>s.spendingMode&&s.status!=="archived");
-
   const theme = type==="expense"?C.red:type==="income"?C.accent:type==="saving"?C.yellow:C.blue;
 
-  // ستايل القائمة المنسدلة الموحد (Premium)
-  const selectStyle = {
-      ...IS, background:C.card, border:`1px solid ${C.border}`, 
-      borderRadius:12, padding:"12px 14px", appearance:"none", cursor:"pointer"
+  const handleSubmit=async()=>{
+    const amt=parseFloat(amount);
+    if(!amount||isNaN(amt)||amt<=0){setAppAlert({title:"Invalid Amount",message:"Please enter a valid amount.",color:C.red});return;}
+    
+    if(type==="transfer"){
+        if(sourceId===toBankId){setAppAlert({title:"Error",message:"Cannot transfer to same account",color:C.red}); return;}
+        await onAdd({type:"transfer",amount:amt,date:txnDate,bankId:sourceId,toBankId,note});
+    } else {
+        const bank=banks.find(b=>b.id===sourceId);
+        const cat=cats.find(c=>c.id===catId);
+        await onAdd({type,amount:amt,date:txnDate,bankId:sourceId,bankName:bank?.name,catId,catName:cat?.name,catIcon:cat?.icon,note});
+    }
+    setAmount("");onDone();
   };
 
-  return <div style={{position:"fixed", inset:0, background:C.bg, zIndex:100, display:"flex", flexDirection:"column", overflow:"hidden"}}>
+  const selectStyle = {...IS, background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:"12px", appearance:"none", cursor:"pointer", color:C.text};
+
+  return <div style={{position:"fixed", inset:0, background:C.bg, zIndex:100, display:"flex", flexDirection:"column"}}>
     <div style={{padding:"24px 16px 16px", display:"flex",justifyContent:"space-between",alignItems:"center"}}>
        <div style={{color:C.text,fontSize:20,fontWeight:800}}>New Transaction</div>
        <button onClick={onDone} style={{background:C.card,border:`1px solid ${C.border}`,color:C.muted,width:36,height:36,borderRadius:99,cursor:"pointer"}}>✕</button>
     </div>
 
-    <div style={{padding:"0 16px", flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch"}}>
+    <div style={{flex:1, overflowY:"auto", padding:"0 16px"}}>
         <div style={{display:"flex",gap:8,marginBottom:24}}>
           {["expense","income","saving","transfer"].map(t=><button key={t} onClick={()=>setType(t)} style={{flex:1,textTransform:"capitalize",padding:"10px 0",borderRadius:12,border:`1px solid ${type===t?theme:C.border}`,background:type===t?theme+"22":"transparent",color:type===t?theme:C.muted,fontWeight:700,fontSize:13,cursor:"pointer"}}>{t}</button>)}
         </div>
 
-        {/* مساحة أكبر للمبلغ */}
-        <div style={{textAlign:"center", marginBottom:32, padding:"20px 0"}}>
+        <div style={{textAlign:"center", marginBottom:32}}>
             <div style={{color:C.muted,fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:8}}>Amount ({currency})</div>
             <input type="number" inputMode="decimal" placeholder="0.00" value={amount} onChange={e=>setAmount(e.target.value)} 
                    style={{background:"transparent", border:"none", color:amount?theme:C.faint, fontSize:56, fontWeight:800, textAlign:"center", width:"100%", outline:"none"}} />
         </div>
 
-        {/* القوائم المنسدلة بدلاً من الكروت الزحمة */}
         <div style={{display:"flex", flexDirection:"column", gap:16}}>
-            <Input type="date" value={txnDate} onChange={e=>setTxnDate(e.target.value)} style={{background:C.card, border:`1px solid ${C.border}`}}/>
+            <input type="date" value={txnDate} onChange={e=>setTxnDate(e.target.value)} style={selectStyle}/>
             
             {type==="transfer" ? (
                 <>
-                    <Select label="From Account" value={sourceId} onChange={e=>setSourceId(e.target.value)} style={selectStyle}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select>
-                    <Select label="To Account" value={toBankId} onChange={e=>setToBankId(e.target.value)} style={selectStyle}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select>
+                    <select value={sourceId} onChange={e=>setSourceId(e.target.value)} style={selectStyle}>{banks.map(b=><option key={b.id} value={b.id}>From: {b.name}</option>)}</select>
+                    <select value={toBankId} onChange={e=>setToBankId(e.target.value)} style={selectStyle}>{banks.map(b=><option key={b.id} value={b.id}>To: {b.name}</option>)}</select>
                 </>
             ) : (
-                <Select label={type==="income"?"Account":"Pay From"} value={sourceId} onChange={e=>setSourceId(e.target.value)} style={selectStyle}>
+                <select value={sourceId} onChange={e=>setSourceId(e.target.value)} style={selectStyle}>
                     {banks.map(b=><option key={b.id} value={b.id}>🏦 {b.name}</option>)}
                     {spendingGoals.map(g=><option key={"goal_"+g.id} value={"goal_"+g.id}>🎯 {g.name}</option>)}
-                </Select>
+                </select>
             )}
 
             {type!=="transfer" && (
-                <Select label="Category" value={catId} onChange={e=>setCatId(e.target.value)} style={selectStyle}>
-                    {cats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]} {c.name}</option>)}
-                </Select>
+                <select value={catId} onChange={e=>setCatId(e.target.value)} style={selectStyle}>
+                    {cats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]||"📌"} {c.name}</option>)}
+                </select>
             )}
 
-            <Input label="Note" placeholder="Add a note..." value={note} onChange={e=>setNote(e.target.value)} style={{background:C.card, border:`1px solid ${C.border}`}}/>
+            <input placeholder="Add a note..." value={note} onChange={e=>setNote(e.target.value)} style={selectStyle}/>
         </div>
     </div>
 
-    {/* زر الحفظ ثابت في الأسفل */}
     <div style={{padding:"16px", borderTop:`1px solid ${C.border}`}}>
-        <Btn full onClick={handleSubmit} style={{background:theme, border:"none", padding:"16px", borderRadius:16}}>Save Transaction</Btn>
+        <button onClick={handleSubmit} style={{width:"100%", background:theme, border:"none", padding:"16px", borderRadius:16, color:"#fff", fontWeight:700, fontSize:16, cursor:"pointer"}}>Save Transaction</button>
     </div>
   </div>;
 }
