@@ -1282,11 +1282,10 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,ban
     setSourceId(banks[0]?.id||"");
   },[type]);
 
-  // Sources for expense: banks + spending mode goals
   const spendingGoals=savings.filter(s=>s.spendingMode&&s.status!=="archived");
   const sources=[
     ...banks.map(b=>({id:b.id,label:b.name,type:"bank"})),
-    ...spendingGoals.map(g=>({id:`goal_${g.id}`,label:`🎯 ${g.name}`,type:"goal",goalId:g.id}))
+    ...spendingGoals.map(g=>({id:`goal_${g.id}`,label:`💳 ${g.name}`,type:"goal",goalId:g.id}))
   ];
 
   const handleSubmit=async()=>{
@@ -1306,7 +1305,6 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,ban
       const bank=banks.find(b=>b.id===bankId);
       const ok=await onAdd({type:"saving",amount:amt,date:txnDate,bankId,bankName:bank?.name,goalId:savingId,catName:sv.name,catIcon:"saving",note});
       if(ok!==false){
-        // Toast
         const newSaved=goalSaved(savingId)+amt;
         const pct=sv.goal?Math.round((newSaved/sv.goal)*100):0;
         const msg=getGoalMessage(pct);if(msg)onGoalToast(msg);
@@ -1315,7 +1313,6 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,ban
       return;
     }
 
-    // Expense/Income
     const src=sources.find(s=>s.id===sourceId);
 
     if(src?.type==="goal"){
@@ -1323,7 +1320,6 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,ban
       const saved=goalSaved(goal.id);
       const cat=cats.find(c=>c.id===catId);
 
-      // Find top bank for this goal
       const bc={};
       txns.filter(t=>t.goalId===goal.id&&t.type==="saving").forEach(t=>{bc[t.bankId]=(bc[t.bankId]||0)+t.amount;});
       txns.filter(t=>t.goalId===goal.id&&(t.type==="goal_withdraw"||t.type==="goal_return")).forEach(t=>{bc[t.bankId]=(bc[t.bankId]||0)-t.amount;});
@@ -1331,11 +1327,9 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,ban
       const topBank=banks.find(b=>b.id===topBankId);
 
       if(amt<=saved){
-        // Enough in goal
         const ok=await onAdd({type:"goal_withdraw",amount:amt,date:txnDate,bankId:topBankId,bankName:topBank?.name,goalId:goal.id,goalName:goal.name,catId,catName:cat?.name,catIcon:cat?.icon,note});
         if(ok!==false){setAmount("");setNote("");onDone();}
       } else {
-        // Not enough — ask user to complete from bank
         const shortfall=amt-saved;
         setAppAlert({
           title:"Not Enough in Goal",
@@ -1344,9 +1338,7 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,ban
           onConfirm:async()=>{
             const avail=safeToSpend(topBankId);
             if(avail<shortfall){setAppAlert({title:"Insufficient Balance",message:`❌ "${topBank?.name}" only has ${fmt(avail)} available.`,color:C.red});return;}
-            // Withdraw all from goal first
             if(saved>0){await onAdd({type:"goal_withdraw",amount:saved,date:txnDate,bankId:topBankId,bankName:topBank?.name,goalId:goal.id,goalName:goal.name,catId,catName:cat?.name,catIcon:cat?.icon,note:"Goal portion"});}
-            // Rest from bank
             await onAdd({type:"expense",amount:shortfall,date:txnDate,bankId:topBankId,bankName:topBank?.name,catId,catName:cat?.name,catIcon:cat?.icon,note:note||"Bank portion"});
             setAmount("");setNote("");onDone();
           }
@@ -1355,26 +1347,103 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,ban
       return;
     }
 
-    // Normal bank transaction
     const bank=banks.find(b=>b.id===sourceId);
     const cat=cats.find(c=>c.id===catId);
     const ok=await onAdd({type,amount:amt,date:txnDate,bankId:sourceId,bankName:bank?.name,catId,catName:cat?.name,catIcon:cat?.icon,note});
     if(ok!==false){setAmount("");setNote("");onDone();}
   };
 
-  return <div style={{padding:"24px 16px 0"}}>
-    <div style={{color:C.text,fontSize:22,fontWeight:800,marginBottom:20}}>New Transaction</div>
-    <div style={{display:"flex",gap:8,marginBottom:20}}>
-      {[{v:"expense",label:"Expense",color:C.red},{v:"income",label:"Income",color:C.accent},{v:"saving",label:"Saving",color:C.yellow},{v:"transfer",label:"Transfer",color:C.blue}].map(o=><button key={o.v} onClick={()=>setType(o.v)} style={{flex:1,padding:"10px 0",borderRadius:10,border:`1.5px solid ${type===o.v?o.color:C.border}`,background:type===o.v?o.color+"22":"transparent",color:type===o.v?o.color:C.muted,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>{o.label}</button>)}
+  const themeColor = type==="expense"?C.red:type==="income"?C.accent:type==="saving"?C.yellow:C.blue;
+
+  return <div style={{padding:"24px 16px 130px", minHeight:"100vh", background:C.bg, boxSizing:"border-box"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+       <div style={{color:C.text,fontSize:22,fontWeight:800}}>New Transaction</div>
+       <button onClick={onDone} style={{background:C.card,border:`1px solid ${C.border}`,color:C.muted,width:38,height:38,borderRadius:99,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center", fontFamily:"'DM Sans', sans-serif"}}>✕</button>
     </div>
-    <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Amount ({currency})</div><input type="number" step="any" placeholder="0.00" value={amount} onChange={e=>setAmount(e.target.value)} style={IS}/></div>
-    <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Date</div><input type="date" value={txnDate} onChange={e=>setTxnDate(e.target.value)} style={{...IS,colorScheme:"dark"}}/></div>
-    {type==="transfer"?(<><Select label="From Account" value={bankId} onChange={e=>setBankId(e.target.value)}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select><Select label="To Account" value={toBankId} onChange={e=>setToBankId(e.target.value)}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select></>)
-    :type==="saving"?(<Select label="Account" value={bankId} onChange={e=>setBankId(e.target.value)}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select>)
-    :(<div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>{type==="income"?"Account":"Pay From"}</div><select value={sourceId} onChange={e=>setSourceId(e.target.value)} style={IS}>{type==="income"?banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>):sources.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></div>)}
-    {type==="saving"?(savings.length>0?<Select label="Saving Goal" value={savingId} onChange={e=>setSavingId(e.target.value)}>{savings.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</Select>:<div style={{color:C.muted,fontSize:13,marginBottom:14,padding:"10px 12px",background:C.card,borderRadius:10}}>No saving goals yet.</div>):type==="transfer"?null:(<Select label="Category" value={catId} onChange={e=>setCatId(e.target.value)}>{cats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]||"📌"} {c.name}</option>)}</Select>)}
-    <Input label="Note (optional)" placeholder="Add a note..." value={note} onChange={e=>setNote(e.target.value)}/>
-    <Btn full onClick={handleSubmit} style={{marginTop:8}}>Save Transaction</Btn>
+
+    {/* Type Tabs */}
+    <div style={{display:"flex",gap:6,marginBottom:24, background:C.card, padding:6, borderRadius:14, border:`1px solid ${C.border}`}}>
+      {[{v:"expense",label:"Expense",color:C.red},{v:"income",label:"Income",color:C.accent},{v:"saving",label:"Saving",color:C.yellow},{v:"transfer",label:"Transfer",color:C.blue}].map(o=><button key={o.v} onClick={()=>setType(o.v)} style={{flex:1,padding:"10px 0",borderRadius:10,border:`1px solid ${type===o.v?o.color+"66":"transparent"}`,background:type===o.v?o.color+"22":"transparent",color:type===o.v?o.color:C.muted,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif", transition:"all 0.2s"}}>{o.label}</button>)}
+    </div>
+
+    {/* Big Digital Amount Input */}
+    <div style={{background:C.surface, border:`1px solid ${C.border}`, borderRadius:20, padding:"24px 16px", marginBottom:20, textAlign:"center"}}>
+      <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Amount ({currency})</div>
+      <div style={{display:"flex", alignItems:"center", justifyContent:"center"}}>
+         <input type="number" step="any" placeholder="0.00" value={amount} onChange={e=>setAmount(e.target.value)} style={{background:"transparent", border:"none", color: themeColor, fontSize:48, fontWeight:800, textAlign:"center", width:"100%", outline:"none", padding:0, fontFamily:"'DM Sans', sans-serif"}}/>
+      </div>
+    </div>
+
+    {/* Date */}
+    <div style={{marginBottom:20}}>
+      <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Date</div>
+      <input type="date" value={txnDate} onChange={e=>setTxnDate(e.target.value)} style={{...IS, background:C.surface, border:`1px solid ${C.border}`, colorScheme:"dark", padding:"12px 14px", borderRadius:12}}/>
+    </div>
+
+    {/* Dynamic Selectors */}
+    {type==="transfer" ? (
+       <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:20}}>
+          <div>
+             <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>From</div>
+             <select value={bankId} onChange={e=>setBankId(e.target.value)} style={{...IS, background:C.surface, borderRadius:12, padding:"12px 14px"}}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select>
+          </div>
+          <div>
+             <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>To</div>
+             <select value={toBankId} onChange={e=>setToBankId(e.target.value)} style={{...IS, background:C.surface, borderRadius:12, padding:"12px 14px"}}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select>
+          </div>
+       </div>
+    ) : type==="saving" ? (
+       <div style={{marginBottom:20}}>
+         <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>From Account</div>
+         <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4,scrollbarWidth:"none", msOverflowStyle:"none"}}>
+           {banks.map(b=>(
+              <button key={b.id} onClick={()=>setBankId(b.id)} style={{flexShrink:0, padding:"12px 18px", borderRadius:12, border:`1.5px solid ${bankId===b.id?themeColor:C.border}`, background:bankId===b.id?themeColor+"22":C.surface, color:bankId===b.id?themeColor:C.text, fontWeight:600, fontSize:14, cursor:"pointer", transition:"all 0.2s"}}>{b.name}</button>
+           ))}
+         </div>
+       </div>
+    ) : (
+       <div style={{marginBottom:20}}>
+         <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>{type==="income"?"To Account":"Pay From"}</div>
+         <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4,scrollbarWidth:"none", msOverflowStyle:"none"}}>
+           {(type==="income"?banks:sources).map(s=>(
+              <button key={s.id} onClick={()=>setSourceId(s.id)} style={{flexShrink:0, padding:"12px 18px", borderRadius:12, border:`1.5px solid ${sourceId===s.id?themeColor:C.border}`, background:sourceId===s.id?themeColor+"22":C.surface, color:sourceId===s.id?themeColor:C.text, fontWeight:600, fontSize:14, cursor:"pointer", transition:"all 0.2s"}}>{s.label}</button>
+           ))}
+         </div>
+       </div>
+    )}
+
+    {/* Target (Goal or Category) */}
+    {type==="saving" ? (
+       savings.length>0 ? (
+          <div style={{marginBottom:20}}>
+            <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>To Goal</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+               {savings.map(s=>(
+                  <button key={s.id} onClick={()=>setSavingId(s.id)} style={{padding:"10px 16px", borderRadius:12, border:`1.5px solid ${savingId===s.id?themeColor:C.border}`, background:savingId===s.id?themeColor+"22":C.surface, color:savingId===s.id?themeColor:C.text, fontWeight:600, fontSize:13, cursor:"pointer", transition:"all 0.2s"}}>🎯 {s.name}</button>
+               ))}
+            </div>
+          </div>
+       ) : <div style={{color:C.muted,fontSize:13,marginBottom:20,padding:"14px",background:C.surface,borderRadius:12, border:`1px solid ${C.border}`}}>No saving goals yet.</div>
+    ) : type==="transfer" ? null : (
+       <div style={{marginBottom:20}}>
+         <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Category</div>
+         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {cats.map(c=>(
+               <button key={c.id} onClick={()=>setCatId(c.id)} style={{display:"flex",alignItems:"center",gap:8, padding:"10px 14px", borderRadius:12, border:`1.5px solid ${catId===c.id?themeColor:C.border}`, background:catId===c.id?themeColor+"22":C.surface, color:catId===c.id?themeColor:C.text, fontWeight:600, fontSize:13, cursor:"pointer", transition:"all 0.2s"}}>
+                  <span style={{fontSize:18}}>{ICONS[c.icon]||"📌"}</span> {c.name}
+               </button>
+            ))}
+         </div>
+       </div>
+    )}
+
+    {/* Note */}
+    <div style={{marginBottom:24}}>
+      <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Note (Optional)</div>
+      <input placeholder="Add a note..." value={note} onChange={e=>setNote(e.target.value)} style={{...IS, background:C.surface, border:`1px solid ${C.border}`, padding:"14px", borderRadius:12}}/>
+    </div>
+
+    <Btn full onClick={handleSubmit} style={{padding:"16px", fontSize:16, borderRadius:16, background:themeColor, border:`1.5px solid ${themeColor}`}}>Save Transaction</Btn>
   </div>;
 }
 
