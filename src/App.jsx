@@ -122,7 +122,7 @@ async function load(key,fallback){try{const r=localStorage.getItem(key);return r
 async function save(key,val){try{localStorage.setItem(key,JSON.stringify(val));return true;}catch(e){console.warn("Storage:",e);return false;}}
 
 // ── Shared input style ────────────────────────────────────────────────────────
-const IS = {width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px",color:C.text,fontSize:15,outline:"none",boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif"};
+const IS = {width:"100%", minWidth:0, background:C.bg, border:`1px solid ${C.border}`, borderRadius:10, padding:"10px 12px", color:C.text, fontSize:15, outline:"none", boxSizing:"border-box", fontFamily:"'DM Sans', sans-serif", display:"block", WebkitAppearance:"none"};
 
 // ── UI primitives ─────────────────────────────────────────────────────────────
 function Pill({color,children,style}){return <span style={{background:color+"22",color,border:`1px solid ${color}44`,borderRadius:99,padding:"2px 10px",fontSize:11,fontWeight:700,...style}}>{children}</span>;}
@@ -626,7 +626,7 @@ function SaverApp(){
 }
 
 // ── BottomNav ─────────────────────────────────────────────────────────────────
-function BottomNav({tab,navigateTo,expCats,banks,savings,onAdd,currency,safeToSpend,setAppAlert,quickActions,txns}){
+function BottomNav({tab,navigateTo,expCats,banks,savings,onAdd,currency,safeToSpend,goalSaved,setAppAlert,quickActions,txns}){
   const[showQuick,setShowQuick]=useState(false);
   const[quickForm,setQuickForm]=useState(null);
   const pressTimer=useRef(null);
@@ -636,14 +636,71 @@ function BottomNav({tab,navigateTo,expCats,banks,savings,onAdd,currency,safeToSp
   const pStart=(e)=>{e.preventDefault();pressTimer.current=setTimeout(()=>{HAPTICS.medium();setShowQuick(true);},450);};
   const pEnd=(e)=>{e.preventDefault();clearTimeout(pressTimer.current);if(!showQuick&&!quickForm)navigateTo("add");};
 
-  const handleQuickSelect=(s)=>{setShowQuick(false);const p=lastUsed.current[s.id]||{};setQuickForm({catId:s.catId,shortcutId:s.id,amount:p.amount||s.amount||"50",bankId:p.bankId&&banks.some(b=>b.id===p.bankId)?p.bankId:s.bankId&&banks.some(b=>b.id===s.bankId)?s.bankId:(banks[0]?.id||""),note:"",date:today()});};
+  // دمج البنوك مع الأهداف اللي متفعل فيها الصرف
+  const spendingGoals=savings.filter(s=>s.spendingMode&&s.status!=="archived");
+  const sources=[
+    ...banks.map(b=>({id:b.id,label:b.name})),
+    ...spendingGoals.map(g=>({id:`goal_${g.id}`,label:`💳 ${g.name}`}))
+  ];
+
+  const handleQuickSelect=(s)=>{
+    setShowQuick(false);
+    const p=lastUsed.current[s.id]||{};
+    setQuickForm({
+        catId:s.catId, shortcutId:s.id, amount:p.amount||s.amount||"50",
+        bankId:p.bankId||s.bankId||(sources[0]?.id||""), 
+        note:"", date:today()
+    });
+  };
+
+  const finishQuickSave = () => {
+    if(quickForm.shortcutId)lastUsed.current[quickForm.shortcutId]={amount:quickForm.amount,bankId:quickForm.bankId};
+    setQuickForm(null);navigateTo("dashboard");
+  };
 
   const handleQuickSave=async()=>{
     const amt=parseFloat(quickForm.amount);
-    if(!quickForm.amount||isNaN(amt)||amt<=0){setAppAlert({title:"Invalid Amount",message:"Please enter a valid amount greater than zero.",color:C.red});return;}
-    const cat=expCats.find(c=>c.id===quickForm.catId);const bank=banks.find(b=>b.id===quickForm.bankId);
+    if(!quickForm.amount||isNaN(amt)||amt<=0){setAppAlert({title:"Invalid Amount",message:"Please enter a valid amount.",color:C.red});return;}
+    const cat=expCats.find(c=>c.id===quickForm.catId);
+
+    // ذكاء الدفع من الأهداف في الإدخال السريع
+    if(quickForm.bankId.startsWith("goal_")){
+        const goalId = quickForm.bankId.replace("goal_", "");
+        const goal = savings.find(g=>g.id===goalId);
+        if(!goal) return;
+        const saved = goalSaved(goalId);
+
+        const bc={};
+        txns.filter(t=>t.goalId===goalId&&t.type==="saving").forEach(t=>{bc[t.bankId]=(bc[t.bankId]||0)+t.amount;});
+        txns.filter(t=>t.goalId===goalId&&(t.type==="goal_withdraw"||t.type==="goal_return")).forEach(t=>{bc[t.bankId]=(bc[t.bankId]||0)-t.amount;});
+        const topBankId=Object.entries(bc).sort((a,b)=>b[1]-a[1])[0]?.[0]||banks[0]?.id;
+        const topBank=banks.find(b=>b.id===topBankId);
+
+        if(amt<=saved){
+            const ok=await onAdd({type:"goal_withdraw",amount:amt,date:quickForm.date,bankId:topBankId,bankName:topBank?.name,goalId:goal.id,goalName:goal.name,catId:quickForm.catId,catName:cat?.name,catIcon:cat?.icon,note:quickForm.note});
+            if(ok!==false) finishQuickSave();
+        } else {
+            const shortfall=amt-saved;
+            setAppAlert({
+                title:"Not Enough in Goal",
+                message:`🎯 Goal has ${fmt(saved)}.\n\nShortfall: ${fmt(shortfall)}\n\nRemaining amount will be taken from "${topBank?.name}". Continue?`,
+                color:C.yellow,
+                onConfirm:async()=>{
+                    const avail=safeToSpend(topBankId);
+                    if(avail<shortfall){setAppAlert({title:"Insufficient Balance",message:`❌ "${topBank?.name}" only has ${fmt(avail)} available.`,color:C.red});return;}
+                    if(saved>0){await onAdd({type:"goal_withdraw",amount:saved,date:quickForm.date,bankId:topBankId,bankName:topBank?.name,goalId:goal.id,goalName:goal.name,catId:quickForm.catId,catName:cat?.name,catIcon:cat?.icon,note:"Goal portion"});}
+                    await onAdd({type:"expense",amount:shortfall,date:quickForm.date,bankId:topBankId,bankName:topBank?.name,catId:quickForm.catId,catName:cat?.name,catIcon:cat?.icon,note:quickForm.note||"Bank portion"});
+                    finishQuickSave();
+                }
+            });
+        }
+        return;
+    }
+
+    // الدفع من بنك عادي
+    const bank=banks.find(b=>b.id===quickForm.bankId);
     const ok=await onAdd({type:"expense",amount:amt,date:quickForm.date,bankId:quickForm.bankId,bankName:bank?.name,catId:quickForm.catId,catName:cat?.name,catIcon:cat?.icon,note:quickForm.note});
-    if(ok!==false){if(quickForm.shortcutId)lastUsed.current[quickForm.shortcutId]={amount:quickForm.amount,bankId:quickForm.bankId};setQuickForm(null);navigateTo("dashboard");}
+    if(ok!==false) finishQuickSave();
   };
 
   return <>
@@ -668,17 +725,12 @@ function BottomNav({tab,navigateTo,expCats,banks,savings,onAdd,currency,safeToSp
       <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20,padding:"12px",background:C.card,borderRadius:12,border:`1px solid ${C.border}`}}><span style={{fontSize:28}}>{ICONS[expCats.find(c=>c.id===quickForm.catId)?.icon]||"📌"}</span><span style={{fontSize:16,fontWeight:700,color:C.text}}>{expCats.find(c=>c.id===quickForm.catId)?.name}</span></div>
       <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>Amount ({currency})</div><input type="number" step="any" value={quickForm.amount} onChange={e=>setQuickForm({...quickForm,amount:e.target.value})} style={IS}/></div>
       <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>Date</div><input type="date" value={quickForm.date} onChange={e=>setQuickForm({...quickForm,date:e.target.value})} style={{...IS,colorScheme:"dark"}}/></div>
-      <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>Account</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{banks.map(b=><button key={b.id} onClick={()=>setQuickForm({...quickForm,bankId:b.id})} style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${quickForm.bankId===b.id?C.accent:C.border}`,background:quickForm.bankId===b.id?C.accentDim:"transparent",color:quickForm.bankId===b.id?C.accent:C.text,fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>{b.name}</button>)}</div></div>
-      <Input label="Note" placeholder="Add a note..." value={quickForm.note} onChange={e=>setQuickForm({...quickForm,note:e.target.value})}/>
-      <Btn full onClick={handleQuickSave}>Save</Btn>
+      <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>Account</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{sources.map(s=><button key={s.id} onClick={()=>setQuickForm({...quickForm,bankId:s.id})} style={{padding:"8px 14px",borderRadius:10,border:`1px solid ${quickForm.bankId===s.id?C.accent:C.border}`,background:quickForm.bankId===s.id?C.accentDim:"transparent",color:quickForm.bankId===s.id?C.accent:C.text,fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>{s.label}</button>)}</div></div>
+      <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>Note (Optional)</div><input placeholder="Add a note..." value={quickForm.note} onChange={e=>setQuickForm({...quickForm,note:e.target.value})} style={IS}/></div>
+      <Btn full onClick={handleQuickSave} style={{marginTop:8}}>Save</Btn>
     </Modal>}
     {showQuick&&<div onClick={()=>setShowQuick(false)} style={{position:"fixed",inset:0,zIndex:40}}/>}
   </>;
-}
-
-function NavBtn({id,icon,label,tab,navigateTo}){
-  const a=tab===id;
-  return <button onClick={()=>navigateTo(id,false)} style={{background:"none",border:"none",color:a?C.accent:C.muted,display:"flex",flexDirection:"column",alignItems:"center",gap:4,padding:"4px 0",cursor:"pointer",transition:"color .2s",width:55,fontFamily:"'DM Sans', sans-serif"}}><span style={{fontSize:22}}>{icon}</span><span style={{fontSize:10,fontWeight:700,letterSpacing:.5,textTransform:"uppercase"}}>{label}</span></button>;
 }
 
 // ── TxnRow ────────────────────────────────────────────────────────────────────
