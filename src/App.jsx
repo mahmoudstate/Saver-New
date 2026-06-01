@@ -888,23 +888,43 @@ function LedgerHeader({type,data}){
   return null;
 }
 
+// ── DeepLedgerView ────────────────────────────────────────────────────────────
 function DeepLedgerView({title,headerType,headerData,txns,onDelete,onUpdate,banks,expCats,onClose}){
   const[filter,setFilter]=useState("all");const[confirmId,setConfirmId]=useState(null);const[editTxn,setEditTxn]=useState(null);const[viewTxn,setViewTxn]=useState(null);
+  const[localAlert,setLocalAlert]=useState(null); // هنا ضفنا نظام التنبيهات
+
   useEffect(()=>{requestAnimationFrame(()=>window.scrollTo(0,0));},[title]);
   const list=txns.filter(t=>{if(filter==="in")return t.type==="income"||t.type==="goal_return";if(filter==="out")return t.type==="expense"||t.type==="saving"||t.type==="goal_withdraw";return true;});
-  const editable=(t)=>t.type!=="transfer"&&t.type!=="goal_withdraw"&&t.type!=="goal_return";
+  
+  // نفس نظام حماية التعديل اللي في الهيستوري
+  const handleEditClick = (t) => {
+      if (t.splitGroupId) {
+          setLocalAlert({title: "Linked Transaction 🔗", message: "Cannot edit a split transaction. Please delete and recreate it.", color: C.yellow});
+          return;
+      }
+      if (t.type === "goal_withdraw" || t.type === "goal_return") {
+          setLocalAlert({title: "Action Not Allowed", message: "Goal spending and returns cannot be edited directly. Please delete and recreate if needed.", color: C.orange});
+          return;
+      }
+      if (t.type === "transfer") {
+          setLocalAlert({title: "Action Not Allowed", message: "Transfers cannot be edited directly. Please delete and recreate.", color: C.blue});
+          return;
+      }
+      setEditTxn(t);
+  };
+
   return <div style={{padding:"24px 16px",minHeight:"100vh",background:C.bg,boxSizing:"border-box"}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><span style={{color:C.text,fontWeight:800,fontSize:22}}>{title}</span><button onClick={onClose} style={{background:C.card,border:`1px solid ${C.border}`,color:C.muted,width:44,height:44,borderRadius:99,cursor:"pointer",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontFamily:"'DM Sans', sans-serif"}}>✕</button></div>
     <LedgerHeader type={headerType} data={headerData}/>
     <div style={{display:"flex",gap:6,marginBottom:18}}>{["all","in","out"].map(f=><button key={f} onClick={()=>setFilter(f)} style={{padding:"6px 14px",borderRadius:10,border:`1px solid ${filter===f?C.accent:C.border}`,background:filter===f?C.accentDim:"transparent",color:filter===f?C.accent:C.muted,fontWeight:700,fontSize:11,cursor:"pointer",textTransform:"uppercase",fontFamily:"'DM Sans', sans-serif"}}>{f}</button>)}</div>
     <div style={{display:"flex",flexDirection:"column",gap:2}}>
       {list.length===0&&<div style={{padding:"40px 0",textAlign:"center",color:C.faint,fontSize:13}}>No transactions found.</div>}
-      {list.map(t=><SwipeRow key={t.id} onEdit={editable(t)?()=>setEditTxn(t):()=>setViewTxn(t)} onDelete={()=>setConfirmId(t.id)}><TxnRow txn={t} hideTotal={false} onClick={()=>setViewTxn(t)}/></SwipeRow>)}
+      {list.map(t=><SwipeRow key={t.id} onEdit={()=>handleEditClick(t)} onDelete={()=>setConfirmId(t.id)}><TxnRow txn={t} hideTotal={false} onClick={()=>setViewTxn(t)}/></SwipeRow>)}
     </div>
-    {confirmId&&<ConfirmModal title="Delete Transaction?" message="This will permanently remove the record and update all balances instantly." onClose={()=>setConfirmId(null)} onConfirm={()=>{onDelete(confirmId);setConfirmId(null);}}/>}
-    {editTxn&&!editable(editTxn)&&<TxnViewModal txn={editTxn} onClose={()=>setEditTxn(null)}/>}
-    {editTxn&&editable(editTxn)&&<EditTxnModal txn={editTxn} banks={banks} expCats={expCats} incCats={expCats} currency={_currency} onSave={async(data)=>{const ok=await onUpdate(editTxn.id,data);if(ok)setEditTxn(null);}} onClose={()=>setEditTxn(null)}/>}
+    {confirmId&&<ConfirmModal title={txns.find(x=>x.id===confirmId)?.splitGroupId?"Delete Linked Transactions?":"Delete Transaction?"} message={txns.find(x=>x.id===confirmId)?.splitGroupId?"🔗 This transaction is split. Deleting it will safely remove ALL linked parts.":"This will permanently remove the record and update all balances instantly."} onClose={()=>setConfirmId(null)} onConfirm={()=>{onDelete(confirmId);setConfirmId(null);}}/>}
+    {editTxn&&<EditTxnModal txn={editTxn} banks={banks} expCats={expCats} incCats={expCats} currency={_currency} onSave={async(data)=>{const ok=await onUpdate(editTxn.id,data);if(ok)setEditTxn(null);}} onClose={()=>setEditTxn(null)}/>}
     {viewTxn&&<TxnViewModal txn={viewTxn} onClose={()=>setViewTxn(null)}/>}
+    {localAlert&&<AlertModal title={localAlert.title} message={localAlert.message} btnColor={localAlert.color} onClose={()=>setLocalAlert(null)}/>}
   </div>;
 }
 
