@@ -372,9 +372,12 @@ function calcGoalSaved(goalId, txns){
 }
 
 function calcFrozenForBank(bankId, savings, txns){
+  // frozen = money deposited into goals but not yet spent or returned
+  // saving      → +frozen (money locked in goal)
+  // goal_return → -frozen (money unlocked back to bank, stays in bankBalance)
+  // goal_withdraw → does NOT touch frozen (already deducted from bankBalance directly)
   return txns.reduce((acc,t)=>{
-     if(t.bankId===bankId && t.type==="saving") return acc+t.amount;
-     if(t.bankId===bankId && t.type==="goal_withdraw") return acc-t.amount;
+     if(t.bankId===bankId && t.type==="saving")      return acc+t.amount;
      if(t.bankId===bankId && t.type==="goal_return") return acc-t.amount;
      return acc;
   },0);
