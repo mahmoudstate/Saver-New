@@ -2362,22 +2362,33 @@ function UserManual({ onBack, navigateTo }) {
         </div>
 
         {/* Mock: Swipeable row */}
-        <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", marginBottom: 14 }}>
-          <div style={{ position: "absolute", inset: 0, display: "flex", justifyContent: "space-between" }}>
-            <div style={{ width: 85, background: C.blueDim, display: "flex", alignItems: "center", justifyContent: "center", color: C.blue, fontWeight: 700, fontSize: 13 }}>✎ Edit</div>
-            <div style={{ width: 85, background: C.redDim, display: "flex", alignItems: "center", justifyContent: "center", color: C.red, fontWeight: 700, fontSize: 13 }}>🗑 Delete</div>
-          </div>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, position: "relative", transform: "translateX(-40px)", padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: C.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🍽</div>
-              <div><div style={{ color: C.text, fontWeight: 600, fontSize: 14 }}>Food</div><div style={{ color: C.muted, fontSize: 11 }}>Cash · Today</div></div>
+        <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 6 }}>
+          <div style={{ display: "flex", alignItems: "stretch", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ flex: 1, background: C.card, border: `1px solid ${C.border}`, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: C.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🍽</div>
+                <div>
+                  <div style={{ color: C.text, fontWeight: 600, fontSize: 14 }}>Food</div>
+                  <div style={{ color: C.muted, fontSize: 11 }}>Cash · Today</div>
+                </div>
+              </div>
+              <div style={{ color: C.red, fontWeight: 800, fontSize: 15 }}>−EGP 85</div>
             </div>
-            <div style={{ color: C.red, fontWeight: 800 }}>−EGP 85</div>
+            <div style={{ display: "flex", flexShrink: 0 }}>
+              <div style={{ width: 72, background: C.blueDim, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 4 }}>
+                <span style={{ fontSize: 16 }}>✎</span>
+                <span style={{ color: C.blue, fontWeight: 700, fontSize: 11 }}>Edit</span>
+              </div>
+              <div style={{ width: 72, background: C.redDim, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 4, borderRadius: "0 12px 12px 0" }}>
+                <span style={{ fontSize: 16 }}>🗑</span>
+                <span style={{ color: C.red, fontWeight: 700, fontSize: 11 }}>Delete</span>
+              </div>
+            </div>
           </div>
-          <div style={{ textAlign: "center", marginTop: 6 }}>
-            <span className="ms-float-left" style={{ fontSize: 18 }}>👈</span>
-            <span style={{ color: C.blue, fontSize: 11, fontWeight: 700, marginLeft: 6 }}>Swipe left to Edit or Delete</span>
-          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
+          <span className="ms-float-left" style={{ fontSize: 18 }}>👈</span>
+          <span style={{ color: C.blue, fontSize: 12, fontWeight: 700 }}>Swipe left on any row to reveal Edit & Delete</span>
         </div>
 
         <TipBox color={C.purple}>Transfers show the full route: Account A ➔ Account B. Deleting any transaction instantly updates all balances.</TipBox>
