@@ -217,17 +217,22 @@ function AlertModal({title,message,onClose,btnColor=C.accent}){
 // ── GoalToast ─────────────────────────────────────────────────────────────────
 function GoalToast({message,onClose}){
   useEffect(()=>{const t=setTimeout(onClose,4000);return()=>clearTimeout(t);},[onClose]);
-  return <div style={{position:"fixed",top:16,left:"50%",transform:"translateX(-50%)",background:C.accentDim,border:`1px solid ${C.accent}`,borderRadius:14,padding:"12px 16px",zIndex:200,maxWidth:320,width:"calc(100% - 40px)",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,boxShadow:"0 8px 24px rgba(0,0,0,0.4)",animation:"toastIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275)",fontFamily:"'DM Sans', sans-serif"}}>
-    <style>{`@keyframes toastIn{from{opacity:0;transform:translate(-50%,-16px) scale(0.95)}to{opacity:1;transform:translate(-50%,0) scale(1)}}`}</style>
-    <span style={{color:C.accent,fontSize:13,fontWeight:600,lineHeight:1.4}}>{message}</span>
-    <button onClick={onClose} style={{background:"transparent",border:"none",color:C.accent,fontSize:16,cursor:"pointer",padding:0,flexShrink:0}}>✕</button>
-  </div>;
+  return(
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 24px",fontFamily:"'DM Sans', sans-serif"}}>
+      <style>{`@keyframes goalPopIn{from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}}`}</style>
+      <div style={{background:C.surface,border:`2px solid ${C.accent}`,borderRadius:24,padding:"36px 28px",width:"100%",maxWidth:340,textAlign:"center",boxShadow:"0 20px 60px rgba(0,0,0,0.7)",animation:"goalPopIn 0.3s cubic-bezier(0.175,0.885,0.32,1.275)"}}>
+        <div style={{fontSize:52,marginBottom:16,lineHeight:1}}>{message.match(/[\u{1F300}-\u{1FFFF}]|[\u2600-\u27FF]/gu)?.[0]||"🎯"}</div>
+        <div style={{color:C.accent,fontSize:18,fontWeight:800,lineHeight:1.5,marginBottom:24}}>{message.replace(/[\u{1F300}-\u{1FFFF}]|[\u2600-\u27FF]/gu,"").trim()}</div>
+        <button onClick={onClose} style={{background:C.accent,border:"none",color:C.bg,borderRadius:12,padding:"12px 32px",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",width:"100%"}}>Keep Going! 💪</button>
+      </div>
+    </div>
+  );
 }
 
 function AppFooter({navigateTo,onPrivacyClick}){
   return <div style={{textAlign:"center",marginTop:40,marginBottom:20,width:"100%"}}>
     <div style={{marginBottom:"6px",display:"flex",justifyContent:"center",alignItems:"center",gap:"8px"}}>
-      <span style={{color:"#60a5fa",opacity:0.8,fontSize:"13px",fontWeight:"700"}}>Saver One V1.2</span>
+      <span style={{color:"#60a5fa",opacity:0.8,fontSize:"13px",fontWeight:"700"}}>Saver One V1.0</span>
       {(navigateTo||onPrivacyClick)&&<><span style={{color:"#444460"}}>|</span><span onClick={()=>onPrivacyClick?onPrivacyClick():(navigateTo&&navigateTo("privacy"))} style={{color:"#6ee7b7",fontWeight:"700",fontSize:"13px",cursor:"pointer"}}>Privacy Policy</span></>}
     </div>
     <div style={{color:"#60a5fa",opacity:0.6,fontSize:"10px",fontWeight:"500"}}>Offline & 100% Private · Powered by Mahmoud © 2026</div>
@@ -269,8 +274,18 @@ function SortableItem({id,children}){
 }
 function SortableList({items,onReorder,renderItem,grid,gap=10}){
   const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{delay:250,tolerance:5}}),useSensor(TouchSensor,{activationConstraint:{delay:250,tolerance:5}}));
-  const cleanup=()=>{document.body.style.overflow="";document.body.style.touchAction="";setTimeout(()=>{isGlobalDragging=false;},100);};
-  useEffect(()=>{const p=(e)=>{if(isGlobalDragging)e.preventDefault();};document.addEventListener("touchmove",p,{passive:false});return()=>{document.removeEventListener("touchmove",p);document.body.style.overflow="";document.body.style.touchAction="";};},[]);
+  const cleanup=useCallback(()=>{document.body.style.overflow="";document.body.style.touchAction="";setTimeout(()=>{isGlobalDragging=false;},100);},[]);
+  useEffect(()=>{
+    const p=(e)=>{if(isGlobalDragging)e.preventDefault();};
+    document.addEventListener("touchmove",p,{passive:false});
+    return()=>{
+      document.removeEventListener("touchmove",p);
+      // cleanup on unmount even if drag was in progress
+      document.body.style.overflow="";
+      document.body.style.touchAction="";
+      isGlobalDragging=false;
+    };
+  },[]);
   return <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={()=>{isGlobalDragging=true;HAPTICS.heavy();document.body.style.overflow="hidden";document.body.style.touchAction="none";}} onDragEnd={(e)=>{HAPTICS.heavy();cleanup();const{active,over}=e;if(over&&active.id!==over.id){const oi=items.findIndex(i=>String(i.id)===String(active.id)),ni=items.findIndex(i=>String(i.id)===String(over.id));onReorder(arrayMove(items,oi,ni));}}} onDragCancel={cleanup}>
     <SortableContext items={items.map(i=>String(i.id))} strategy={grid?rectSortingStrategy:verticalListSortingStrategy}>
       <div style={{display:grid?"grid":"flex",gridTemplateColumns:grid?"1fr 1fr":"none",flexDirection:grid?"row":"column",gap}}>
@@ -323,7 +338,7 @@ function SplashScreen(){
     <div style={{color:"#e8e8f0",fontSize:32,fontWeight:800,letterSpacing:10,textTransform:"uppercase",marginBottom:6,animation:"saverLogoIn 1.0s 0.15s both"}}>SAVER</div>
     <div style={{color:"#6ee7b7",fontSize:12,fontWeight:500,letterSpacing:3,opacity:phase>=1?1:0,animation:phase>=1?"saverFadeUp 0.6s ease forwards":"none",marginBottom:80}}>Easy come, easy go.</div>
     <div style={{display:"flex",gap:7,position:"absolute",bottom:70}}>{[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:99,background:"#6ee7b7",animation:`saverBounce 1.3s ease ${i*0.22}s infinite`}}/>)}</div>
-    <div style={{color:"#444460",fontSize:10,position:"absolute",bottom:24,fontWeight:700,letterSpacing:1}}>Saver One V1.2</div>
+    <div style={{color:"#444460",fontSize:10,position:"absolute",bottom:24,fontWeight:700,letterSpacing:1}}>Saver One V1.0</div>
   </div>;
 }
 
@@ -377,6 +392,8 @@ function SaverApp(){
   const[hasSeenWelcome,setHasSeenWelcome]=useState(true);
   const[filterMonth,setFilterMonth]=useState("all");
   const[currency,setCurrencyState]=useState("EGP");
+  // sync global formatter هنا عشان أي render جديد يشوف العملة الصح فوراً
+  useEffect(()=>{ setCurrencyGlobal(currency); },[currency]);
   const[username,setUsernameState]=useState("");
   const[lastBackup,setLastBackup]=useState(null);
   const[appAlert,setAppAlert]=useState(null);
@@ -614,10 +631,10 @@ function SaverApp(){
       </>
     ):(
       <>
-        {ledgerBank&&<DeepLedgerView title={ledgerBank.name} headerType="bank" headerData={{balance:bankBalance(ledgerBank.id),safe:safeToSpend(ledgerBank.id),frozen:frozenForBank(ledgerBank.id)}} txns={txns.filter(t=>t.bankId===ledgerBank.id||t.fromBankId===ledgerBank.id||t.toBankId===ledgerBank.id)} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} onClose={()=>setLedgerBank(null)}/>}
-        {ledgerGroup&&(()=>{const spent=txns.filter(t=>t.type==="expense"&&ledgerGroup.cats.includes(t.catId)).reduce((a,t)=>a+t.amount,0);return <DeepLedgerView title={ledgerGroup.name} headerType="group" headerData={{spent,color:ledgerGroup.color}} txns={txns.filter(t=>t.type==="expense"&&ledgerGroup.cats.includes(t.catId))} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} onClose={()=>setLedgerGroup(null)}/>;})()}
+        {ledgerBank&&<DeepLedgerView title={ledgerBank.name} headerType="bank" headerData={{balance:bankBalance(ledgerBank.id),safe:safeToSpend(ledgerBank.id),frozen:frozenForBank(ledgerBank.id)}} txns={txns.filter(t=>t.bankId===ledgerBank.id||t.fromBankId===ledgerBank.id||t.toBankId===ledgerBank.id)} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerBank(null)}/>}
+        {ledgerGroup&&(()=>{const spent=txns.filter(t=>t.type==="expense"&&ledgerGroup.cats.includes(t.catId)).reduce((a,t)=>a+t.amount,0);return <DeepLedgerView title={ledgerGroup.name} headerType="group" headerData={{spent,color:ledgerGroup.color}} txns={txns.filter(t=>t.type==="expense"&&ledgerGroup.cats.includes(t.catId))} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerGroup(null)}/>;})()}
         {ledgerSaving&&(()=>{const saved=goalSaved(ledgerSaving.id);return <SavingDetailView goal={ledgerSaving} saved={saved} txns={txns} onDelete={delTxn} addTxn={addTxn} banks={banks} savings={savings} onSave={saveSavings} onGoalToast={setGoalToast} setAppAlert={setAppAlert} goalSaved={goalSaved} onClose={()=>setLedgerSaving(null)}/>;})()}
-        {ledgerBudget&&(()=>{const spent=txns.filter(t=>t.type==="expense"&&ledgerBudget.cats.includes(t.catId)).reduce((a,t)=>a+t.amount,0);return <DeepLedgerView title={ledgerBudget.name} headerType="budget" headerData={{spent,limit:ledgerBudget.amount}} txns={txns.filter(t=>t.type==="expense"&&ledgerBudget.cats.includes(t.catId))} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} onClose={()=>setLedgerBudget(null)}/>;})()}
+        {ledgerBudget&&(()=>{const spent=txns.filter(t=>t.type==="expense"&&ledgerBudget.cats.includes(t.catId)).reduce((a,t)=>a+t.amount,0);return <DeepLedgerView title={ledgerBudget.name} headerType="budget" headerData={{spent,limit:ledgerBudget.amount}} txns={txns.filter(t=>t.type==="expense"&&ledgerBudget.cats.includes(t.catId))} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerBudget(null)}/>;})()}
       </>
     )}
     {appAlert&&<AlertModal title={appAlert.title} message={appAlert.message} btnColor={appAlert.color} onClose={()=>setAppAlert(null)}/>}
@@ -1130,7 +1147,7 @@ function LedgerHeader({type,data}){
 }
 
 // ── DeepLedgerView ────────────────────────────────────────────────────────────
-function DeepLedgerView({title,headerType,headerData,txns,onDelete,onUpdate,banks,expCats,onClose}){
+function DeepLedgerView({title,headerType,headerData,txns,onDelete,onUpdate,banks,expCats,incCats,onClose}){
   const[filter,setFilter]=useState("all");const[confirmId,setConfirmId]=useState(null);const[editTxn,setEditTxn]=useState(null);const[viewTxn,setViewTxn]=useState(null);
   const[localAlert,setLocalAlert]=useState(null); // هنا ضفنا نظام التنبيهات
 
@@ -1163,7 +1180,7 @@ function DeepLedgerView({title,headerType,headerData,txns,onDelete,onUpdate,bank
       {list.map(t=><SwipeRow key={t.id} onEdit={()=>handleEditClick(t)} onDelete={()=>setConfirmId(t.id)}><TxnRow txn={t} hideTotal={false} onClick={()=>setViewTxn(t)}/></SwipeRow>)}
     </div>
     {confirmId&&<ConfirmModal title={txns.find(x=>x.id===confirmId)?.splitGroupId?"Delete Linked Transactions?":"Delete Transaction?"} message={txns.find(x=>x.id===confirmId)?.splitGroupId?"🔗 This transaction is split. Deleting it will safely remove ALL linked parts.":"This will permanently remove the record and update all balances instantly."} onClose={()=>setConfirmId(null)} onConfirm={()=>{onDelete(confirmId);setConfirmId(null);}}/>}
-    {editTxn&&<EditTxnModal txn={editTxn} banks={banks} expCats={expCats} incCats={expCats} currency={_currency} onSave={async(data)=>{const ok=await onUpdate(editTxn.id,data);if(ok)setEditTxn(null);}} onClose={()=>setEditTxn(null)}/>}
+    {editTxn&&<EditTxnModal txn={editTxn} banks={banks} expCats={expCats} incCats={incCats||expCats} currency={_currency} onSave={async(data)=>{const ok=await onUpdate(editTxn.id,data);if(ok)setEditTxn(null);}} onClose={()=>setEditTxn(null)}/>}
     {viewTxn&&<TxnViewModal txn={viewTxn} onClose={()=>setViewTxn(null)}/>}
     {localAlert&&<AlertModal title={localAlert.title} message={localAlert.message} btnColor={localAlert.color} onClose={()=>setLocalAlert(null)}/>}
   </div>;
@@ -1312,6 +1329,11 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
   const[note,setNote]=useState("");
   const[savingId,setSavingId]=useState(savings[0]?.id||"");
   const[txnDate,setTxnDate]=useState(today());
+
+  // sync savingId لو الـ savings اتغيرت وكانت فاضية
+  useEffect(()=>{
+    if(!savingId && savings.length>0) setSavingId(savings[0].id);
+  },[savings]);
   
   const cats = type==="expense" ? expCats : type==="income" ? incCats : [];
   const activeGoals = savings.filter(s=>s.status!=="archived");
