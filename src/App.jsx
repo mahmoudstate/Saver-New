@@ -347,11 +347,18 @@ function SplashScreen(){
 // ════════════════════════════════════════════════════════════════════════════════
 function calcBankBalance(bankId, txns){
   return txns.reduce((acc,t)=>{
-    if(t.bankId===bankId && t.type==="income") return acc+t.amount;
-    if(t.bankId===bankId && t.type==="expense") return acc-t.amount;
+    if(t.type==="transfer"){
+      // support both storage formats: {bankId, toBankId} and {fromBankId, toBankId}
+      const fromId = t.fromBankId || t.bankId;
+      const toId   = t.toBankId;
+      if(toId   === bankId) return acc + t.amount;
+      if(fromId === bankId) return acc - t.amount;
+      return acc;
+    }
+    if(t.bankId===bankId && t.type==="income")        return acc+t.amount;
+    if(t.bankId===bankId && t.type==="expense")       return acc-t.amount;
     if(t.bankId===bankId && t.type==="goal_withdraw") return acc-t.amount;
-    if(t.toBankId===bankId && t.type==="transfer") return acc+t.amount;
-    if(t.fromBankId===bankId && t.type==="transfer") return acc-t.amount;
+    if(t.bankId===bankId && t.type==="goal_return")   return acc+t.amount;
     return acc;
   },0);
 }
@@ -469,7 +476,8 @@ function SaverApp(){
     processingRef.current=true;
     try{
       if(t.type==="expense"||t.type==="transfer"){
-        const checkId=t.type==="transfer"?t.fromBankId:t.bankId;
+        // for transfer: fromBankId takes priority, fallback to bankId (sourceId)
+        const checkId = t.type==="transfer" ? (t.fromBankId || t.bankId) : t.bankId;
         const avail=safeToSpend(checkId);
         if(avail<t.amount){HAPTICS.warning();setAppAlert({title:"Insufficient Balance",message:`⚠️ Available balance is ${fmt(avail)}. Not enough.`,color:C.red});return false;}
       }
@@ -554,7 +562,7 @@ function SaverApp(){
 
         // حماية عمليات الصرف والتحويل (كما هي)
         if(orig.type==="expense"||orig.type==="transfer"){
-          const checkId=orig.type==="transfer"?orig.fromBankId:orig.bankId;
+          const checkId = orig.type==="transfer" ? (orig.fromBankId || orig.bankId) : orig.bankId;
           const availWithout=safeToSpend(checkId)+orig.amount;
           if(availWithout<data.amount){HAPTICS.warning();setAppAlert({title:"Insufficient Balance",message:"⚠️ Not enough balance for this modification.",color:C.red});return false;}
         }
@@ -632,9 +640,9 @@ function SaverApp(){
     ):(
       <>
         {ledgerBank&&<DeepLedgerView title={ledgerBank.name} headerType="bank" headerData={{balance:bankBalance(ledgerBank.id),safe:safeToSpend(ledgerBank.id),frozen:frozenForBank(ledgerBank.id)}} txns={txns.filter(t=>t.bankId===ledgerBank.id||t.fromBankId===ledgerBank.id||t.toBankId===ledgerBank.id)} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerBank(null)}/>}
-        {ledgerGroup&&(()=>{const spent=txns.filter(t=>t.type==="expense"&&ledgerGroup.cats.includes(t.catId)).reduce((a,t)=>a+t.amount,0);return <DeepLedgerView title={ledgerGroup.name} headerType="group" headerData={{spent,color:ledgerGroup.color}} txns={txns.filter(t=>t.type==="expense"&&ledgerGroup.cats.includes(t.catId))} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerGroup(null)}/>;})()}
+        {ledgerGroup&&(()=>{const spent=txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerGroup.cats.includes(t.catId)).reduce((a,t)=>a+t.amount,0);return <DeepLedgerView title={ledgerGroup.name} headerType="group" headerData={{spent,color:ledgerGroup.color}} txns={txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerGroup.cats.includes(t.catId))} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerGroup(null)}/>;})()}
         {ledgerSaving&&(()=>{const saved=goalSaved(ledgerSaving.id);return <SavingDetailView goal={ledgerSaving} saved={saved} txns={txns} onDelete={delTxn} addTxn={addTxn} banks={banks} savings={savings} onSave={saveSavings} onGoalToast={setGoalToast} setAppAlert={setAppAlert} goalSaved={goalSaved} onClose={()=>setLedgerSaving(null)}/>;})()}
-        {ledgerBudget&&(()=>{const spent=txns.filter(t=>t.type==="expense"&&ledgerBudget.cats.includes(t.catId)).reduce((a,t)=>a+t.amount,0);return <DeepLedgerView title={ledgerBudget.name} headerType="budget" headerData={{spent,limit:ledgerBudget.amount}} txns={txns.filter(t=>t.type==="expense"&&ledgerBudget.cats.includes(t.catId))} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerBudget(null)}/>;})()}
+        {ledgerBudget&&(()=>{const spent=txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerBudget.cats.includes(t.catId)).reduce((a,t)=>a+t.amount,0);return <DeepLedgerView title={ledgerBudget.name} headerType="budget" headerData={{spent,limit:ledgerBudget.amount}} txns={txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerBudget.cats.includes(t.catId))} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerBudget(null)}/>;})()}
       </>
     )}
     {appAlert&&<AlertModal title={appAlert.title} message={appAlert.message} btnColor={appAlert.color} onClose={()=>setAppAlert(null)}/>}
@@ -1365,7 +1373,9 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
     let ok = false;
     if(type==="transfer"){
         if(sourceId===toBankId){setAppAlert({title:"Error",message:"Cannot transfer to same account",color:C.red}); return;}
-        ok = await onAdd({type:"transfer",amount:amt,date:txnDate,bankId:sourceId,toBankId,note});
+        const fromBank = banks.find(b=>b.id===sourceId);
+        const toBank   = banks.find(b=>b.id===toBankId);
+        ok = await onAdd({type:"transfer",amount:amt,date:txnDate,bankId:sourceId,fromBankId:sourceId,toBankId,bankName:fromBank?.name,toBankName:toBank?.name,note});
     } else if(type==="saving"){
         ok = await onAdd({type:"saving",amount:amt,date:txnDate,bankId:sourceId,bankName:bank?.name,goalId:savingId,catName:savings.find(s=>s.id===savingId)?.name,catIcon:"saving",note});
         if(ok!==false){
