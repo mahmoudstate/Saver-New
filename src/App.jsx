@@ -1320,7 +1320,7 @@ function SavingDetailView({goal,saved,txns,onDelete,addTxn,banks,savings,onSave,
 }
 
 // ── AddTransaction (النسخة الاحترافية بالأيقونات المالية) ────────────────
-function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,safeToSpend,goalSaved,setAppAlert,txns}){
+function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,safeToSpend,goalSaved,setAppAlert,onGoalToast,txns}){
   const[type,setType]=useState("expense");
   const[amount,setAmount]=useState("");
   const[sourceId,setSourceId]=useState(banks[0]?.id||"");
@@ -1368,6 +1368,14 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
         ok = await onAdd({type:"transfer",amount:amt,date:txnDate,bankId:sourceId,toBankId,note});
     } else if(type==="saving"){
         ok = await onAdd({type:"saving",amount:amt,date:txnDate,bankId:sourceId,bankName:bank?.name,goalId:savingId,catName:savings.find(s=>s.id===savingId)?.name,catIcon:"saving",note});
+        if(ok!==false && onGoalToast){
+          const goal=savings.find(s=>s.id===savingId);
+          const prevSaved=goalSaved(savingId);
+          const newSaved=prevSaved+amt;
+          const pct=goal?.goal>0?Math.round((newSaved/goal.goal)*100):0;
+          const msg=getGoalMessage(pct);
+          if(msg) setTimeout(()=>onGoalToast(msg),300);
+        }
     } else {
         const cat=cats.find(c=>c.id===catId);
         ok = await onAdd({type,amount:amt,date:txnDate,bankId:sourceId,bankName:bank?.name,catId,catName:cat?.name,catIcon:cat?.icon,note});
