@@ -1357,7 +1357,7 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
     if(type==="saving" && !savingId) {setAppAlert({title:"No Goal",message:"Please select a savings goal.",color:C.red}); return;}
 
     const bank=banks.find(b=>b.id===sourceId);
-    if(type==="expense" && bank && amt > safeToSpend(bank.id)) {
+    if(type==="expense" && !sourceId.startsWith("goal_") && bank && amt > safeToSpend(bank.id)) {
         setAppAlert({title:"Insufficient Funds",message:`Available: ${fmt(safeToSpend(bank.id))}`,color:C.red});
         return; 
     }
@@ -1383,6 +1383,15 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
           onDone();
         }
         return;
+    } else if(type==="expense" && sourceId.startsWith("goal_")){
+        // الصرف من هدف — نبعت goal_withdraw
+        const goalId = sourceId.replace("goal_","");
+        const goal = savings.find(s=>s.id===goalId);
+        const saved = goalSaved(goalId);
+        if(!goal){setAppAlert({title:"Error",message:"Goal not found.",color:C.red});return;}
+        if(amt>saved){setAppAlert({title:"Insufficient Goal Balance",message:`⚠️ Goal only has ${fmt(saved)}.`,color:C.red});return;}
+        const cat=cats.find(c=>c.id===catId);
+        ok = await onAdd({type:"goal_withdraw",amount:amt,date:txnDate,goalId:goal.id,goalName:goal.name,catId,catName:cat?.name,catIcon:cat?.icon,note});
     } else {
         const cat=cats.find(c=>c.id===catId);
         ok = await onAdd({type,amount:amt,date:txnDate,bankId:sourceId,bankName:bank?.name,catId,catName:cat?.name,catIcon:cat?.icon,note});
