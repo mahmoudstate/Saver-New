@@ -358,7 +358,6 @@ function calcBankBalance(bankId, txns){
     if(t.bankId===bankId && t.type==="income")        return acc+t.amount;
     if(t.bankId===bankId && t.type==="expense")       return acc-t.amount;
     if(t.bankId===bankId && t.type==="goal_withdraw") return acc-t.amount;
-    if(t.bankId===bankId && t.type==="goal_return")   return acc+t.amount;
     return acc;
   },0);
 }
