@@ -232,7 +232,7 @@ function GoalToast({message,onClose}){
 function AppFooter({navigateTo,onPrivacyClick}){
   return <div style={{textAlign:"center",marginTop:40,marginBottom:20,width:"100%"}}>
     <div style={{marginBottom:"6px",display:"flex",justifyContent:"center",alignItems:"center",gap:"8px"}}>
-      <span style={{color:"#60a5fa",opacity:0.8,fontSize:"13px",fontWeight:"700"}}>Saver One V1.0</span>
+      <span style={{color:"#60a5fa",opacity:0.8,fontSize:"13px",fontWeight:"700"}}>Saver One V1.2</span>
       {(navigateTo||onPrivacyClick)&&<><span style={{color:"#444460"}}>|</span><span onClick={()=>onPrivacyClick?onPrivacyClick():(navigateTo&&navigateTo("privacy"))} style={{color:"#6ee7b7",fontWeight:"700",fontSize:"13px",cursor:"pointer"}}>Privacy Policy</span></>}
     </div>
     <div style={{color:"#60a5fa",opacity:0.6,fontSize:"10px",fontWeight:"500"}}>Offline & 100% Private · Powered by Mahmoud © 2026</div>
@@ -338,7 +338,7 @@ function SplashScreen(){
     <div style={{color:"#e8e8f0",fontSize:32,fontWeight:800,letterSpacing:10,textTransform:"uppercase",marginBottom:6,animation:"saverLogoIn 1.0s 0.15s both"}}>SAVER</div>
     <div style={{color:"#6ee7b7",fontSize:12,fontWeight:500,letterSpacing:3,opacity:phase>=1?1:0,animation:phase>=1?"saverFadeUp 0.6s ease forwards":"none",marginBottom:80}}>Easy come, easy go.</div>
     <div style={{display:"flex",gap:7,position:"absolute",bottom:70}}>{[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:99,background:"#6ee7b7",animation:`saverBounce 1.3s ease ${i*0.22}s infinite`}}/>)}</div>
-    <div style={{color:"#444460",fontSize:10,position:"absolute",bottom:24,fontWeight:700,letterSpacing:1}}>Saver One V1.0</div>
+    <div style={{color:"#444460",fontSize:10,position:"absolute",bottom:24,fontWeight:700,letterSpacing:1}}>Saver One V1.2</div>
   </div>;
 }
 
@@ -2107,130 +2107,456 @@ function MonthlyBills({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,setAp
   </div>;
 }
 
-// ── UserManual  ──────────────────────────────────
+// ── UserManual (New Design) ───────────────────────────────────────────────────
+// Props: onBack, navigateTo
+// Replace the old UserManual function entirely with this one.
+// No other changes needed in the file.
+
 function UserManual({ onBack, navigateTo }) {
   useEffect(() => { window.scrollTo(0, 0); }, []);
-  const scrollToSection = (id) => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); };
-  const handleFeedback = () => { window.location.href = "mailto:hello@savertrack.app?subject=Saver%20App%20Feedback"; };
+  const [activeSection, setActiveSection] = useState(null);
 
-  const sectionStyle = { marginBottom: 40 };
-  const iconBoxStyle = (bg, c) => ({ background: bg, color: c, width: 40, height: 40, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 });
-  const guideBoxStyle = { padding: "20px", background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, marginTop: 14 };
+  const scrollTo = (id) => {
+    const el = document.getElementById("ms-" + id);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    setActiveSection(id);
+  };
+
+  const handleFeedback = () => {
+    window.location.href = "mailto:hello@savertrack.app?subject=Saver%20App%20Feedback";
+  };
+
+  // ── Reusable sub-components ─────────────────────────────────────────────────
+  const SectionHeader = ({ icon, iconBg, iconColor, title }) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+      <div style={{ width: 44, height: 44, borderRadius: 14, background: iconBg, color: iconColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
+        {icon}
+      </div>
+      <h3 style={{ color: C.text, margin: 0, fontSize: 20, fontWeight: 800 }}>{title}</h3>
+    </div>
+  );
+
+  const TipBox = ({ color, children }) => (
+    <div style={{ background: color + "18", border: `1px solid ${color}44`, borderRadius: 12, padding: "12px 14px", marginTop: 14, display: "flex", gap: 10, alignItems: "flex-start" }}>
+      <span style={{ fontSize: 16, flexShrink: 0 }}>💡</span>
+      <span style={{ color: color, fontSize: 13, fontWeight: 600, lineHeight: 1.5 }}>{children}</span>
+    </div>
+  );
+
+  const StepRow = ({ num, color, children }) => (
+    <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 14 }}>
+      <div style={{ width: 26, height: 26, borderRadius: 99, background: color + "22", border: `1.5px solid ${color}`, color, fontWeight: 800, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>{num}</div>
+      <div style={{ color: C.muted, fontSize: 14, lineHeight: 1.6 }}>{children}</div>
+    </div>
+  );
+
+  const MockCard = ({ children, style }) => (
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px", ...style }}>
+      {children}
+    </div>
+  );
+
+  const Divider = () => <div style={{ height: 1, background: C.border, margin: "32px 0" }} />;
+
+  const NAV_ITEMS = [
+    { id: "home",     label: "Home",     icon: "◈" },
+    { id: "add",      label: "Add",      icon: "＋" },
+    { id: "bills",    label: "Bills",    icon: "☷" },
+    { id: "history",  label: "History",  icon: "☰" },
+    { id: "savings",  label: "Savings",  icon: "◎" },
+    { id: "budgets",  label: "Budgets",  icon: "📊" },
+    { id: "quick",    label: "Quick",    icon: "⚡" },
+    { id: "settings", label: "Settings", icon: "⚙" },
+    { id: "tips",     label: "Tips",     icon: "🏆" },
+  ];
 
   return (
-    <div style={{ padding: "24px 16px 130px", minHeight: "100vh", background: C.bg, boxSizing: "border-box" }}>
-      
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-        <button onClick={onBack} style={{ background: "transparent", border: "none", color: C.muted, fontSize: 24, cursor: "pointer", padding: "10px" }}>❮</button>
-        <div style={{ color: C.text, fontSize: 24, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
-          Manual Guide <span style={{ fontSize: 20 }}>💡</span>
+    <div style={{ padding: "24px 16px 130px", minHeight: "100vh", background: C.bg, boxSizing: "border-box", fontFamily: "'DM Sans', sans-serif" }}>
+
+      {/* ── Header ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24 }}>
+        <button onClick={onBack} style={{ background: "transparent", border: "none", color: C.muted, fontSize: 22, cursor: "pointer", padding: "10px 15px 10px 0", display: "flex", alignItems: "center" }}>
+          <span style={{ display: "block", transform: "translateY(-1px)" }}>❮</span>
+        </button>
+        <div style={{ color: C.text, fontSize: 22, fontWeight: 800 }}>Manual Guide</div>
+      </div>
+
+      {/* ── Hero ── */}
+      <div style={{ background: `linear-gradient(135deg, ${C.accentDim} 0%, ${C.blueDim} 100%)`, border: `1px solid ${C.accent}33`, borderRadius: 20, padding: "22px 20px", marginBottom: 24 }}>
+        <div style={{ fontSize: 32, marginBottom: 8 }}>📖</div>
+        <div style={{ color: C.text, fontSize: 18, fontWeight: 800, marginBottom: 6 }}>Welcome to Saver</div>
+        <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.6 }}>
+          Everything you need to know — from adding your first transaction to mastering savings goals and budgets. All your data stays <strong style={{ color: C.accent }}>100% on your device</strong>.
         </div>
       </div>
 
-      <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>Everything is stored locally on your device — 100% private.</p>
-
-      <div style={{ marginBottom: 32 }}>
-        <Btn full outline color={C.accent} onClick={handleFeedback} style={{ padding: "14px", borderRadius: 12, fontWeight: 700 }}>🐞 Report a Bug / Suggestion</Btn>
-      </div>
-
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 30, overflowX: "auto", paddingBottom: 10 }}>
-        {["Home", "Adding", "Bills", "History", "Settings", "Tips"].map((item, idx) => (
-          <button key={item} onClick={() => scrollToSection(`guide-sec-${idx}`)} style={{ whiteSpace: "nowrap", padding: "10px 20px", borderRadius: 12, border: `1px solid ${C.border}`, background: C.surface, color: C.text, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-            {item}
-          </button>
-        ))}
+      {/* ── Quick Nav ── */}
+      <div style={{ overflowX: "auto", paddingBottom: 8, marginBottom: 28, WebkitOverflowScrolling: "touch" }}>
+        <div style={{ display: "flex", gap: 8, width: "max-content" }}>
+          {NAV_ITEMS.map(n => (
+            <button key={n.id} onClick={() => scrollTo(n.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "10px 14px", borderRadius: 14, border: `1px solid ${activeSection === n.id ? C.accent : C.border}`, background: activeSection === n.id ? C.accentDim : C.card, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.2s" }}>
+              <span style={{ fontSize: 18 }}>{n.icon}</span>
+              <span style={{ color: activeSection === n.id ? C.accent : C.muted, fontSize: 10, fontWeight: 700, whiteSpace: "nowrap" }}>{n.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <style>{`
-        .guide-pointer-up { animation: float-up 1.5s infinite ease-in-out; font-size: 24px; text-align: center; margin-top: 8px; }
-        @keyframes float-up { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        @keyframes float-up { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+        @keyframes float-left { 0%,100%{transform:translateX(0)} 50%{transform:translateX(-7px)} }
+        .ms-float-up { animation: float-up 1.6s infinite ease-in-out; }
+        .ms-float-left { animation: float-left 1.6s infinite ease-in-out; }
       `}</style>
 
-      {/* Sections */}
-      <div id="guide-sec-0" style={sectionStyle}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-          <div style={iconBoxStyle(C.blueDim, C.blue)}>◈</div>
-          <h3 style={{ color: C.text, margin: 0, fontSize: 18, fontWeight: 800 }}>Home Screen</h3>
-        </div>
-        <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6 }}>Your Dashboard gives you a complete overview. See your Total Balance, Monthly Income/Expenses, Accounts, and Spending Groups.</p>
-        <div style={guideBoxStyle}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: C.bg, padding: "12px", borderRadius: 12 }}>
-            <div><div style={{ color: C.muted, fontSize: 10, fontWeight: 700 }}>Total Balance</div><div style={{ color: C.text, fontSize: 20, fontWeight: 800 }}>••••••</div></div>
-            <span style={{ fontSize: 20 }}>🐵</span>
+      {/* ════════════════════════════════════════════
+          SECTION 1 — HOME SCREEN
+      ════════════════════════════════════════════ */}
+      <div id="ms-home" style={{ marginBottom: 40 }}>
+        <SectionHeader icon="◈" iconBg={C.blueDim} iconColor={C.blue} title="Home Screen" />
+        <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
+          Your dashboard gives you a full financial snapshot at a glance — total balance, income vs expenses, accounts, goals, and spending groups.
+        </p>
+
+        {/* Mock: Balance Card */}
+        <MockCard style={{ background: "linear-gradient(135deg,#1e1e28,#23232f)", marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ color: C.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>Total Balance</div>
+              <div style={{ color: C.text, fontSize: 28, fontWeight: 800 }}>••••••</div>
+            </div>
+            <div style={{ fontSize: 28 }}>🐵</div>
           </div>
-          <div className="guide-pointer-up" style={{ color: C.accent }}>👆</div>
+          <div style={{ textAlign: "center", marginTop: 10 }}>
+            <span className="ms-float-up" style={{ fontSize: 20 }}>👆</span>
+            <div style={{ color: C.accent, fontSize: 11, fontWeight: 700, marginTop: 4 }}>Tap the monkey to hide / show balances</div>
+          </div>
+        </MockCard>
+
+        {/* Mock: Account Cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+          {[{ name: "CIB", color: C.blue, bal: "12,500" }, { name: "Cash", color: C.yellow, bal: "3,200" }].map(b => (
+            <MockCard key={b.name}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                <div style={{ width: 8, height: 8, borderRadius: 99, background: b.color }} />
+                <span style={{ color: C.muted, fontSize: 11, fontWeight: 600 }}>{b.name}</span>
+              </div>
+              <div style={{ color: b.color, fontSize: 16, fontWeight: 800 }}>EGP {b.bal}</div>
+            </MockCard>
+          ))}
         </div>
+        <div style={{ color: C.faint, fontSize: 12, textAlign: "center", marginBottom: 10 }}>
+          🔁 Long press any account card to drag & reorder
+        </div>
+
+        {/* Mock: Income / Expense */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+          <MockCard><div style={{ color: C.muted, fontSize: 10, fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Income</div><div style={{ color: C.accent, fontSize: 18, fontWeight: 800 }}>EGP 8,000</div><div style={{ color: C.accent, fontSize: 10, fontWeight: 700, marginTop: 4 }}>▲ 12% vs last month</div></MockCard>
+          <MockCard><div style={{ color: C.muted, fontSize: 10, fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Expenses</div><div style={{ color: C.red, fontSize: 18, fontWeight: 800 }}>EGP 3,400</div><div style={{ color: C.red, fontSize: 10, fontWeight: 700, marginTop: 4 }}>▲ 5% vs last month</div></MockCard>
+        </div>
+
+        <TipBox color={C.blue}>Use the month selector (top right) to filter everything on the dashboard by a specific month or view all time.</TipBox>
       </div>
 
-      <div id="guide-sec-1" style={sectionStyle}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-          <div style={iconBoxStyle(C.accentDim, C.accent)}>＋</div>
-          <h3 style={{ color: C.text, margin: 0, fontSize: 18, fontWeight: 800 }}>Adding Transactions</h3>
+      <Divider />
+
+      {/* ════════════════════════════════════════════
+          SECTION 2 — ADDING TRANSACTIONS
+      ════════════════════════════════════════════ */}
+      <div id="ms-add" style={{ marginBottom: 40 }}>
+        <SectionHeader icon="＋" iconBg={C.accentDim} iconColor={C.accent} title="Adding Transactions" />
+        <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
+          Tap the big <strong style={{ color: C.accent }}>+</strong> button at the bottom center. There are 4 transaction types:
+        </p>
+
+        {/* Types */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+          {[
+            { type: "Expense", color: C.red,    icon: "↓", desc: "Money going out" },
+            { type: "Income",  color: C.accent, icon: "↑", desc: "Money coming in" },
+            { type: "Saving",  color: C.yellow, icon: "◎", desc: "Deposit to a goal" },
+            { type: "Transfer",color: C.blue,   icon: "→", desc: "Between accounts" },
+          ].map(t => (
+            <MockCard key={t.type} style={{ borderColor: t.color + "44" }}>
+              <div style={{ color: t.color, fontSize: 22, fontWeight: 800, marginBottom: 4 }}>{t.icon}</div>
+              <div style={{ color: C.text, fontSize: 13, fontWeight: 700 }}>{t.type}</div>
+              <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>{t.desc}</div>
+            </MockCard>
+          ))}
         </div>
-        <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6 }}>Tap the center <strong>(+)</strong> button. <strong style={{ color: C.red }}>Protection:</strong> The app blocks transactions if your account balance is insufficient.</p>
-        <div style={{...guideBoxStyle, display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <div style={{ width: 68, height: 68, borderRadius: "50%", background: C.accent, color: C.bg, fontSize: 36, display: "flex", alignItems: "center", justifyContent: "center" }}>+</div>
-          <div className="guide-pointer-up" style={{ color: C.yellow }}>👆</div>
-          <div style={{ textAlign: "center", color: C.yellow, fontSize: 12, fontWeight: 700 }}>Quick Add: Long press for Shortcuts.</div>
-        </div>
+
+        {/* Mock: + button with long press tip */}
+        <MockCard style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px" }}>
+          <div style={{ width: 68, height: 68, borderRadius: "50%", background: C.accent, color: C.bg, fontSize: 36, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>+</div>
+          <div style={{ color: C.yellow, fontSize: 12, fontWeight: 700, marginTop: 12, textAlign: "center" }}>
+            ⚡ Long press for Quick Action shortcuts
+          </div>
+        </MockCard>
+
+        <TipBox color={C.red}>The app will block any transaction if your account doesn't have enough balance — no accidental overdrafts.</TipBox>
       </div>
 
-      <div id="guide-sec-2" style={sectionStyle}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-          <div style={iconBoxStyle(C.redDim, C.red)}>☷</div>
-          <h3 style={{ color: C.text, margin: 0, fontSize: 18, fontWeight: 800 }}>Monthly Bills</h3>
+      <Divider />
+
+      {/* ════════════════════════════════════════════
+          SECTION 3 — MONTHLY BILLS
+      ════════════════════════════════════════════ */}
+      <div id="ms-bills" style={{ marginBottom: 40 }}>
+        <SectionHeader icon="☷" iconBg={C.redDim} iconColor={C.red} title="Monthly Bills" />
+        <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
+          Add your recurring bills once — they reset every month automatically. Set a due day and a reminder window.
+        </p>
+
+        {/* Mock: Bill item */}
+        <MockCard style={{ marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+            <div>
+              <div style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>Netflix</div>
+              <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>CIB · Subscriptions · Due 5th</div>
+              <div style={{ color: C.yellow, fontSize: 11, fontWeight: 700, marginTop: 4 }}>🟡 Due in 2 days</div>
+            </div>
+            <div style={{ color: C.red, fontSize: 17, fontWeight: 800 }}>EGP 250</div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ flex: 1, background: C.accentDim, border: `1px solid ${C.accent}`, color: C.accent, borderRadius: 10, padding: "10px", textAlign: "center", fontWeight: 700, fontSize: 13 }}>✓ Pay Now</div>
+            <div style={{ background: C.yellowDim, border: `1px solid ${C.yellow}`, color: C.yellow, borderRadius: 10, padding: "10px 14px", fontWeight: 700, fontSize: 13 }}>⟲ Undo</div>
+          </div>
+        </MockCard>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+          {[
+            { icon: "🟡", text: "Yellow = due soon (within reminder window)" },
+            { icon: "🔴", text: "Red = overdue — pay immediately" },
+            { icon: "✓",  text: "Pay Now auto-records an Expense transaction" },
+            { icon: "⟲",  text: "Paid by mistake? Undo reverses it instantly" },
+          ].map((r, i) => (
+            <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <span style={{ fontSize: 16, flexShrink: 0 }}>{r.icon}</span>
+              <span style={{ color: C.muted, fontSize: 13, lineHeight: 1.5 }}>{r.text}</span>
+            </div>
+          ))}
         </div>
-        <div style={guideBoxStyle}>
-          <ul style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, paddingLeft: 18, margin: 0 }}>
-            <li>🟡 Due soon · 🔴 Overdue</li>
-            <li>Tap <strong>Pay Now</strong> to auto-record Expense</li>
-            <li>Swipe left to Edit or Delete</li>
-          </ul>
-        </div>
+
+        <TipBox color={C.yellow}>Set "Remind Before" to 3 days so you never get caught off guard by an upcoming bill.</TipBox>
       </div>
 
-      <div id="guide-sec-3" style={sectionStyle}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-          <div style={iconBoxStyle(C.purpleDim, C.purple)}>☰</div>
-          <h3 style={{ color: C.text, margin: 0, fontSize: 18, fontWeight: 800 }}>History</h3>
+      <Divider />
+
+      {/* ════════════════════════════════════════════
+          SECTION 4 — HISTORY
+      ════════════════════════════════════════════ */}
+      <div id="ms-history" style={{ marginBottom: 40 }}>
+        <SectionHeader icon="☰" iconBg={C.purpleDim} iconColor={C.purple} title="History & Records" />
+        <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
+          A full log of every transaction. Search, filter by type or month, and manage any record.
+        </p>
+
+        {/* Mock: Search bar */}
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 14px", color: C.faint, fontSize: 14, marginBottom: 10 }}>🔍 Search by name, note or category...</div>
+
+        {/* Mock: Filter pills */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
+          {["All", "Expense", "Income", "Saving", "Transfer"].map((f, i) => (
+            <span key={f} style={{ padding: "5px 12px", borderRadius: 8, background: i === 0 ? C.accentDim : "transparent", border: `1px solid ${i === 0 ? C.accent : C.border}`, color: i === 0 ? C.accent : C.muted, fontSize: 12, fontWeight: 700 }}>{f}</span>
+          ))}
         </div>
-        <div style={guideBoxStyle}>
-          <ul style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, paddingLeft: 18, margin: 0 }}>
-            <li>Swipe left to Edit or Delete</li>
-            <li>Transfer logs show route: A ➔ B</li>
-            <li>Instant balance updates</li>
-          </ul>
+
+        {/* Mock: Swipeable row */}
+        <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", marginBottom: 14 }}>
+          <div style={{ position: "absolute", inset: 0, display: "flex", justifyContent: "space-between" }}>
+            <div style={{ width: 85, background: C.blueDim, display: "flex", alignItems: "center", justifyContent: "center", color: C.blue, fontWeight: 700, fontSize: 13 }}>✎ Edit</div>
+            <div style={{ width: 85, background: C.redDim, display: "flex", alignItems: "center", justifyContent: "center", color: C.red, fontWeight: 700, fontSize: 13 }}>🗑 Delete</div>
+          </div>
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, position: "relative", transform: "translateX(-40px)", padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: C.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🍽</div>
+              <div><div style={{ color: C.text, fontWeight: 600, fontSize: 14 }}>Food</div><div style={{ color: C.muted, fontSize: 11 }}>Cash · Today</div></div>
+            </div>
+            <div style={{ color: C.red, fontWeight: 800 }}>−EGP 85</div>
+          </div>
+          <div style={{ textAlign: "center", marginTop: 6 }}>
+            <span className="ms-float-left" style={{ fontSize: 18 }}>👈</span>
+            <span style={{ color: C.blue, fontSize: 11, fontWeight: 700, marginLeft: 6 }}>Swipe left to Edit or Delete</span>
+          </div>
         </div>
+
+        <TipBox color={C.purple}>Transfers show the full route: Account A ➔ Account B. Deleting any transaction instantly updates all balances.</TipBox>
       </div>
 
-      <div id="guide-sec-4" style={sectionStyle}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-          <div style={iconBoxStyle(C.surface, C.text)}>⚙</div>
-          <h3 style={{ color: C.text, margin: 0, fontSize: 18, fontWeight: 800 }}>Settings</h3>
+      <Divider />
+
+      {/* ════════════════════════════════════════════
+          SECTION 5 — SAVINGS GOALS
+      ════════════════════════════════════════════ */}
+      <div id="ms-savings" style={{ marginBottom: 40 }}>
+        <SectionHeader icon="◎" iconBg={C.yellowDim} iconColor={C.yellow} title="Savings Goals" />
+        <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
+          Set a target amount, give it a name, and contribute to it anytime using the <strong style={{ color: C.yellow }}>Saving</strong> transaction type.
+        </p>
+
+        {/* Mock: Goal card */}
+        <MockCard style={{ marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>🎯 Travel Fund</div>
+            <span style={{ background: C.yellow + "22", color: C.yellow, border: `1px solid ${C.yellow}44`, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>65%</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ color: C.yellow, fontSize: 18, fontWeight: 800 }}>EGP 6,500</span>
+            <span style={{ color: C.muted, fontSize: 13 }}>of EGP 10,000</span>
+          </div>
+          <div style={{ height: 6, background: C.border, borderRadius: 99 }}><div style={{ height: "100%", width: "65%", background: C.yellow, borderRadius: 99 }} /></div>
+          <div style={{ color: C.faint, fontSize: 10, fontWeight: 700, marginTop: 5, textAlign: "right" }}>EGP 3,500 left</div>
+        </MockCard>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+          {[
+            { icon: "◎", color: C.yellow, text: 'Add a new goal from Settings → Savings Goals → "+ New Goal"' },
+            { icon: "＋", color: C.accent, text: 'Contribute anytime: tap +, choose "Saving", pick your goal' },
+            { icon: "💳", color: C.blue,   text: "Enable Spending Mode to use goal funds directly as a payment source" },
+            { icon: "📊", color: C.purple, text: "Tap any goal card on the dashboard to see its full transaction history" },
+          ].map((r, i) => (
+            <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <span style={{ fontSize: 16, color: r.color, flexShrink: 0, fontWeight: 800 }}>{r.icon}</span>
+              <span style={{ color: C.muted, fontSize: 13, lineHeight: 1.5 }}>{r.text}</span>
+            </div>
+          ))}
         </div>
-        <div style={guideBoxStyle}>
-          <ul style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, paddingLeft: 18, margin: 0 }}>
-            <li>Manage Goals, Budgets, Quick Actions</li>
-            <li>Currency switching</li>
-            <li>Backup & Restore (JSON)</li>
-          </ul>
-        </div>
+
+        <TipBox color={C.yellow}>Funds deposited into a goal are "frozen" — they won't show as available balance in your accounts until withdrawn.</TipBox>
       </div>
 
-      <div id="guide-sec-5" style={sectionStyle}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-          <div style={iconBoxStyle(C.yellowDim, C.yellow)}>💡</div>
-          <h3 style={{ color: C.text, margin: 0, fontSize: 18, fontWeight: 800 }}>Pro Tips</h3>
+      <Divider />
+
+      {/* ════════════════════════════════════════════
+          SECTION 6 — BUDGETS
+      ════════════════════════════════════════════ */}
+      <div id="ms-budgets" style={{ marginBottom: 40 }}>
+        <SectionHeader icon="📊" iconBg={C.accentDim} iconColor={C.accent} title="Monthly Budgets" />
+        <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
+          Set a monthly spending limit for any group of categories. The dashboard shows how much is left and your daily safe-to-spend amount.
+        </p>
+
+        {/* Mock: Budget card */}
+        <MockCard style={{ marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>Daily Expenses</span>
+            <span style={{ background: C.yellow + "22", color: C.yellow, border: `1px solid ${C.yellow}44`, borderRadius: 99, padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>72%</span>
+          </div>
+          <div style={{ color: C.muted, fontSize: 12, marginBottom: 6 }}>Spent <strong style={{ color: C.text }}>EGP 1,440</strong> of EGP 2,000</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ color: C.accent, fontSize: 17, fontWeight: 800 }}>EGP 560 left</span>
+            <span style={{ color: C.muted, fontSize: 11 }}>Daily: EGP 80</span>
+          </div>
+          <div style={{ height: 6, background: C.border, borderRadius: 99 }}><div style={{ height: "100%", width: "72%", background: C.yellow, borderRadius: 99 }} /></div>
+        </MockCard>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+          {[
+            { pct: "< 70%", color: C.accent, label: "Green — On track" },
+            { pct: "70–89%", color: C.yellow, label: "Yellow — Getting close" },
+            { pct: "≥ 90%",  color: C.red,    label: "Red — Almost over budget" },
+          ].map(r => (
+            <div key={r.pct} style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <div style={{ width: 10, height: 10, borderRadius: 99, background: r.color, flexShrink: 0 }} />
+              <span style={{ color: C.muted, fontSize: 13 }}><strong style={{ color: r.color }}>{r.pct}</strong> — {r.label}</span>
+            </div>
+          ))}
         </div>
-        <div style={guideBoxStyle}>
-          <ul style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, paddingLeft: 18, margin: 0 }}>
-            <li>Swipe on any item to manage</li>
-            <li>Drag & Drop cards on Home</li>
-            <li>Long press (+) for shortcuts</li>
-          </ul>
+
+        <TipBox color={C.accent}>The "Daily safe-to-spend" figure tells you exactly how much you can spend each remaining day without busting your budget.</TipBox>
+      </div>
+
+      <Divider />
+
+      {/* ════════════════════════════════════════════
+          SECTION 7 — QUICK ACTIONS
+      ════════════════════════════════════════════ */}
+      <div id="ms-quick" style={{ marginBottom: 40 }}>
+        <SectionHeader icon="⚡" iconBg={C.blueDim} iconColor={C.blue} title="Quick Actions" />
+        <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
+          Configure up to 4 one-tap shortcuts for your most frequent expenses. Log a transaction in under 2 seconds.
+        </p>
+
+        <StepRow num="1" color={C.blue}>Go to <strong style={{ color: C.text }}>Settings → Quick Actions</strong> and configure your 4 slots (category, amount, account).</StepRow>
+        <StepRow num="2" color={C.blue}><strong style={{ color: C.text }}>Long press</strong> the + button anywhere in the app.</StepRow>
+        <StepRow num="3" color={C.blue}>Tap a shortcut — a small form appears to confirm or adjust the amount before saving.</StepRow>
+
+        {/* Mock: Quick slots */}
+        <div style={{ display: "flex", gap: 10, justifyContent: "center", background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: "16px", marginBottom: 14 }}>
+          {[{ icon: "☕", name: "Coffee" }, { icon: "🚗", name: "Transport" }, { icon: "🍕", name: "Takeaway" }, { icon: "🛍", name: "Shopping" }].map(q => (
+            <div key={q.name} style={{ width: 80, height: 80, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
+              <span style={{ fontSize: 26 }}>{q.icon}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: C.text }}>{q.name}</span>
+            </div>
+          ))}
         </div>
+
+        <TipBox color={C.blue}>Saver remembers the last amount and account you used for each shortcut — so next time it's pre-filled for you.</TipBox>
+      </div>
+
+      <Divider />
+
+      {/* ════════════════════════════════════════════
+          SECTION 8 — SETTINGS
+      ════════════════════════════════════════════ */}
+      <div id="ms-settings" style={{ marginBottom: 40 }}>
+        <SectionHeader icon="⚙" iconBg={C.surface} iconColor={C.text} title="Settings" />
+        <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
+          Everything that customizes how Saver works for you.
+        </p>
+
+        {[
+          { icon: "👤", color: C.accent,  title: "General",    desc: "Set your display name, access Savings, Budgets, and Quick Actions." },
+          { icon: "💱", color: C.blue,    title: "Currency",   desc: "Switch between EGP, GBP, USD, EUR, SAR, AED. Only the label changes — numbers stay the same." },
+          { icon: "🏦", color: C.yellow,  title: "Accounts",   desc: 'Add or edit bank accounts. Set a Low Balance Alert — a 🔻 icon appears when balance drops below your limit.' },
+          { icon: "📤", color: C.red,     title: "Exp. Categories", desc: "Add, rename, or delete expense categories. Pick an icon and assign a group tag." },
+          { icon: "💰", color: C.accent,  title: "Inc. Categories", desc: "Same as above but for income sources like Salary, Freelance, or Gift." },
+          { icon: "📊", color: C.purple,  title: "Groups",     desc: "Create spending groups that cluster categories together (e.g. Daily Life = Food + Coffee + Transport)." },
+          { icon: "💾", color: C.blue,    title: "Backup & Restore", desc: "Download all data as a JSON file. Saver reminds you every 3 days. Restore any backup with one tap." },
+        ].map((s, i) => (
+          <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "14px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, marginBottom: 8 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: s.color + "22", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{s.icon}</div>
+            <div>
+              <div style={{ color: C.text, fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{s.title}</div>
+              <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.5 }}>{s.desc}</div>
+            </div>
+          </div>
+        ))}
+
+        <TipBox color={C.accent}>Back up before making big changes — restoring a backup overwrites all current data.</TipBox>
+      </div>
+
+      <Divider />
+
+      {/* ════════════════════════════════════════════
+          SECTION 9 — PRO TIPS & GESTURES
+      ════════════════════════════════════════════ */}
+      <div id="ms-tips" style={{ marginBottom: 40 }}>
+        <SectionHeader icon="🏆" iconBg={C.yellowDim} iconColor={C.yellow} title="Pro Tips & Gestures" />
+
+        {[
+          { gesture: "👈 Swipe Left",      color: C.blue,   desc: "On any transaction or bill row to reveal Edit and Delete buttons." },
+          { gesture: "👇 Long Press +",    color: C.accent, desc: "Opens your 4 Quick Action shortcuts for instant expense logging." },
+          { gesture: "✋ Long Press Card", color: C.purple, desc: "On any account, budget, or savings card to enter drag & drop reorder mode." },
+          { gesture: "👆 Tap Balance",     color: C.yellow, desc: "Tap the monkey icon on the total balance to toggle privacy mode." },
+          { gesture: "🔍 History Search",  color: C.red,    desc: "Searches across category names, notes, and bank names simultaneously." },
+          { gesture: "📅 Month Filter",    color: C.blue,   desc: "Available on Dashboard and History — months are grouped by year." },
+        ].map((t, i) => (
+          <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "14px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, marginBottom: 8 }}>
+            <div style={{ color: t.color, fontWeight: 800, fontSize: 13, minWidth: 110, flexShrink: 0, paddingTop: 2 }}>{t.gesture}</div>
+            <div style={{ color: C.muted, fontSize: 13, lineHeight: 1.5 }}>{t.desc}</div>
+          </div>
+        ))}
+
+        <TipBox color={C.yellow}>The app is designed for speed — once you set up Quick Actions and know the swipe gestures, logging an expense takes under 3 seconds.</TipBox>
+      </div>
+
+      {/* ── Feedback ── */}
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: "20px", textAlign: "center", marginBottom: 20 }}>
+        <div style={{ fontSize: 28, marginBottom: 8 }}>🐞</div>
+        <div style={{ color: C.text, fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Found a bug or have a suggestion?</div>
+        <div style={{ color: C.muted, fontSize: 13, marginBottom: 16 }}>We'd love to hear from you.</div>
+        <Btn full onClick={handleFeedback} color={C.blue}>Send Feedback</Btn>
       </div>
 
       <AppFooter navigateTo={navigateTo} />
