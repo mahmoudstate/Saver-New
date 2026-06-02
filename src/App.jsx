@@ -347,17 +347,11 @@ function SplashScreen(){
 // ════════════════════════════════════════════════════════════════════════════════
 function calcBankBalance(bankId, txns){
   return txns.reduce((acc,t)=>{
-    if(t.type==="transfer"){
-      // support both storage formats: {bankId, toBankId} and {fromBankId, toBankId}
-      const fromId = t.fromBankId || t.bankId;
-      const toId   = t.toBankId;
-      if(toId   === bankId) return acc + t.amount;
-      if(fromId === bankId) return acc - t.amount;
-      return acc;
-    }
-    if(t.bankId===bankId && t.type==="income")        return acc+t.amount;
-    if(t.bankId===bankId && t.type==="expense")       return acc-t.amount;
+    if(t.bankId===bankId && t.type==="income") return acc+t.amount;
+    if(t.bankId===bankId && t.type==="expense") return acc-t.amount;
     if(t.bankId===bankId && t.type==="goal_withdraw") return acc-t.amount;
+    if(t.toBankId===bankId && t.type==="transfer") return acc+t.amount;
+    if((t.fromBankId||t.bankId)===bankId && t.type==="transfer") return acc-t.amount;
     return acc;
   },0);
 }
@@ -372,12 +366,9 @@ function calcGoalSaved(goalId, txns){
 }
 
 function calcFrozenForBank(bankId, savings, txns){
-  // frozen = money deposited into goals but not yet spent or returned
-  // saving      → +frozen (money locked in goal)
-  // goal_return → -frozen (money unlocked back to bank, stays in bankBalance)
-  // goal_withdraw → does NOT touch frozen (already deducted from bankBalance directly)
   return txns.reduce((acc,t)=>{
-     if(t.bankId===bankId && t.type==="saving")      return acc+t.amount;
+     if(t.bankId===bankId && t.type==="saving") return acc+t.amount;
+     if(t.bankId===bankId && t.type==="goal_withdraw") return acc-t.amount;
      if(t.bankId===bankId && t.type==="goal_return") return acc-t.amount;
      return acc;
   },0);
@@ -478,8 +469,7 @@ function SaverApp(){
     processingRef.current=true;
     try{
       if(t.type==="expense"||t.type==="transfer"){
-        // for transfer: fromBankId takes priority, fallback to bankId (sourceId)
-        const checkId = t.type==="transfer" ? (t.fromBankId || t.bankId) : t.bankId;
+        const checkId=t.type==="transfer"?(t.fromBankId||t.bankId):t.bankId;
         const avail=safeToSpend(checkId);
         if(avail<t.amount){HAPTICS.warning();setAppAlert({title:"Insufficient Balance",message:`⚠️ Available balance is ${fmt(avail)}. Not enough.`,color:C.red});return false;}
       }
@@ -564,7 +554,7 @@ function SaverApp(){
 
         // حماية عمليات الصرف والتحويل (كما هي)
         if(orig.type==="expense"||orig.type==="transfer"){
-          const checkId = orig.type==="transfer" ? (orig.fromBankId || orig.bankId) : orig.bankId;
+          const checkId=orig.type==="transfer"?(orig.fromBankId||orig.bankId):orig.bankId;
           const availWithout=safeToSpend(checkId)+orig.amount;
           if(availWithout<data.amount){HAPTICS.warning();setAppAlert({title:"Insufficient Balance",message:"⚠️ Not enough balance for this modification.",color:C.red});return false;}
         }
@@ -1375,8 +1365,8 @@ function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,saf
     let ok = false;
     if(type==="transfer"){
         if(sourceId===toBankId){setAppAlert({title:"Error",message:"Cannot transfer to same account",color:C.red}); return;}
-        const fromBank = banks.find(b=>b.id===sourceId);
-        const toBank   = banks.find(b=>b.id===toBankId);
+        const fromBank=banks.find(b=>b.id===sourceId);
+        const toBank=banks.find(b=>b.id===toBankId);
         ok = await onAdd({type:"transfer",amount:amt,date:txnDate,bankId:sourceId,fromBankId:sourceId,toBankId,bankName:fromBank?.name,toBankName:toBank?.name,note});
     } else if(type==="saving"){
         ok = await onAdd({type:"saving",amount:amt,date:txnDate,bankId:sourceId,bankName:bank?.name,goalId:savingId,catName:savings.find(s=>s.id===savingId)?.name,catIcon:"saving",note});
