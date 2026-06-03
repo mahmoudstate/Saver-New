@@ -268,92 +268,109 @@ function SwipeRow({onEdit,onDelete,children}){
 }
 
 
+// ── BalanceCarousel (الكارت الذكي الجديد) ──────────────────────────────────────
+function BalanceCarousel({ totalBalance, totalSafe, hideTotal, setHideTotal, initialMode, onModeChange }) {
+  const [index, setIndex] = useState(initialMode === "available" ? 1 : 0);
+  const [drag, setDrag] = useState(0);
+  const trackRef = useRef(null);
+  const startX = useRef(0), startY = useRef(0), isDragging = useRef(false), isH = useRef(false);
 
-function BalanceSwipeCard({ onAvailable, onTotal, activeMode, children }) {
-  const [slide, setSlide] = useState(0);
-  const rowRef = useRef(null), startX = useRef(0), startY = useRef(0), currentX = useRef(0);
-  const isH = useRef(false), isV = useRef(false), slideRef = useRef(0);
+  useEffect(() => { setIndex(initialMode === "available" ? 1 : 0); }, [initialMode]);
 
-  const close = useCallback(() => {
-    setSlide(0); slideRef.current = 0; currentX.current = 0;
-    if (rowRef.current) {
-      rowRef.current.style.transform = "translateX(0px)";
-      rowRef.current.style.transition = "transform 0.4s cubic-bezier(0.175,0.885,0.32,1.15)";
+  const handleTouchStart = (e) => {
+    startX.current = e.touches[0].clientX;
+    startY.current = e.touches[0].clientY;
+    isDragging.current = true;
+    isH.current = false;
+    if (trackRef.current) trackRef.current.style.transition = 'none';
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging.current) return;
+    const dx = e.touches[0].clientX - startX.current;
+    const dy = e.touches[0].clientY - startY.current;
+
+    if (!isH.current) {
+      // تفادي التمرير الرأسي (Scroll)
+      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 5) { isDragging.current = false; return; }
+      if (Math.abs(dx) > 10) isH.current = true;
     }
-    if (globalActiveSwipeClose === close) globalActiveSwipeClose = null;
-  }, []);
 
-  useEffect(() => {
-    const el = rowRef.current; if (!el) return;
-    const s = (e) => {
-      if (globalActiveSwipeClose && globalActiveSwipeClose !== close) globalActiveSwipeClose();
-      startX.current = e.touches[0].clientX; startY.current = e.touches[0].clientY;
-      currentX.current = slideRef.current; isH.current = false; isV.current = false;
-      el.style.transition = "none";
-    };
-    const m = (e) => {
-      if (isV.current) return;
-      const dx = e.touches[0].clientX - startX.current, dy = Math.abs(e.touches[0].clientY - startY.current);
-      if (!isH.current) {
-        if (dy > Math.abs(dx) && dy > 3) { isV.current = true; return; }
-        if (Math.abs(dx) > 10 && Math.abs(dx) > dy) isH.current = true;
-      }
-      if (isH.current) {
-        e.preventDefault();
-        let t = currentX.current + dx;
-        if (t < -95) t = -95; if (t > 95) t = 95;
-        el.style.transform = `translateX(${t}px)`; setSlide(t); slideRef.current = t;
-      }
-    };
-    const en = () => {
-      if (isV.current) return;
-      el.style.transition = "transform 0.4s cubic-bezier(0.175,0.885,0.32,1.15)";
-      const sv = slideRef.current;
-      if (sv < -35) {
-        setSlide(-85); slideRef.current = -85; currentX.current = -85;
-        el.style.transform = "translateX(-85px)"; HAPTICS.light(); globalActiveSwipeClose = close;
-      } else if (sv > 35) {
-        setSlide(85); slideRef.current = 85; currentX.current = 85;
-        el.style.transform = "translateX(85px)"; HAPTICS.light(); globalActiveSwipeClose = close;
-      } else {
-        setSlide(0); slideRef.current = 0; currentX.current = 0;
-        el.style.transform = "translateX(0px)";
-        if (globalActiveSwipeClose === close) globalActiveSwipeClose = null;
-      }
-    };
-    el.addEventListener("touchstart", s, { passive: false });
-    el.addEventListener("touchmove", m, { passive: false });
-    el.addEventListener("touchend", en);
-    return () => { el.removeEventListener("touchstart", s); el.removeEventListener("touchmove", m); el.removeEventListener("touchend", en); };
-  }, [close]);
+    if (isH.current) {
+      if (e.cancelable) e.preventDefault(); 
+      let newDrag = dx;
+      // فيزياء التمدد عند الحواف (Rubber band effect)
+      if (index === 0 && dx > 0) newDrag = dx * 0.25; 
+      if (index === 1 && dx < 0) newDrag = dx * 0.25; 
+      setDrag(newDrag);
+    }
+  };
 
-  useEffect(() => {
-    const handleScroll = () => { if (slideRef.current !== 0) close(); };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [close]);
+  const handleTouchEnd = () => {
+    if (!isDragging.current || !isH.current) return;
+    isDragging.current = false;
+    const threshold = 60; // المسافة المطلوبة لقلب الشاشة
+
+    let newIndex = index;
+    if (drag < -threshold && index === 0) newIndex = 1;
+    else if (drag > threshold && index === 1) newIndex = 0;
+
+    setDrag(0);
+    if (trackRef.current) trackRef.current.style.transition = 'transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)';
+    
+    if (newIndex !== index) {
+      setIndex(newIndex);
+      if(window.HAPTICS) HAPTICS.light();
+      onModeChange(newIndex === 0 ? "total" : "available");
+    }
+  };
+
+  // حساب حركة البارالاكس (المحتوى يتحرك أبطأ من الكارت)
+  const pX = -drag * 0.4; 
 
   return (
-    <div style={{ position: "relative", marginBottom: 10, userSelect: "none", WebkitUserSelect: "none" }}>
-      {slide !== 0 && (
-        <div onClick={(e) => { e.stopPropagation(); close(); }} style={{ position: "fixed", inset: 0, zIndex: 50 }} />
-      )}
-      <div style={{ position: "relative", overflow: "hidden", borderRadius: 16 }}>
-        <div style={{ position: "absolute", inset: 0, display: "flex", justifyContent: "space-between", zIndex: 0 }}>
-          <button onClick={() => { close(); onAvailable && onAvailable(); }} style={{ width: 85, background: C.accentDim, border: "none", color: C.accent, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Available</button>
-          <button onClick={() => { close(); onTotal && onTotal(); }} style={{ width: 85, background: C.blueDim, border: "none", color: C.blue, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Total</button>
-        </div>
-        <div ref={rowRef} style={{ touchAction: slide !== 0 ? "none" : "pan-y", position: "relative", zIndex: 1, width: "100%", boxSizing: "border-box" }}>
-          {children}
-          <div style={{ position: "absolute", bottom: 8, left: 0, width: "100%", display: "flex", justifyContent: "center", gap: 6, zIndex: 2, pointerEvents: "none" }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: activeMode === "total" ? C.accent : C.muted, opacity: activeMode === "total" ? 1 : 0.4, transition: "all 0.3s ease" }} />
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: activeMode === "available" ? C.accent : C.muted, opacity: activeMode === "available" ? 1 : 0.4, transition: "all 0.3s ease" }} />
+    <div 
+      style={{ position: "relative", marginBottom: 20, borderRadius: 18, overflow: "hidden", background: "linear-gradient(135deg, #1e1e28 0%, #23232f 100%)", border: `1px solid ${C.faint}`, touchAction: "pan-y", userSelect: "none", WebkitUserSelect: "none" }} 
+      onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
+    >
+      
+      <div ref={trackRef} style={{ display: "flex", width: "200%", transform: `translateX(calc(${index === 0 ? '0%' : '-50%'} + ${drag}px))`, transition: 'transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
+        
+        {/* شاشة 1: الإجمالي (Total) */}
+        <div style={{ width: "50%", padding: "20px 20px 34px 20px", boxSizing: "border-box", position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", right: -10, top: "15%", opacity: 0.03, fontSize: 80, pointerEvents: "none" }}>🏦</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", transform: `translateX(${index === 0 ? pX : 0}px)`, transition: drag === 0 ? 'transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)' : 'none' }}>
+            <div style={{ position: "relative", zIndex: 2 }}>
+              <div style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>Total Balance</div>
+              <div style={{ color: C.text, fontSize: 32, fontWeight: 800, letterSpacing: -1 }}>{hideTotal ? "••••••" : fmt(totalBalance)}</div>
+            </div>
+            <button onClick={(e) => { e.stopPropagation(); setHideTotal(v => !v); }} style={{ background: C.border, border: "none", color: C.muted, width: 38, height: 38, borderRadius: 99, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>{hideTotal ? "🙈" : "🐵"}</button>
           </div>
         </div>
+
+        {/* شاشة 2: المتاح (Available) */}
+        <div style={{ width: "50%", padding: "20px 20px 34px 20px", boxSizing: "border-box", position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", right: -10, top: "15%", opacity: 0.03, fontSize: 80, pointerEvents: "none" }}>💸</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", transform: `translateX(${index === 1 ? pX : 0}px)`, transition: drag === 0 ? 'transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)' : 'none' }}>
+            <div style={{ position: "relative", zIndex: 2 }}>
+              <div style={{ color: C.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>Available to Spend</div>
+              <div style={{ color: C.accent, fontSize: 32, fontWeight: 800, letterSpacing: -1 }}>{hideTotal ? "••••••" : fmt(totalSafe)}</div>
+            </div>
+            <button onClick={(e) => { e.stopPropagation(); setHideTotal(v => !v); }} style={{ background: C.border, border: "none", color: C.muted, width: 38, height: 38, borderRadius: 99, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>{hideTotal ? "🙈" : "🐵"}</button>
+          </div>
+        </div>
+
+      </div>
+
+      {/* النقاط السفلية (Pagination Dots) */}
+      <div style={{ position: "absolute", bottom: 12, left: 0, width: "100%", display: "flex", justifyContent: "center", gap: 8, pointerEvents: "none", zIndex: 3 }}>
+        <div style={{ width: 6, height: 6, borderRadius: "50%", background: index === 0 ? C.accent : C.muted, opacity: index === 0 ? 1 : 0.3, transition: "all 0.4s ease" }} />
+        <div style={{ width: 6, height: 6, borderRadius: "50%", background: index === 1 ? C.accent : C.muted, opacity: index === 1 ? 1 : 0.3, transition: "all 0.4s ease" }} />
       </div>
     </div>
   );
 }
+
 
 // ── SortableList ──────────────────────────────────────────────────────────────
 function SortableItem({id,children}){
@@ -940,7 +957,6 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
   const[insightsType,setInsightsType]=useState(null); 
 
   const[balanceMode,setBalanceMode]=useState("total");
-  const[confirmBalanceMode,setConfirmBalanceMode]=useState(null);
   useEffect(()=>{load("et_balance_mode","total").then(setBalanceMode);},[]);
 
   const defaultOrder = [
@@ -1015,21 +1031,17 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
         <div key="accounts">
           <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Accounts</div>
           
-          <BalanceSwipeCard activeMode={balanceMode} onAvailable={()=>setConfirmBalanceMode("available")} onTotal={()=>setConfirmBalanceMode("total")}>
-            <Card style={{padding:"16px 18px 24px 18px",background:"linear-gradient(135deg,#1e1e28 0%,#23232f 100%)",borderColor:C.faint,position:"relative"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div style={{position:"relative", zIndex:2}}>
-                  <div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>
-                    {balanceMode === "total" ? "Total Balance" : "Available Balance"}
-                  </div>
-                  <div style={{color:C.text,fontSize:30,fontWeight:800,letterSpacing:-1}}>
-                    {hideTotal ? "••••••" : fmt(balanceMode === "total" ? totalBalance : totalSafe)}
-                  </div>
-                </div>
-                <button onClick={()=>setHideTotal(v=>!v)} style={{background:C.border,border:"none",color:C.muted,width:36,height:36,borderRadius:99,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",zIndex:2}}>{hideTotal?"🙈":"🐵"}</button>
-              </div>
-            </Card>
-          </BalanceSwipeCard>
+          <BalanceCarousel 
+            totalBalance={totalBalance} 
+            totalSafe={totalSafe} 
+            hideTotal={hideTotal} 
+            setHideTotal={setHideTotal} 
+            initialMode={balanceMode} 
+            onModeChange={async (mode) => {
+              setBalanceMode(mode);
+              await save("et_balance_mode", mode);
+            }}
+          />
 
           <div style={{marginBottom:20}}>
             <SortableList grid items={banks} onReorder={onBanks} renderItem={(b)=>{
@@ -1175,14 +1187,6 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
     </div>
 
     {viewTxn&&<TxnViewModal txn={viewTxn} onClose={()=>setViewTxn(null)}/>}
-
-    {confirmBalanceMode&&<ConfirmModal 
-      title="Change Display Mode?" 
-      message={confirmBalanceMode === "total" ? "This will display your total balance, including funds locked in saving goals." : "This will hide your locked goal savings and only display the funds available to spend."} 
-      confirmColor={C.blue} 
-      onClose={()=>setConfirmBalanceMode(null)} 
-      onConfirm={async()=>{setBalanceMode(confirmBalanceMode); await save("et_balance_mode", confirmBalanceMode); setConfirmBalanceMode(null); HAPTICS.success();}}
-    />}
 
     {insightsType && (
       <Modal title={insightsType === "expense" ? "Expense Breakdown" : "Income Breakdown"} onClose={()=>setInsightsType(null)} center={false}>
