@@ -267,30 +267,92 @@ function SwipeRow({onEdit,onDelete,children}){
   </div>;
 }
 
-function BalanceSwipeCard({onAvailable, onTotal, children}){
-  const [slide,setSlide]=useState(0);
-  const rowRef=useRef(null),startX=useRef(0),startY=useRef(0),currentX=useRef(0);
-  const isH=useRef(false),isV=useRef(false),slideRef=useRef(0);
-  const close=useCallback(()=>{
-    setSlide(0);slideRef.current=0;currentX.current=0;
-    if(rowRef.current){rowRef.current.style.transform="translateX(0px)";rowRef.current.style.transition="transform 0.4s cubic-bezier(0.175,0.885,0.32,1.15)";}
-    if(globalActiveSwipeClose===close)globalActiveSwipeClose=null;
-  },[]);
-  useEffect(()=>{
-    const el=rowRef.current;if(!el)return;
-    const s=(e)=>{if(globalActiveSwipeClose&&globalActiveSwipeClose!==close)globalActiveSwipeClose();startX.current=e.touches[0].clientX;startY.current=e.touches[0].clientY;currentX.current=slideRef.current;isH.current=false;isV.current=false;el.style.transition="none";};
-    const m=(e)=>{if(isV.current)return;const dx=e.touches[0].clientX-startX.current,dy=Math.abs(e.touches[0].clientY-startY.current);if(!isH.current){if(dy>Math.abs(dx)&&dy>3){isV.current=true;return;}if(Math.abs(dx)>10&&Math.abs(dx)>dy)isH.current=true;}if(isH.current){e.preventDefault();let t=currentX.current+dx;if(t<-95)t=-95;if(t>95)t=95;el.style.transform=`translateX(${t}px)`;setSlide(t);slideRef.current=t;}};
-    const en=()=>{if(isV.current)return;el.style.transition="transform 0.4s cubic-bezier(0.175,0.885,0.32,1.15)";const sv=slideRef.current;if(sv<-35){setSlide(-85);slideRef.current=-85;currentX.current=-85;el.style.transform="translateX(-85px)";HAPTICS.light();globalActiveSwipeClose=close;}else if(sv>35){setSlide(85);slideRef.current=85;currentX.current=85;el.style.transform="translateX(85px)";HAPTICS.light();globalActiveSwipeClose=close;}else{setSlide(0);slideRef.current=0;currentX.current=0;el.style.transform="translateX(0px)";if(globalActiveSwipeClose===close)globalActiveSwipeClose=null;}};
-    el.addEventListener("touchstart",s,{passive:false});el.addEventListener("touchmove",m,{passive:false});el.addEventListener("touchend",en);
-    return()=>{el.removeEventListener("touchstart",s);el.removeEventListener("touchmove",m);el.removeEventListener("touchend",en);};
-  },[close]);
-  return <div style={{position:"relative",overflow:"hidden",borderRadius:16,marginBottom:10,userSelect:"none",WebkitUserSelect:"none"}}>
-    <div style={{position:"absolute",inset:0,display:"flex",justifyContent:"space-between",zIndex:0}}>
-      <button onClick={()=>{close();onAvailable&&onAvailable();}} style={{width:85,background:C.accentDim,border:"none",color:C.accent,fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>Available</button>
-      <button onClick={()=>{close();onTotal&&onTotal();}} style={{width:85,background:C.blueDim,border:"none",color:C.blue,fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>Total</button>
+
+
+function BalanceSwipeCard({ onAvailable, onTotal, activeMode, children }) {
+  const [slide, setSlide] = useState(0);
+  const rowRef = useRef(null), startX = useRef(0), startY = useRef(0), currentX = useRef(0);
+  const isH = useRef(false), isV = useRef(false), slideRef = useRef(0);
+
+  const close = useCallback(() => {
+    setSlide(0); slideRef.current = 0; currentX.current = 0;
+    if (rowRef.current) {
+      rowRef.current.style.transform = "translateX(0px)";
+      rowRef.current.style.transition = "transform 0.4s cubic-bezier(0.175,0.885,0.32,1.15)";
+    }
+    if (globalActiveSwipeClose === close) globalActiveSwipeClose = null;
+  }, []);
+
+  useEffect(() => {
+    const el = rowRef.current; if (!el) return;
+    const s = (e) => {
+      if (globalActiveSwipeClose && globalActiveSwipeClose !== close) globalActiveSwipeClose();
+      startX.current = e.touches[0].clientX; startY.current = e.touches[0].clientY;
+      currentX.current = slideRef.current; isH.current = false; isV.current = false;
+      el.style.transition = "none";
+    };
+    const m = (e) => {
+      if (isV.current) return;
+      const dx = e.touches[0].clientX - startX.current, dy = Math.abs(e.touches[0].clientY - startY.current);
+      if (!isH.current) {
+        if (dy > Math.abs(dx) && dy > 3) { isV.current = true; return; }
+        if (Math.abs(dx) > 10 && Math.abs(dx) > dy) isH.current = true;
+      }
+      if (isH.current) {
+        e.preventDefault();
+        let t = currentX.current + dx;
+        if (t < -95) t = -95; if (t > 95) t = 95;
+        el.style.transform = `translateX(${t}px)`; setSlide(t); slideRef.current = t;
+      }
+    };
+    const en = () => {
+      if (isV.current) return;
+      el.style.transition = "transform 0.4s cubic-bezier(0.175,0.885,0.32,1.15)";
+      const sv = slideRef.current;
+      if (sv < -35) {
+        setSlide(-85); slideRef.current = -85; currentX.current = -85;
+        el.style.transform = "translateX(-85px)"; HAPTICS.light(); globalActiveSwipeClose = close;
+      } else if (sv > 35) {
+        setSlide(85); slideRef.current = 85; currentX.current = 85;
+        el.style.transform = "translateX(85px)"; HAPTICS.light(); globalActiveSwipeClose = close;
+      } else {
+        setSlide(0); slideRef.current = 0; currentX.current = 0;
+        el.style.transform = "translateX(0px)";
+        if (globalActiveSwipeClose === close) globalActiveSwipeClose = null;
+      }
+    };
+    el.addEventListener("touchstart", s, { passive: false });
+    el.addEventListener("touchmove", m, { passive: false });
+    el.addEventListener("touchend", en);
+    return () => { el.removeEventListener("touchstart", s); el.removeEventListener("touchmove", m); el.removeEventListener("touchend", en); };
+  }, [close]);
+
+  useEffect(() => {
+    const handleScroll = () => { if (slideRef.current !== 0) close(); };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [close]);
+
+  return (
+    <div style={{ position: "relative", marginBottom: 10, userSelect: "none", WebkitUserSelect: "none" }}>
+      {slide !== 0 && (
+        <div onClick={(e) => { e.stopPropagation(); close(); }} style={{ position: "fixed", inset: 0, zIndex: 50 }} />
+      )}
+      <div style={{ position: "relative", overflow: "hidden", borderRadius: 16 }}>
+        <div style={{ position: "absolute", inset: 0, display: "flex", justifyContent: "space-between", zIndex: 0 }}>
+          <button onClick={() => { close(); onAvailable && onAvailable(); }} style={{ width: 85, background: C.accentDim, border: "none", color: C.accent, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Available</button>
+          <button onClick={() => { close(); onTotal && onTotal(); }} style={{ width: 85, background: C.blueDim, border: "none", color: C.blue, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Total</button>
+        </div>
+        <div ref={rowRef} style={{ touchAction: slide !== 0 ? "none" : "pan-y", position: "relative", zIndex: 1, width: "100%", boxSizing: "border-box" }}>
+          {children}
+          <div style={{ position: "absolute", bottom: 8, left: 0, width: "100%", display: "flex", justifyContent: "center", gap: 6, zIndex: 2, pointerEvents: "none" }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: activeMode === "total" ? C.accent : C.muted, opacity: activeMode === "total" ? 1 : 0.4, transition: "all 0.3s ease" }} />
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: activeMode === "available" ? C.accent : C.muted, opacity: activeMode === "available" ? 1 : 0.4, transition: "all 0.3s ease" }} />
+          </div>
+        </div>
+      </div>
     </div>
-    <div ref={rowRef} style={{touchAction:slide!==0?"none":"pan-y",position:"relative",zIndex:1,width:"100%",boxSizing:"border-box"}}>{children}</div>
-  </div>;
+  );
 }
 
 // ── SortableList ──────────────────────────────────────────────────────────────
@@ -877,7 +939,6 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
   const[showCustomize,setShowCustomize]=useState(false);
   const[insightsType,setInsightsType]=useState(null); 
 
-  // حالة عرض الرصيد الجديد ورسالة التأكيد
   const[balanceMode,setBalanceMode]=useState("total");
   const[confirmBalanceMode,setConfirmBalanceMode]=useState(null);
   useEffect(()=>{load("et_balance_mode","total").then(setBalanceMode);},[]);
@@ -894,7 +955,6 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
   useEffect(() => { load("et_dash_order", defaultOrder).then(setDashOrder); }, []);
 
   const totalBalance = useMemo(() => banks.reduce((s, b) => s + bankBalance(b.id), 0), [banks, bankBalance]);
-  // تم إضافة إجمالي السيولة المتاحة للصرف
   const totalSafe = useMemo(() => banks.reduce((s, b) => s + safeToSpend(b.id), 0), [banks, safeToSpend]);
   const totalIncome = useMemo(() => txns.filter(t => t.type === "income" || t.type === "goal_return").reduce((a, t) => a + t.amount, 0), [txns]);
   const totalExp = useMemo(() => txns.filter(t => t.type === "expense" || t.type === "goal_withdraw").reduce((a, t) => a + t.amount, 0), [txns]);
@@ -935,7 +995,6 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
       if(!totals[key]) totals[key] = {name, icon, amount: 0};
       totals[key].amount += t.amount;
     });
-    // تم التعديل لـ 5 تصنيفات بدل 3
     return Object.values(totals).sort((a,b)=>b.amount-a.amount).slice(0,5).map(c=>({...c, pct: totalAmt>0?Math.round((c.amount/totalAmt)*100):0}));
   };
 
@@ -956,9 +1015,8 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
         <div key="accounts">
           <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Accounts</div>
           
-          <BalanceSwipeCard onAvailable={()=>setConfirmBalanceMode("available")} onTotal={()=>setConfirmBalanceMode("total")}>
-            <Card style={{padding:"16px 18px",background:"linear-gradient(135deg,#1e1e28 0%,#23232f 100%)",borderColor:C.faint,position:"relative"}}>
-              <div style={{position:"absolute", right:20, top:"50%", transform:"translateY(-50%)", opacity:0.04, fontSize:60, pointerEvents:"none", letterSpacing:-15}}>⟷</div>
+          <BalanceSwipeCard activeMode={balanceMode} onAvailable={()=>setConfirmBalanceMode("available")} onTotal={()=>setConfirmBalanceMode("total")}>
+            <Card style={{padding:"16px 18px 24px 18px",background:"linear-gradient(135deg,#1e1e28 0%,#23232f 100%)",borderColor:C.faint,position:"relative"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div style={{position:"relative", zIndex:2}}>
                   <div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>
@@ -1029,7 +1087,6 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
           <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Monthly Budgets</div>
           <div style={{marginBottom:20}}>
             <SortableList items={budgets} onReorder={onBudgets} renderItem={(bdg)=>{
-              // تم إصلاح فلتر الشهور للميزانية هنا
               const targetMonth = filterMonth === "all" ? curMonth : filterMonth;
               const allExp=txnsAll.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&bdg.cats.includes(t.catId));
               const spent=allExp.filter(t=>t.date.startsWith(targetMonth)).reduce((a,t)=>a+t.amount,0);
@@ -1062,7 +1119,6 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
           <div style={{marginBottom:20}}>
             <SortableList items={savings} onReorder={onSavings} renderItem={(s)=>{
               const saved=goalSaved(s.id),pct=s.goal?Math.min(110,Math.round((saved/s.goal)*100)):0,isSpending=s.spendingMode;
-              // تم توحيد اللون للبرتقالي (Orange) هنا
               const mainColor = isSpending ? C.orange : C.yellow;
               return <Card onClick={()=>onOpenSaving(s)} className="ic" style={{padding:"14px 14px 12px",cursor:"pointer",transition:"transform 0.1s ease",border:`1px solid ${isSpending?C.orange+"66":C.border}`}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
