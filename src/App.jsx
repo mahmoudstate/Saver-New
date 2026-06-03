@@ -267,6 +267,32 @@ function SwipeRow({onEdit,onDelete,children}){
   </div>;
 }
 
+function BalanceSwipeCard({onAvailable, onTotal, children}){
+  const [slide,setSlide]=useState(0);
+  const rowRef=useRef(null),startX=useRef(0),startY=useRef(0),currentX=useRef(0);
+  const isH=useRef(false),isV=useRef(false),slideRef=useRef(0);
+  const close=useCallback(()=>{
+    setSlide(0);slideRef.current=0;currentX.current=0;
+    if(rowRef.current){rowRef.current.style.transform="translateX(0px)";rowRef.current.style.transition="transform 0.4s cubic-bezier(0.175,0.885,0.32,1.15)";}
+    if(globalActiveSwipeClose===close)globalActiveSwipeClose=null;
+  },[]);
+  useEffect(()=>{
+    const el=rowRef.current;if(!el)return;
+    const s=(e)=>{if(globalActiveSwipeClose&&globalActiveSwipeClose!==close)globalActiveSwipeClose();startX.current=e.touches[0].clientX;startY.current=e.touches[0].clientY;currentX.current=slideRef.current;isH.current=false;isV.current=false;el.style.transition="none";};
+    const m=(e)=>{if(isV.current)return;const dx=e.touches[0].clientX-startX.current,dy=Math.abs(e.touches[0].clientY-startY.current);if(!isH.current){if(dy>Math.abs(dx)&&dy>3){isV.current=true;return;}if(Math.abs(dx)>10&&Math.abs(dx)>dy)isH.current=true;}if(isH.current){e.preventDefault();let t=currentX.current+dx;if(t<-95)t=-95;if(t>95)t=95;el.style.transform=`translateX(${t}px)`;setSlide(t);slideRef.current=t;}};
+    const en=()=>{if(isV.current)return;el.style.transition="transform 0.4s cubic-bezier(0.175,0.885,0.32,1.15)";const sv=slideRef.current;if(sv<-35){setSlide(-85);slideRef.current=-85;currentX.current=-85;el.style.transform="translateX(-85px)";HAPTICS.light();globalActiveSwipeClose=close;}else if(sv>35){setSlide(85);slideRef.current=85;currentX.current=85;el.style.transform="translateX(85px)";HAPTICS.light();globalActiveSwipeClose=close;}else{setSlide(0);slideRef.current=0;currentX.current=0;el.style.transform="translateX(0px)";if(globalActiveSwipeClose===close)globalActiveSwipeClose=null;}};
+    el.addEventListener("touchstart",s,{passive:false});el.addEventListener("touchmove",m,{passive:false});el.addEventListener("touchend",en);
+    return()=>{el.removeEventListener("touchstart",s);el.removeEventListener("touchmove",m);el.removeEventListener("touchend",en);};
+  },[close]);
+  return <div style={{position:"relative",overflow:"hidden",borderRadius:16,marginBottom:10,userSelect:"none",WebkitUserSelect:"none"}}>
+    <div style={{position:"absolute",inset:0,display:"flex",justifyContent:"space-between",zIndex:0}}>
+      <button onClick={()=>{close();onAvailable&&onAvailable();}} style={{width:85,background:C.accentDim,border:"none",color:C.accent,fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>Available</button>
+      <button onClick={()=>{close();onTotal&&onTotal();}} style={{width:85,background:C.blueDim,border:"none",color:C.blue,fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>Total</button>
+    </div>
+    <div ref={rowRef} style={{touchAction:slide!==0?"none":"pan-y",position:"relative",zIndex:1,width:"100%",boxSizing:"border-box"}}>{children}</div>
+  </div>;
+}
+
 // ── SortableList ──────────────────────────────────────────────────────────────
 function SortableItem({id,children}){
   const{attributes,listeners,setNodeRef,transform,transition,isDragging}=useSortable({id:String(id)});
@@ -851,6 +877,11 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
   const[showCustomize,setShowCustomize]=useState(false);
   const[insightsType,setInsightsType]=useState(null); 
 
+  // حالة عرض الرصيد الجديد ورسالة التأكيد
+  const[balanceMode,setBalanceMode]=useState("total");
+  const[confirmBalanceMode,setConfirmBalanceMode]=useState(null);
+  useEffect(()=>{load("et_balance_mode","total").then(setBalanceMode);},[]);
+
   const defaultOrder = [
       {id: "accounts", label: "🏦 Accounts & Balance"},
       {id: "overview", label: "📊 Income & Cash Flow"},
@@ -863,6 +894,8 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
   useEffect(() => { load("et_dash_order", defaultOrder).then(setDashOrder); }, []);
 
   const totalBalance = useMemo(() => banks.reduce((s, b) => s + bankBalance(b.id), 0), [banks, bankBalance]);
+  // تم إضافة إجمالي السيولة المتاحة للصرف
+  const totalSafe = useMemo(() => banks.reduce((s, b) => s + safeToSpend(b.id), 0), [banks, safeToSpend]);
   const totalIncome = useMemo(() => txns.filter(t => t.type === "income" || t.type === "goal_return").reduce((a, t) => a + t.amount, 0), [txns]);
   const totalExp = useMemo(() => txns.filter(t => t.type === "expense" || t.type === "goal_withdraw").reduce((a, t) => a + t.amount, 0), [txns]);
   const curMonth=new Date().toISOString().slice(0,7);
@@ -922,12 +955,24 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
       if (section.id === "accounts") return (
         <div key="accounts">
           <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Accounts</div>
-          <Card style={{padding:"16px 18px",marginBottom:10,background:"linear-gradient(135deg,#1e1e28 0%,#23232f 100%)",borderColor:C.faint}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Total Balance</div><div style={{color:C.text,fontSize:30,fontWeight:800,letterSpacing:-1}}>{hideTotal?"••••••":fmt(totalBalance)}</div></div>
-              <button onClick={()=>setHideTotal(v=>!v)} style={{background:C.border,border:"none",color:C.muted,width:36,height:36,borderRadius:99,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>{hideTotal?"🙈":"🐵"}</button>
-            </div>
-          </Card>
+          
+          <BalanceSwipeCard onAvailable={()=>setConfirmBalanceMode("available")} onTotal={()=>setConfirmBalanceMode("total")}>
+            <Card style={{padding:"16px 18px",background:"linear-gradient(135deg,#1e1e28 0%,#23232f 100%)",borderColor:C.faint,position:"relative"}}>
+              <div style={{position:"absolute", right:20, top:"50%", transform:"translateY(-50%)", opacity:0.04, fontSize:60, pointerEvents:"none", letterSpacing:-15}}>⟷</div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{position:"relative", zIndex:2}}>
+                  <div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>
+                    {balanceMode === "total" ? "Total Balance" : "Available Balance"}
+                  </div>
+                  <div style={{color:C.text,fontSize:30,fontWeight:800,letterSpacing:-1}}>
+                    {hideTotal ? "••••••" : fmt(balanceMode === "total" ? totalBalance : totalSafe)}
+                  </div>
+                </div>
+                <button onClick={()=>setHideTotal(v=>!v)} style={{background:C.border,border:"none",color:C.muted,width:36,height:36,borderRadius:99,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",zIndex:2}}>{hideTotal?"🙈":"🐵"}</button>
+              </div>
+            </Card>
+          </BalanceSwipeCard>
+
           <div style={{marginBottom:20}}>
             <SortableList grid items={banks} onReorder={onBanks} renderItem={(b)=>{
               const bal=bankBalance(b.id),safe=safeToSpend(b.id),frozen=frozenForBank(b.id),hasFrozen=frozen>0;
@@ -1074,6 +1119,14 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
     </div>
 
     {viewTxn&&<TxnViewModal txn={viewTxn} onClose={()=>setViewTxn(null)}/>}
+
+    {confirmBalanceMode&&<ConfirmModal 
+      title="Change Display Mode?" 
+      message={confirmBalanceMode === "total" ? "This will display your total balance, including funds locked in saving goals." : "This will hide your locked goal savings and only display the funds available to spend."} 
+      confirmColor={C.blue} 
+      onClose={()=>setConfirmBalanceMode(null)} 
+      onConfirm={async()=>{setBalanceMode(confirmBalanceMode); await save("et_balance_mode", confirmBalanceMode); setConfirmBalanceMode(null); HAPTICS.success();}}
+    />}
 
     {insightsType && (
       <Modal title={insightsType === "expense" ? "Expense Breakdown" : "Income Breakdown"} onClose={()=>setInsightsType(null)} center={false}>
