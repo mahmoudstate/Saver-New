@@ -862,9 +862,9 @@ function Dashboard({txns,txnsAll,bills,budgets,banks,groups,expCats,savings,filt
   const [dashOrder, setDashOrder] = useState(defaultOrder);
   useEffect(() => { load("et_dash_order", defaultOrder).then(setDashOrder); }, []);
 
-  const totalBalance=banks.reduce((s,b)=>s+bankBalance(b.id),0);
-  const totalIncome=txns.filter(t=>t.type==="income"||t.type==="goal_return").reduce((a,t)=>a+t.amount,0);
-  const totalExp=txns.filter(t=>t.type==="expense"||t.type==="goal_withdraw").reduce((a,t)=>a+t.amount,0);
+  const totalBalance = useMemo(() => banks.reduce((s, b) => s + bankBalance(b.id), 0), [banks, bankBalance]);
+  const totalIncome = useMemo(() => txns.filter(t => t.type === "income" || t.type === "goal_return").reduce((a, t) => a + t.amount, 0), [txns]);
+  const totalExp = useMemo(() => txns.filter(t => t.type === "expense" || t.type === "goal_withdraw").reduce((a, t) => a + t.amount, 0), [txns]);
   const curMonth=new Date().toISOString().slice(0,7);
 
   const cashFlowPct = totalIncome > 0 ? Math.min(100, Math.round((totalExp / totalIncome) * 100)) : 0;
