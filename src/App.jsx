@@ -2175,58 +2175,7 @@ function AddBillForm({ brand, editItem, banks, expCats, onSave, onCancel }) {
   );
 }
 
-// ── Add Installment Form (Full Page & Spacious) ───────────────────────────────
-function AddInstForm({ editItem, banks, onSave, onCancel }) {
-  useEffect(() => { window.scrollTo(0, 0); }, []);
-  const [form, setForm] = useState(editItem || { name: "", store: "", totalAmount: "", monthlyAmount: "", totalMonths: "", paidMonths: "0", bankId: banks[0]?.id||"", dueDay: "1", reminderDays: "2", note: "" });
 
-  const handleSave = () => {
-    const total = parseFloat(form.totalAmount), monthly = parseFloat(form.monthlyAmount), months = parseInt(form.totalMonths);
-    if (!form.name || isNaN(total) || isNaN(monthly) || isNaN(months)) return;
-    onSave({ ...form, totalAmount: total, monthlyAmount: monthly, totalMonths: months, paidMonths: parseInt(form.paidMonths)||0, dueDay: parseInt(form.dueDay)||1, reminderDays: parseInt(form.reminderDays)||2 });
-  };
-
-  return (
-    <div style={{ padding: "24px 16px", minHeight: "100vh", background: C.bg }}>
-      <div style={{ display: "flex", alignItems: "center", marginBottom: 32 }}>
-        <button onClick={onCancel} style={{ background: "transparent", border: "none", color: C.text, fontSize: 22, cursor: "pointer", marginRight: 16 }}>❮</button>
-        <div style={{ color: C.text, fontSize: 24, fontWeight: 800 }}>{editItem ? "Edit Installment" : "New Installment"}</div>
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        <div style={{ background: C.surface, padding: 20, borderRadius: 16, border: `1px solid ${C.border}` }}>
-          <Input label="Item Name" placeholder="e.g. iPhone 16 Pro" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-          <div style={{ marginTop: 16 }}>
-            <Input label="Store / Provider" placeholder="e.g. Amazon, BestBuy" value={form.store} onChange={e => setForm({ ...form, store: e.target.value })} />
-          </div>
-        </div>
-
-        <div style={{ background: C.surface, padding: 20, borderRadius: 16, border: `1px solid ${C.border}` }}>
-          <div style={{ color: C.muted, fontSize: 12, fontWeight: 800, textTransform: "uppercase", marginBottom: 16, letterSpacing: 1 }}>Financials</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            <Input label="Total Price" type="number" step="any" placeholder="0.00" value={form.totalAmount} onChange={e => setForm({ ...form, totalAmount: e.target.value })} />
-            <Input label="Monthly Pay" type="number" step="any" placeholder="0.00" value={form.monthlyAmount} onChange={e => setForm({ ...form, monthlyAmount: e.target.value })} />
-            <Input label="Total Months" type="number" min="1" value={form.totalMonths} onChange={e => setForm({ ...form, totalMonths: e.target.value })} />
-            <Input label="Already Paid" type="number" min="0" value={form.paidMonths} onChange={e => setForm({ ...form, paidMonths: e.target.value })} />
-          </div>
-        </div>
-
-        <div style={{ background: C.surface, padding: 20, borderRadius: 16, border: `1px solid ${C.border}` }}>
-          <div style={{ color: C.muted, fontSize: 12, fontWeight: 800, textTransform: "uppercase", marginBottom: 16, letterSpacing: 1 }}>Payment Settings</div>
-          <Select label="Pay from Account" value={form.bankId} onChange={e => setForm({ ...form, bankId: e.target.value })}>{banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</Select>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 16 }}>
-            <Input label="Due Day (1-28)" type="number" min="1" max="28" value={form.dueDay} onChange={e => setForm({ ...form, dueDay: e.target.value })} />
-            <Input label="Remind Before" type="number" min="0" max="7" value={form.reminderDays} onChange={e => setForm({ ...form, reminderDays: e.target.value })} />
-          </div>
-        </div>
-      </div>
-      
-      <div style={{ marginTop: 32, paddingBottom: 40 }}>
-        <Btn full onClick={handleSave} style={{ padding: 16, fontSize: 16, borderRadius: 16 }}>{editItem ? "Save Changes" : "Create Installment"}</Btn>
-      </div>
-    </div>
-  );
-}
 
 // ── Provider Selector Screen (Full Page Grid) ────────────────────────────────
 function ProviderSelector({ onSelect, onCancel }) {
