@@ -2277,6 +2277,344 @@ function AddInstForm({ editItem, banks, onSave, onCancel }) {
   );
 }
 
+// ── MonthlyBills (The Ultimate UX Architecture) ───────────────────────────────
+function MonthlyBills({ bills, onSave, installments, onSaveInstallments, banks, expCats, onAddTxn, delTxn, currency, setAppAlert }) {
+  const getLocalMonth = () => {
+    const d = new Date();
+    const offset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - offset).toISOString().slice(0, 7);
+  };
+  const curMonth = getLocalMonth();
+
+  const [activeTab, setActiveTab] = useState("bills");
+  const [filterMonth, setFilterMonth] = useState(curMonth);
+
+  // Views: "list" | "select_provider" | "form_bill" | "form_inst" | "details_bill" | "details_inst"
+  const [view, setView] = useState("list");
+  const [selectedBrand, setSelectedBrand] = useState(null);
+  const [activeItem, setActiveItem] = useState(null);
+
+  const [confirmUndo, setConfirmUndo] = useState(null);
+  const payingRef = useRef({});
+
+  const allBrands = Object.keys(BRAND_PRESETS).reduce((acc, key) => [...acc, ...BRAND_PRESETS[key]], []);
+  
+  const availMonths = [...new Set([
+    ...bills.flatMap(b => b.payments?.map(p => p.month) || []),
+    ...installments.flatMap(i => i.payments?.map(p => p.month) || []),
+    curMonth
+  ])].sort().reverse();
+
+  // ── Helpers ──
+  const isPaid = (item, mStr = filterMonth) => item.payments?.some(p => p.month === mStr);
+  
+  // ── Core Actions ──
+  const handleSaveBill = async (formData) => {
+    let finalName = formData.name;
+    if (formData.brandId && formData.brandId !== "custom") {
+      const brandObj = allBrands.find(b => b.id === formData.brandId);
+      if (brandObj) finalName = brandObj.name;
+    }
+    const isNew = !activeItem;
+    const targetId = isNew ? Date.now().toString() : activeItem.id;
+    const creationDate = isNew ? curMonth : (activeItem.createdAt || curMonth);
+    const newObj = { ...formData, id: targetId, name: finalName, createdAt: creationDate, payments: activeItem?.payments || [] };
+    
+    if (isNew) await onSave([...bills, newObj]);
+    else await onSave(bills.map(b => b.id === targetId ? newObj : b));
+    
+    setView("list"); setActiveItem(null); setSelectedBrand(null);
+  };
+
+  const handleSaveInst = async (formData) => {
+    const isNew = !activeItem;
+    const targetId = isNew ? Date.now().toString() : activeItem.id;
+    const creationDate = isNew ? curMonth : (activeItem.createdAt || curMonth);
+    const status = formData.paidMonths >= formData.totalMonths ? "completed" : "active";
+    const newObj = { ...formData, id: targetId, createdAt: creationDate, status, payments: activeItem?.payments || [] };
+    
+    if (isNew) await onSaveInstallments([...installments, newObj]);
+    else await onSaveInstallments(installments.map(i => i.id === targetId ? newObj : i));
+    
+    setView("list"); setActiveItem(null);
+  };
+
+  const handlePayBill = async (bill) => {
+    if (payingRef.current[bill.id] || isPaid(bill)) return;
+    payingRef.current[bill.id] = true;
+    try {
+      const bank = banks.find(b => b.id === bill.bankId), cat = expCats.find(c => c.id === bill.catId);
+      const ms = `${MONTHS[+filterMonth.split("-")[1] - 1]} ${filterMonth.split("-")[0]}`;
+      const id = await onAddTxn({ type: "expense", amount: bill.amount, date: today(), bankId: bill.bankId, bankName: bank?.name, catId: bill.catId, catName: cat?.name || bill.name, catIcon: cat?.icon || "bills", note: `Monthly Bill: ${bill.name} ${ms}` });
+      if (id !== false) {
+        HAPTICS.success();
+        const updated = bills.map(b => b.id === bill.id ? { ...b, payments: [...(b.payments || []), { month: filterMonth, date: today(), txnId: id }] } : b);
+        await onSave(updated);
+        if (view === "details_bill") setActiveItem(updated.find(x => x.id === bill.id));
+      }
+    } finally { setTimeout(() => { payingRef.current[bill.id] = false; }, 1000); }
+  };
+
+  const handlePayInst = async (inst) => {
+    if (payingRef.current[inst.id] || isPaid(inst)) return;
+    payingRef.current[inst.id] = true;
+    try {
+      const bank = banks.find(b => b.id === inst.bankId);
+      const ms = `${MONTHS[+filterMonth.split("-")[1] - 1]} ${filterMonth.split("-")[0]}`;
+      const id = await onAddTxn({ type: "expense", amount: inst.monthlyAmount, date: today(), bankId: inst.bankId, bankName: bank?.name, catId: "", catName: "Installment", catIcon: "shopping", note: `Installment: ${inst.name} (${inst.paidMonths + 1}/${inst.totalMonths}) - ${ms}` });
+      if (id !== false) {
+        HAPTICS.success();
+        const newPaid = inst.paidMonths + 1;
+        const updated = installments.map(i => i.id === inst.id ? { ...i, paidMonths: newPaid, status: newPaid >= i.totalMonths ? "completed" : "active", payments: [...(i.payments || []), { month: filterMonth, date: today(), txnId: id }] } : i);
+        await onSaveInstallments(updated);
+        if (view === "details_inst") setActiveItem(updated.find(x => x.id === inst.id));
+      }
+    } finally { setTimeout(() => { payingRef.current[inst.id] = false; }, 1000); }
+  };
+
+  const handleUndoConfirm = async () => {
+    if (!confirmUndo) return;
+    const targetList = confirmUndo.type === "bill" ? bills : installments;
+    const saveFunc = confirmUndo.type === "bill" ? onSave : onSaveInstallments;
+    const item = targetList.find(x => x.id === confirmUndo.id);
+    const p = item.payments.find(x => x.month === filterMonth);
+    if (p?.txnId) await delTxn(p.txnId);
+    
+    let updated;
+    if (confirmUndo.type === "inst") {
+      updated = targetList.map(i => i.id === item.id ? { ...i, paidMonths: Math.max(0, i.paidMonths - 1), status: "active", payments: i.payments.filter(x => x.month !== filterMonth) } : i);
+      await saveFunc(updated);
+    } else {
+      updated = targetList.map(b => b.id === item.id ? { ...b, payments: b.payments.filter(x => x.month !== filterMonth) } : b);
+      await saveFunc(updated);
+    }
+    if(view.startsWith("details")) setActiveItem(updated.find(x => x.id === item.id));
+    setConfirmUndo(null);
+  };
+
+  const handleDelete = async (type, id) => {
+    if(type === "bill") await onSave(bills.filter(b => b.id !== id));
+    else await onSaveInstallments(installments.filter(i => i.id !== id));
+    setView("list"); setActiveItem(null);
+  };
+
+  // ── Time & Creation Filters ──
+  const isAllTime = filterMonth === "all";
+  const filteredBills = bills.filter(b => {
+    if (isAllTime) return true;
+    if (b.createdAt && filterMonth < b.createdAt) return false;
+    return true;
+  });
+  const filteredInsts = installments.filter(i => {
+    if (isAllTime) return true;
+    if (i.createdAt && filterMonth < i.createdAt) return false;
+    return true;
+  });
+
+  // ── Views Routing ──
+  if (view === "select_provider") return <ProviderSelector onSelect={(brand) => { setSelectedBrand(brand); setView("form_bill"); }} onCancel={() => setView("list")} />;
+  if (view === "form_bill") return <AddBillForm brand={selectedBrand} editItem={activeItem} banks={banks} expCats={expCats} onSave={handleSaveBill} onCancel={() => { setView("list"); setActiveItem(null); setSelectedBrand(null); }} />;
+  if (view === "form_inst") return <AddInstForm editItem={activeItem} banks={banks} onSave={handleSaveInst} onCancel={() => { setView("list"); setActiveItem(null); }} />;
+
+  // ── Details View (Immersive Pages) ──
+  if (view === "details_bill" && activeItem) {
+    const brand = allBrands.find(b => b.id === activeItem.brandId);
+    const themeColor = brand ? brand.color : C.accent;
+    const paid = isPaid(activeItem);
+    return (
+      <div style={{ minHeight: "100vh", background: `linear-gradient(180deg, ${themeColor}22 0%, ${C.bg} 40%)`, padding: "24px 16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+          <button onClick={() => { setView("list"); setActiveItem(null); }} style={{ background: "transparent", border: "none", color: C.text, fontSize: 22, cursor: "pointer" }}>❮</button>
+          <button onClick={() => setView("form_bill")} style={{ background: "transparent", border: "none", color: themeColor, fontSize: 16, fontWeight: 800, cursor: "pointer" }}>Edit</button>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 40 }}>
+          {brand ? (
+            <div style={{ width: 90, height: 90, borderRadius: 28, background: C.surface, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 16, boxShadow: `0 12px 32px ${themeColor}33` }}>
+              <img src={brand.logo} alt={brand.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            </div>
+          ) : <div style={{ fontSize: 60, marginBottom: 16 }}>⚡</div>}
+          <div style={{ color: C.text, fontSize: 28, fontWeight: 900, textAlign: "center" }}>{activeItem.name}</div>
+          <div style={{ color: themeColor, fontSize: 32, fontWeight: 900, marginTop: 8 }}>{fmt(activeItem.amount)}</div>
+        </div>
+        <div style={{ background: C.surface, borderRadius: 20, padding: 24, border: `1px solid ${C.border}`, marginBottom: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}><span style={{ color: C.muted, fontWeight: 700 }}>Due Date</span><span style={{ color: C.text, fontWeight: 800 }}>Day {activeItem.dueDay} of month</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}><span style={{ color: C.muted, fontWeight: 700 }}>Linked Account</span><span style={{ color: C.text, fontWeight: 800 }}>{banks.find(b => b.id === activeItem.bankId)?.name || "Unknown"}</span></div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: C.muted, fontWeight: 700 }}>Added Since</span><span style={{ color: C.text, fontWeight: 800 }}>{activeItem.createdAt || "Unknown"}</span></div>
+        </div>
+        {!paid ? (
+          <Btn full onClick={() => handlePayBill(activeItem)} style={{ background: themeColor, color: "#fff", padding: 18, fontSize: 18, borderRadius: 16, border: "none", boxShadow: `0 8px 24px ${themeColor}44` }}>✓ Mark as Paid</Btn>
+        ) : (
+          <div style={{ display: "flex", gap: 12 }}>
+            <div style={{ flex: 1, background: `${themeColor}22`, color: themeColor, padding: 18, borderRadius: 16, textAlign: "center", fontWeight: 800, fontSize: 16 }}>✓ Fully Paid</div>
+            <button onClick={() => setConfirmUndo({ type: "bill", id: activeItem.id, name: activeItem.name })} style={{ background: "transparent", border: `1px solid ${C.red}55`, color: C.red, borderRadius: 16, padding: "0 20px", fontWeight: 800 }}>Undo</button>
+          </div>
+        )}
+        <button onClick={() => handleDelete("bill", activeItem.id)} style={{ width: "100%", background: "transparent", border: "none", color: C.red, fontWeight: 700, marginTop: 32, cursor: "pointer" }}>Delete Subscription</button>
+      </div>
+    );
+  }
+
+  if (view === "details_inst" && activeItem) {
+    const paid = isPaid(activeItem);
+    const remaining = Math.max(0, activeItem.totalAmount - (activeItem.paidMonths * activeItem.monthlyAmount));
+    return (
+      <div style={{ minHeight: "100vh", background: C.bg, padding: "24px 16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+          <button onClick={() => { setView("list"); setActiveItem(null); }} style={{ background: "transparent", border: "none", color: C.text, fontSize: 22, cursor: "pointer" }}>❮</button>
+          <button onClick={() => setView("form_inst")} style={{ background: "transparent", border: "none", color: C.accent, fontSize: 16, fontWeight: 800, cursor: "pointer" }}>Edit</button>
+        </div>
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <div style={{ fontSize: 50, marginBottom: 12 }}>🛍️</div>
+          <div style={{ color: C.text, fontSize: 28, fontWeight: 900 }}>{activeItem.name}</div>
+          <div style={{ color: C.muted, fontSize: 15, fontWeight: 700, marginTop: 4 }}>from {activeItem.store}</div>
+        </div>
+        <div style={{ background: C.surface, borderRadius: 20, padding: 24, border: `1px solid ${C.border}`, marginBottom: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
+            <div><div style={{ color: C.muted, fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>Total Price</div><div style={{ color: C.text, fontSize: 22, fontWeight: 900 }}>{fmt(activeItem.totalAmount)}</div></div>
+            <div style={{ textAlign: "right" }}><div style={{ color: C.muted, fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>Monthly Load</div><div style={{ color: C.yellow, fontSize: 22, fontWeight: 900 }}>{fmt(activeItem.monthlyAmount)}</div></div>
+          </div>
+          <div style={{ background: C.bg, padding: 16, borderRadius: 14, marginBottom: 20 }}>
+             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}><span style={{ color: C.text, fontWeight: 800 }}>Remaining Debt</span><span style={{ color: C.red, fontWeight: 900, fontSize: 16 }}>{fmt(remaining)}</span></div>
+             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}><span style={{ color: C.muted, fontSize: 12, fontWeight: 700 }}>Progress: {activeItem.paidMonths} of {activeItem.totalMonths} months</span><span style={{ color: C.muted, fontSize: 12, fontWeight: 700 }}>Due Day: {activeItem.dueDay}</span></div>
+             <ProgressBar value={activeItem.paidMonths} max={activeItem.totalMonths} color={C.yellow} />
+          </div>
+          {activeItem.note && <div style={{ color: C.muted, fontSize: 13, background: `${C.border}33`, padding: 12, borderRadius: 10 }}>📝 {activeItem.note}</div>}
+        </div>
+        {activeItem.status === "completed" ? (
+          <div style={{ background: `${C.green}22`, color: C.green, padding: 18, borderRadius: 16, textAlign: "center", fontWeight: 800, fontSize: 16 }}>🎉 Fully Paid Off!</div>
+        ) : !paid ? (
+          <Btn full onClick={() => handlePayInst(activeItem)} style={{ padding: 18, fontSize: 18, borderRadius: 16 }}>✓ Pay Installment</Btn>
+        ) : (
+          <div style={{ display: "flex", gap: 12 }}>
+            <div style={{ flex: 1, background: C.surface, border: `1px solid ${C.border}`, color: C.accent, padding: 18, borderRadius: 16, textAlign: "center", fontWeight: 800, fontSize: 16 }}>✓ Paid for this month</div>
+            <button onClick={() => setConfirmUndo({ type: "inst", id: activeItem.id, name: activeItem.name })} style={{ background: "transparent", border: `1px solid ${C.yellow}55`, color: C.yellow, borderRadius: 16, padding: "0 20px", fontWeight: 800 }}>Undo</button>
+          </div>
+        )}
+        <button onClick={() => handleDelete("inst", activeItem.id)} style={{ width: "100%", background: "transparent", border: "none", color: C.red, fontWeight: 700, marginTop: 32, cursor: "pointer" }}>Delete Installment</button>
+      </div>
+    );
+  }
+
+  // ── Render Item Helpers for Lists ──
+  const renderBillCard = (bill) => {
+    const brand = allBrands.find(b => b.id === bill.brandId);
+    const paid = isPaid(bill);
+    return (
+      <SwipeRow key={bill.id} onEdit={() => { setActiveItem(bill); setView("form_bill"); }} onDelete={() => setConfirmUndo({ type: "delete_prompt", id: bill.id, listType: "bill" })}>
+        <div onClick={() => { setActiveItem(bill); setView("details_bill"); }} style={{ background: paid ? C.surface : C.card, padding: "16px", borderRadius: 18, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 16, cursor: "pointer", opacity: paid ? 0.6 : 1, transition: "transform 0.2s", boxShadow: `0 4px 12px ${C.border}33`, boxSizing:"border-box" }}>
+          {brand ? (
+            <div style={{ width: 48, height: 48, borderRadius: 14, background: C.surface, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0, border: `1px solid ${C.border}` }}>
+              <img src={brand.logo} alt={brand.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            </div>
+          ) : <div style={{ width: 48, height: 48, borderRadius: 14, background: `${C.border}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>⚡</div>}
+          
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: C.text, fontWeight: 800, fontSize: 16, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{bill.name}</div>
+            <div style={{ color: C.muted, fontSize: 12, marginTop: 4, fontWeight: 600 }}>Due: {bill.dueDay}</div>
+          </div>
+          
+          <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <div style={{ color: paid ? C.muted : C.text, fontSize: 18, fontWeight: 900 }}>{fmt(bill.amount)}</div>
+            {paid && <div style={{ color: C.green, fontSize: 10, fontWeight: 800, marginTop: 4, textTransform: "uppercase" }}>Paid ✓</div>}
+          </div>
+        </div>
+      </SwipeRow>
+    );
+  };
+
+  const renderInstCard = (inst) => {
+    const paid = isPaid(inst);
+    const remaining = Math.max(0, inst.totalAmount - (inst.paidMonths * inst.monthlyAmount));
+    return (
+      <SwipeRow key={inst.id} onEdit={() => { setActiveItem(inst); setView("form_inst"); }} onDelete={() => setConfirmUndo({ type: "delete_prompt", id: inst.id, listType: "inst" })}>
+        <div onClick={() => { setActiveItem(inst); setView("details_inst"); }} style={{ background: C.card, padding: "20px", borderRadius: 18, border: `1px solid ${inst.status === "completed" ? C.green : C.border}`, cursor: "pointer", opacity: paid ? 0.7 : 1, boxShadow: `0 4px 12px ${C.border}33`, boxSizing:"border-box" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+            <div>
+              <div style={{ color: C.text, fontWeight: 900, fontSize: 18 }}>{inst.name}</div>
+              <div style={{ color: C.muted, fontSize: 13, marginTop: 4, fontWeight: 600 }}>{inst.store}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ color: inst.status === "completed" ? C.green : C.text, fontWeight: 900, fontSize: 18 }}>{fmt(inst.monthlyAmount)}</div>
+              <div style={{ color: C.muted, fontSize: 11, fontWeight: 800, textTransform: "uppercase", marginTop: 2 }}>/ Month</div>
+            </div>
+          </div>
+          <ProgressBar value={inst.paidMonths} max={inst.totalMonths} color={inst.status === "completed" ? C.green : C.yellow} />
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10 }}>
+            <span style={{ color: C.muted, fontSize: 12, fontWeight: 700 }}>{inst.paidMonths}/{inst.totalMonths} Months</span>
+            <span style={{ color: inst.status === "completed" ? C.green : C.text, fontSize: 12, fontWeight: 800 }}>{inst.status === "completed" ? "Completed" : `${fmt(remaining)} left`}</span>
+          </div>
+        </div>
+      </SwipeRow>
+    );
+  };
+
+  // ── Main List View ──
+  return (
+    <div style={{ padding: "24px 16px 100px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div style={{ color: C.text, fontSize: 26, fontWeight: 900 }}>Obligations</div>
+        <Btn small onClick={() => activeTab === "bills" ? setView("select_provider") : setView("form_inst")} style={{ borderRadius: 12, padding: "8px 16px" }}>
+          + Add {activeTab === "bills" ? "Bill" : "Plan"}
+        </Btn>
+      </div>
+
+      <div style={{ display: "flex", background: C.surface, padding: 4, borderRadius: 14, marginBottom: 20, border: `1px solid ${C.border}` }}>
+        <button onClick={() => setActiveTab("bills")} style={{ flex: 1, padding: "12px 0", borderRadius: 10, border: "none", background: activeTab === "bills" ? C.bg : "transparent", color: activeTab === "bills" ? C.text : C.muted, fontWeight: 800, fontSize: 14, cursor: "pointer", boxShadow: activeTab === "bills" ? `0 2px 8px ${C.border}66` : "none", transition: "all 0.2s" }}>⚡ Bills</button>
+        <button onClick={() => setActiveTab("installments")} style={{ flex: 1, padding: "12px 0", borderRadius: 10, border: "none", background: activeTab === "installments" ? C.bg : "transparent", color: activeTab === "installments" ? C.text : C.muted, fontWeight: 800, fontSize: 14, cursor: "pointer", boxShadow: activeTab === "installments" ? `0 2px 8px ${C.border}66` : "none", transition: "all 0.2s" }}>💳 Installments</button>
+      </div>
+
+      <div style={{ marginBottom: 24 }}><MonthSelect value={filterMonth} onChange={e => setFilterMonth(e.target.value)} availMonths={availMonths} /></div>
+
+      {activeTab === "bills" && (
+        <>
+          {filteredBills.length === 0 && <EmptyState icon="📋" message={isAllTime ? "No bills found in history." : "No bills added yet or available for this month."} />}
+          {filteredBills.length > 0 && (
+             isAllTime ? (
+               <SortableList items={filteredBills} onReorder={onSave} renderItem={renderBillCard} />
+             ) : (
+               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                 {filteredBills.map(renderBillCard)}
+               </div>
+             )
+          )}
+        </>
+      )}
+
+      {activeTab === "installments" && (
+        <>
+          {filteredInsts.length === 0 && <EmptyState icon="📦" message="No installments found." />}
+          {isAllTime && filteredInsts.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
+              <div style={{ background: C.surface, padding: 16, borderRadius: 16, border: `1px solid ${C.border}` }}><div style={{ color: C.muted, fontSize: 10, fontWeight: 800, textTransform: "uppercase", marginBottom: 8 }}>Total Remaining Debt</div><div style={{ color: C.red, fontSize: 20, fontWeight: 900 }}>{fmt(filteredInsts.filter(i=>i.status!=="completed").reduce((a, i) => a + (i.totalAmount - (i.monthlyAmount * i.paidMonths)), 0))}</div></div>
+              <div style={{ background: C.surface, padding: 16, borderRadius: 16, border: `1px solid ${C.border}` }}><div style={{ color: C.muted, fontSize: 10, fontWeight: 800, textTransform: "uppercase", marginBottom: 8 }}>Total Monthly Load</div><div style={{ color: C.yellow, fontSize: 20, fontWeight: 900 }}>{fmt(filteredInsts.filter(i=>i.status!=="completed").reduce((a, i) => a + i.monthlyAmount, 0))}</div></div>
+            </div>
+          )}
+          {filteredInsts.length > 0 && (
+             isAllTime ? (
+               <SortableList items={filteredInsts} onReorder={onSaveInstallments} renderItem={renderInstCard} />
+             ) : (
+               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                 {filteredInsts.map(renderInstCard)}
+               </div>
+             )
+          )}
+        </>
+      )}
+
+      {confirmUndo && confirmUndo.type === "delete_prompt" && (
+        <ConfirmModal title="Delete Item?" message="This removes it from obligations. Past history records remain." onClose={() => setConfirmUndo(null)} onConfirm={() => {
+           handleDelete(confirmUndo.listType, confirmUndo.id);
+           setConfirmUndo(null);
+        }} />
+      )}
+      
+      {confirmUndo && confirmUndo.type !== "delete_prompt" && (
+        <ConfirmModal title="Undo Payment?" message={`Remove payment record for this month?`} confirmColor={C.yellow} onClose={() => setConfirmUndo(null)} onConfirm={handleUndoConfirm} />
+      )}
+    </div>
+  );
+}
+
 // ── UserManual (New Design) ───────────────────────────────────────────────────
 // Props: onBack, navigateTo
 // Replace the old UserManual function entirely with this one.
