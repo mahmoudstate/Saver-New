@@ -197,6 +197,15 @@ function Input({label,error,...props}){
   </div>;
 }
 
+function ProgressBar({ value, max, color }) {
+  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
+  return (
+    <div style={{ width: "100%", height: 8, background: C.border, borderRadius: 4, overflow: "hidden" }}>
+      <div style={{ width: `${pct}%`, height: "100%", background: color, transition: "width 0.3s ease" }} />
+    </div>
+  );
+}
+
 function Select({label,children,...props}){
   return <div style={{marginBottom:14}}>
     {label&&<div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>{label}</div>}
@@ -730,6 +739,7 @@ function SaverApp(){
   const saveGroups=async(g)=>{setGroups(g);await persist(KEYS.groups,g);};
   const saveSavings=async(s)=>{setSavings(s);await persist(KEYS.savings,s);};
   const saveBills=async(b)=>{setBills(b);await persist(KEYS.bills,b);};
+  const saveInstallments=async(inst)=>{setInstallments(inst);await persist(KEYS.installments,inst);};
   const saveBudgets=async(bdg)=>{setBudgets(bdg);await persist(KEYS.budgets,bdg);};
   const saveQuickActions=async(qa)=>{setQuickActions(qa);await persist(KEYS.quickActions,qa);};
   const saveCurrencyHandler=async(c)=>{if(c===currency)return;setPendingCurrency(c);};
@@ -785,7 +795,7 @@ function SaverApp(){
         {tab==="budgets"&&<BudgetsPage budgets={budgets} expCats={expCats} onSave={saveBudgets} onBack={()=>navigateTo("settings")} currency={currency} txns={txns}/>}
         {tab==="quickactions"&&<QuickActionsSetup quickActions={quickActions} expCats={expCats} banks={banks} onSave={saveQuickActions} onBack={()=>navigateTo("settings")}/>}
         {tab==="manual"&&<UserManual onBack={()=>navigateTo("settings")} navigateTo={navigateTo}/>}
-        {tab==="monthly"&&<MonthlyBills bills={bills} onSave={saveBills} banks={banks} expCats={expCats} onAddTxn={addTxn} delTxn={delTxn} currency={currency} setAppAlert={setAppAlert}/>}
+        {tab==="monthly"&&<MonthlyBills bills={bills} onSave={saveBills} installments={installments} onSaveInstallments={saveInstallments} banks={banks} expCats={expCats} onAddTxn={addTxn} delTxn={delTxn} currency={currency} setAppAlert={setAppAlert}/>}
         {tab==="settings"&&<Settings banks={banks} expCats={expCats} incCats={incCats} groups={groups} onBanks={saveBanks} onExpCats={saveExpCats} onIncCats={saveIncCats} onGroups={saveGroups} currency={currency} onCurrency={saveCurrencyHandler} username={username} onUsername={saveUsernameHandler} {...sharedProps} onOpenSavings={()=>navigateTo("savings")} onOpenBudgets={()=>navigateTo("budgets")} onOpenQuickActions={()=>navigateTo("quickactions")} onOpenManual={()=>navigateTo("manual")} setLastBackup={setLastBackup} txns={txns} bills={bills} savings={savings} budgets={budgets} onRestore={handleRestorePayload} setAppAlert={setAppAlert} navigateTo={navigateTo}/>}
         {tab==="privacy"&&<Privacy onBack={()=>navigateTo("dashboard")}/>}
         {tab!=="privacy"&&<BottomNav tab={tab} navigateTo={navigateTo} expCats={expCats} banks={banks} savings={activeSavings} onAdd={addTxn} currency={currency} {...sharedProps} setAppAlert={setAppAlert} quickActions={quickActions} txns={txns}/>}
@@ -2112,11 +2122,9 @@ function QuickActionsSetup({quickActions,expCats,banks,onSave,onBack}){
   </div>;
 }
 
-// ── MonthlyBills ──────────────────────────────────────────────────────────────
-function MonthlyBills({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,setAppAlert}){
+// ── MonthlyBills (Bills & Installments) ───────────────────────────────────────
+function MonthlyBills({bills,onSave,installments,onSaveInstallments,banks,expCats,onAddTxn,delTxn,currency,setAppAlert}){
   useEffect(()=>{window.scrollTo(0,0);},[]);
-
-  // ضبط الزمن المحلي لضمان الوقوف دايماً على الشهر الفعلي
   const getLocalMonth = () => {
     const d = new Date();
     const offset = d.getTimezoneOffset() * 60000;
@@ -2124,166 +2132,310 @@ function MonthlyBills({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,setAp
   };
   const curMonth = getLocalMonth();
 
-  const[showAdd,setShowAdd]=useState(false);const[editItem,setEditItem]=useState(null);const[confirmDelete,setConfirmDelete]=useState(null);const[confirmUndo,setConfirmUndo]=useState(null);
-  const[name,setName]=useState("");const[amount,setAmount]=useState("");const[bankId,setBankId]=useState(banks[0]?.id||"");const[catId,setCatId]=useState(expCats[0]?.id||"");const[dueDay,setDueDay]=useState("1");const[reminderDays,setReminderDays]=useState("2");
-  
-  const[filterMonth,setFilterMonth]=useState(curMonth);
-  const availMonths=[...new Set([...bills.flatMap(b=>b.payments?.map(p=>p.month)||[]),curMonth])].sort().reverse();
-  const payingRef=useRef({});
-  const isReportMode=filterMonth==="all";
+  const [activeTab, setActiveTab] = useState("bills");
+  const [filterMonth, setFilterMonth] = useState(curMonth);
+  const isReportMode = filterMonth !== "all" && filterMonth !== curMonth;
+  const isAllTime = filterMonth === "all";
 
-  const isPaid=(bill, mStr=filterMonth)=>bill.payments?.some(p=>p.month===mStr);
+  // استخراج كل الشركات من الكتالوج
+  const allBrands = Object.keys(BRAND_PRESETS).reduce((acc, key) => [...acc, ...BRAND_PRESETS[key]], []);
 
-  const getReminderStatus=(bill)=>{
-    if(!bill.dueDay)return null;
-    // التنبيهات بتظهر بس في الشهر الحالي مش في السجل القديم
-    if(isPaid(bill)||filterMonth!==curMonth)return null;
-    const now=new Date();
-    const due=new Date(now.getFullYear(),now.getMonth(),bill.dueDay);
+  // حالات الفواتير
+  const [showAddBill, setShowAddBill] = useState(false);
+  const [editBill, setEditBill] = useState(null);
+  const [billForm, setBillForm] = useState({name:"", amount:"", bankId:banks[0]?.id||"", catId:expCats[0]?.id||"", dueDay:"1", reminderDays:"2", brandId:""});
+
+  // حالات الأقساط
+  const [showAddInst, setShowAddInst] = useState(false);
+  const [editInst, setEditInst] = useState(null);
+  const [instForm, setInstForm] = useState({name:"", store:"", totalAmount:"", monthlyAmount:"", totalMonths:"", paidMonths:"0", bankId:banks[0]?.id||"", dueDay:"1", reminderDays:"2", note:""});
+
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmUndo, setConfirmUndo] = useState(null);
+  const payingRef = useRef({});
+
+  const availMonths = [...new Set([
+    ...bills.flatMap(b=>b.payments?.map(p=>p.month)||[]),
+    ...installments.flatMap(i=>i.payments?.map(p=>p.month)||[]),
+    curMonth
+  ])].sort().reverse();
+
+  // ── دوال الفواتير ──
+  const isPaid = (item, mStr=filterMonth) => item.payments?.some(p=>p.month===mStr);
+  const getReminderStatus = (item) => {
+    if(!item.dueDay || isPaid(item) || filterMonth!==curMonth) return null;
+    const now=new Date(), due=new Date(now.getFullYear(),now.getMonth(),item.dueDay);
     const diff=Math.ceil((due-now)/(1000*60*60*24));
-    if(diff<0)return{overdue:true,days:Math.abs(diff)};
-    if(diff<=(bill.reminderDays||2))return{overdue:false,days:diff};
+    if(diff<0) return {overdue:true, days:Math.abs(diff)};
+    if(diff<=(item.reminderDays||2)) return {overdue:false, days:diff};
     return null;
   };
 
-  const openAdd=(item=null)=>{setEditItem(item);setName(item?.name||"");setAmount(item?.amount?String(item.amount):"");setBankId(item?.bankId||banks[0]?.id||"");setCatId(item?.catId||expCats[0]?.id||"");setDueDay(item?.dueDay?String(item.dueDay):"1");setReminderDays(item?.reminderDays?String(item.reminderDays):"2");setShowAdd(true);};
-  
-  const handleSave=async()=>{
-    const pa=parseFloat(amount);if(!name||!amount||isNaN(pa)||pa<=0)return;
-    const dd=Math.min(28,Math.max(1,parseInt(dueDay)||1)),rd=Math.min(7,Math.max(0,parseInt(reminderDays)||2));
-    if(editItem)await onSave(bills.map(b=>b.id===editItem.id?{...b,name,amount:pa,bankId,catId,dueDay:dd,reminderDays:rd}:b));
-    else await onSave([...bills,{id:Date.now().toString(),name,amount:pa,bankId,catId,dueDay:dd,reminderDays:rd,payments:[]}]);
-    setShowAdd(false);setEditItem(null);setName("");setAmount("");
+  const handleSaveBill = async () => {
+    const pa = parseFloat(billForm.amount);
+    if(!billForm.name||!billForm.amount||isNaN(pa)||pa<=0) return;
+    const dd = Math.min(28,Math.max(1,parseInt(billForm.dueDay)||1)), rd = Math.min(7,Math.max(0,parseInt(billForm.reminderDays)||2));
+    
+    // سحب اسم الشركة لو تم اختيارها من الكتالوج
+    let finalName = billForm.name;
+    if(billForm.brandId && billForm.brandId !== "custom"){
+      const brand = allBrands.find(b=>b.id === billForm.brandId);
+      if(brand) finalName = brand.name;
+    }
+
+    if(editBill) await onSave(bills.map(b=>b.id===editBill.id?{...b, ...billForm, name:finalName, amount:pa, dueDay:dd, reminderDays:rd}:b));
+    else await onSave([...bills,{id:Date.now().toString(), ...billForm, name:finalName, amount:pa, dueDay:dd, reminderDays:rd, payments:[]}]);
+    setShowAddBill(false); setEditBill(null);
   };
 
-  const handlePay=async(bill)=>{
-    if(payingRef.current[bill.id]||isPaid(bill))return;
+  const handlePayBill = async (bill) => {
+    if(payingRef.current[bill.id]||isPaid(bill)) return;
     payingRef.current[bill.id]=true;
     try{
-      const bank=banks.find(b=>b.id===bill.bankId),cat=expCats.find(c=>c.id===bill.catId);
+      const bank=banks.find(b=>b.id===bill.bankId), cat=expCats.find(c=>c.id===bill.catId);
       const dateStr=today();
       const ms=`${MONTHS[+filterMonth.split("-")[1]-1]} ${filterMonth.split("-")[0]}`;
-      const id=await onAddTxn({type:"expense",amount:bill.amount,date:dateStr,bankId:bill.bankId,bankName:bank?.name,catId:bill.catId,catName:cat?.name||bill.name,catIcon:cat?.icon||"bills",note:`Monthly Bill: ${bill.name} ${ms}`});
-      if(id!==false){HAPTICS.success();await onSave(bills.map(b=>b.id===bill.id?{...b,payments:[...(b.payments||[]),{month:filterMonth,date:dateStr,txnId:id}]}:b));}
+      const id=await onAddTxn({type:"expense", amount:bill.amount, date:dateStr, bankId:bill.bankId, bankName:bank?.name, catId:bill.catId, catName:cat?.name||bill.name, catIcon:cat?.icon||"bills", note:`Monthly Bill: ${bill.name} ${ms}`});
+      if(id!==false){ HAPTICS.success(); await onSave(bills.map(b=>b.id===bill.id?{...b,payments:[...(b.payments||[]),{month:filterMonth,date:dateStr,txnId:id}]}:b)); }
     }finally{setTimeout(()=>{payingRef.current[bill.id]=false;},1000);}
   };
 
-  const handleUndoConfirm=async()=>{
-    if(!confirmUndo)return;
-    const p=confirmUndo.payments.find(p=>p.month===filterMonth);
-    if(p?.txnId)await delTxn(p.txnId);
-    await onSave(bills.map(b=>b.id===confirmUndo.id?{...b,payments:b.payments.filter(p=>p.month!==filterMonth)}:b));
+  // ── دوال الأقساط ──
+  const handleSaveInst = async () => {
+    const total = parseFloat(instForm.totalAmount), monthly = parseFloat(instForm.monthlyAmount), months = parseInt(instForm.totalMonths), paid = parseInt(instForm.paidMonths)||0;
+    if(!instForm.name||isNaN(total)||isNaN(monthly)||isNaN(months)) return;
+    const dd = Math.min(28,Math.max(1,parseInt(instForm.dueDay)||1)), rd = Math.min(7,Math.max(0,parseInt(instForm.reminderDays)||2));
+    
+    if(editInst) await onSaveInstallments(installments.map(i=>i.id===editInst.id?{...i, ...instForm, totalAmount:total, monthlyAmount:monthly, totalMonths:months, paidMonths:paid, dueDay:dd, reminderDays:rd}:i));
+    else await onSaveInstallments([...installments,{id:Date.now().toString(), ...instForm, totalAmount:total, monthlyAmount:monthly, totalMonths:months, paidMonths:paid, dueDay:dd, reminderDays:rd, payments:[], status:"active"}]);
+    setShowAddInst(false); setEditInst(null);
+  };
+
+  const handlePayInst = async (inst) => {
+    if(payingRef.current[inst.id]||isPaid(inst)) return;
+    payingRef.current[inst.id]=true;
+    try{
+      const bank=banks.find(b=>b.id===inst.bankId);
+      const dateStr=today();
+      const ms=`${MONTHS[+filterMonth.split("-")[1]-1]} ${filterMonth.split("-")[0]}`;
+      const id=await onAddTxn({type:"expense", amount:inst.monthlyAmount, date:dateStr, bankId:inst.bankId, bankName:bank?.name, catId:"", catName:"Installment", catIcon:"shopping", note:`Installment: ${inst.name} (${inst.paidMonths + 1}/${inst.totalMonths}) - ${ms}`});
+      if(id!==false){ 
+        HAPTICS.success(); 
+        const newPaid = inst.paidMonths + 1;
+        await onSaveInstallments(installments.map(i=>i.id===inst.id?{...i, paidMonths: newPaid, status: newPaid>=i.totalMonths?"completed":"active", payments:[...(i.payments||[]),{month:filterMonth,date:dateStr,txnId:id}]}:i)); 
+      }
+    }finally{setTimeout(()=>{payingRef.current[inst.id]=false;},1000);}
+  };
+
+  const handleUndoConfirm = async () => {
+    if(!confirmUndo) return;
+    const targetList = confirmUndo.type === "bill" ? bills : installments;
+    const saveFunc = confirmUndo.type === "bill" ? onSave : onSaveInstallments;
+    const item = targetList.find(x=>x.id===confirmUndo.id);
+    const p = item.payments.find(x=>x.month===filterMonth);
+    if(p?.txnId) await delTxn(p.txnId);
+    
+    if(confirmUndo.type === "inst"){
+       await saveFunc(targetList.map(i=>i.id===item.id?{...i, paidMonths: Math.max(0, i.paidMonths - 1), status: "active", payments:i.payments.filter(x=>x.month!==filterMonth)}:i));
+    } else {
+       await saveFunc(targetList.map(b=>b.id===item.id?{...b, payments:b.payments.filter(x=>x.month!==filterMonth)}:b));
+    }
     setConfirmUndo(null);
   };
 
-  const paidCount=isReportMode?0:bills.filter(b=>isPaid(b)).length;
-  const totalMonthly=bills.reduce((a,b)=>a+b.amount,0);
-  const paidAmount=isReportMode?0:bills.filter(b=>isPaid(b)).reduce((a,b)=>a+b.amount,0);
-
-  // ── تجهيز بيانات السجل الزمني (Timeline) ──
-  const yearsMap = {};
-  availMonths.forEach(m => {
-      const y = m.split("-")[0];
-      if(!yearsMap[y]) yearsMap[y] = [];
-      yearsMap[y].push(m);
+  // ── ترتيب ذكي ──
+  const sortedBills = [...bills].sort((a,b)=>{
+     const aPaid = isPaid(a), bPaid = isPaid(b);
+     if(aPaid && !bPaid) return 1; if(!aPaid && bPaid) return -1;
+     return (a.dueDay||99) - (b.dueDay||99);
   });
-  const sortedYears = Object.keys(yearsMap).sort().reverse();
 
-  // ── مصنع كروت الفواتير (ذكي بيعرف لو الكارت للقراءة بس ولا تفاعلي) ──
-  const renderBillCard = (bill, mStr, isReadOnly, idx) => {
-      const paid = isPaid(bill, mStr);
-      const bank = banks.find(b=>b.id===bill.bankId);
-      const cat = expCats.find(c=>c.id===bill.catId);
-      const isLast = !isReadOnly && idx === bills.length - 1;
+  const activeInsts = installments.filter(i => i.status !== "completed");
+  const completedInsts = installments.filter(i => i.status === "completed");
+  const sortedInsts = [...activeInsts].sort((a,b)=>{
+     const aPaid = isPaid(a), bPaid = isPaid(b);
+     if(aPaid && !bPaid) return 1; if(!aPaid && bPaid) return -1;
+     return (a.dueDay||99) - (b.dueDay||99);
+  });
 
-      const cardContent = (
-          <div style={{background:paid?C.accentDim+"44":isReadOnly?C.redDim+"33":C.card, boxSizing:"border-box", borderBottom:isLast?"none":isReadOnly?"none":`1px solid ${C.border}`, borderRadius:isReadOnly?12:0, border:isReadOnly?`1px solid ${paid?C.accent:C.red}66`:"none", marginBottom:isReadOnly?10:0}}>
-            <div style={{display:"flex", alignItems:"center", gap:10, padding:isReadOnly?"14px 16px":"12px 14px 6px"}}>
-              <div style={{width:36, height:36, borderRadius:99, background:paid?C.accentDim:C.border+"88", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0}}>{ICONS[cat?.icon]||"⚡"}</div>
-              <div style={{flex:1, minWidth:0}}>
-                <div style={{color:C.text, fontWeight:700, fontSize:15, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{bill.name}</div>
-                <div style={{color:C.muted, fontSize:11, marginTop:2}}>{bank?.name} · {cat?.name||"Bills"}{!isReadOnly&&bill.dueDay?<span style={{color:C.faint}}> · Due {bill.dueDay}</span>:null}</div>
-                {!isReadOnly&&(()=>{const r=getReminderStatus(bill);return r?<div style={{color:r.overdue?C.red:C.yellow, fontSize:10, fontWeight:700, marginTop:3}}>{r.overdue?"🔴 Overdue by "+r.days+" day"+(r.days!==1?"s":""):"🟡 Due in "+r.days+" day"+(r.days!==1?"s":"")}</div>:null;})()}
-              </div>
-              <div style={{textAlign:"right", flexShrink:0}}>
-                  <div style={{color:paid?C.accent:C.red, fontSize:17, fontWeight:800}}>{fmt(bill.amount)}</div>
-                  {isReadOnly && <div style={{color:paid?C.accent:C.red, fontSize:10, fontWeight:800, marginTop:4, letterSpacing:1}}>{paid?"✓ PAID":"✕ UNPAID"}</div>}
-              </div>
-            </div>
-            {!isReadOnly && (
-              <div style={{padding:"0 14px 12px", display:"flex", gap:8}}>
-                {!paid?<button onClick={()=>handlePay(bill)} style={{flex:1, background:C.accentDim, border:`1.5px solid ${C.accent}`, color:C.accent, borderRadius:10, height:44, fontWeight:800, fontSize:15, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6, fontFamily:"'DM Sans', sans-serif"}}><span>✓</span> Pay Now</button>:<>
-                  <div style={{flex:1, background:C.accent, color:C.bg, borderRadius:10, height:44, fontSize:14, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center", gap:6}}>✓ Paid {filterMonth.slice(5)}</div>
-                  <button onClick={()=>setConfirmUndo(bill)} style={{flexShrink:0, background:C.yellowDim, border:`1.5px solid ${C.yellow}`, color:C.yellow, borderRadius:10, height:44, padding:"0 18px", fontSize:14, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:4, fontFamily:"'DM Sans', sans-serif"}}>⟲ Undo</button>
-                </>}
-              </div>
-            )}
-          </div>
-      );
+  const openBillAdd = (item=null) => {
+    setEditBill(item);
+    setBillForm({
+      name:item?.name||"", amount:item?.amount?String(item.amount):"", bankId:item?.bankId||banks[0]?.id||"",
+      catId:item?.catId||expCats[0]?.id||"", dueDay:item?.dueDay?String(item.dueDay):"1", reminderDays:item?.reminderDays?String(item.reminderDays):"2", brandId:item?.brandId||""
+    });
+    setShowAddBill(true);
+  };
 
-      if(isReadOnly) return <div key={`${bill.id}-${mStr}`}>{cardContent}</div>;
-      return <SwipeRow key={bill.id} onEdit={()=>openAdd(bill)} onDelete={()=>setConfirmDelete(bill.id)}>{cardContent}</SwipeRow>;
+  const openInstAdd = (item=null) => {
+    setEditInst(item);
+    setInstForm({
+      name:item?.name||"", store:item?.store||"", totalAmount:item?.totalAmount?String(item.totalAmount):"",
+      monthlyAmount:item?.monthlyAmount?String(item.monthlyAmount):"", totalMonths:item?.totalMonths?String(item.totalMonths):"", paidMonths:item?.paidMonths?String(item.paidMonths):"0",
+      bankId:item?.bankId||banks[0]?.id||"", dueDay:item?.dueDay?String(item.dueDay):"1", reminderDays:item?.reminderDays?String(item.reminderDays):"2", note:item?.note||""
+    });
+    setShowAddInst(true);
   };
 
   return <div style={{padding:"24px 16px 0"}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><div style={{color:C.text,fontSize:22,fontWeight:800}}>Monthly Bills</div><Btn small onClick={()=>openAdd()}>+ Add Bill</Btn></div>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+      <div style={{color:C.text,fontSize:22,fontWeight:800}}>Obligations</div>
+      <Btn small onClick={()=>activeTab==="bills"?openBillAdd():openInstAdd()}>+ Add {activeTab==="bills"?"Bill":"Installment"}</Btn>
+    </div>
+
+    {/* Tabs Switcher */}
+    <div style={{display:"flex",gap:8,marginBottom:16}}>
+      <button onClick={()=>setActiveTab("bills")} style={{flex:1,padding:"10px 0",borderRadius:10,border:`1.5px solid ${activeTab==="bills"?C.accent:C.border}`,background:activeTab==="bills"?C.accentDim:"transparent",color:activeTab==="bills"?C.accent:C.muted,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>⚡ Bills</button>
+      <button onClick={()=>setActiveTab("installments")} style={{flex:1,padding:"10px 0",borderRadius:10,border:`1.5px solid ${activeTab==="installments"?C.accent:C.border}`,background:activeTab==="installments"?C.accentDim:"transparent",color:activeTab==="installments"?C.accent:C.muted,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>💳 Installments</button>
+    </div>
+
     <div style={{marginBottom:16}}><MonthSelect value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} availMonths={availMonths}/></div>
 
-    {bills.length===0&&<EmptyState icon="📋" message="No monthly bills added yet."/>}
-
-    {bills.length>0&&(
-      isReportMode ? (
-        // ── عرض السجل الزمني (All Time Timeline) ──
-        <div style={{display:"flex", flexDirection:"column", gap:24, paddingBottom: 40}}>
-          {sortedYears.map(year => (
-            <div key={year}>
-              <div style={{color:C.text, fontSize:28, fontWeight:800, marginBottom:16, borderBottom:`1px solid ${C.border}`, paddingBottom:8}}>{year}</div>
-              {yearsMap[year].map(monthStr => {
-                  const monthName = MONTHS[+monthStr.split("-")[1] - 1];
-                  const pdCnt = bills.filter(b=>isPaid(b, monthStr)).length;
-                  return (
-                    <div key={monthStr} style={{marginBottom: 20}}>
-                        <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12}}>
-                          <span style={{color:C.muted, fontSize:15, fontWeight:800, letterSpacing:1, textTransform:"uppercase"}}>{monthName}</span>
-                          <Pill color={pdCnt===bills.length?C.accent:C.red}>{pdCnt}/{bills.length} Paid</Pill>
-                        </div>
-                        <div style={{display:"flex", flexDirection:"column", gap:0}}>
-                          {bills.map(b => renderBillCard(b, monthStr, true))}
-                        </div>
+    {activeTab === "bills" ? (
+      <>
+        {bills.length===0 && <EmptyState icon="📋" message="No monthly bills added yet."/>}
+        {bills.length>0 && !isAllTime && (
+          <div style={{border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden", marginBottom:40}}>
+            {sortedBills.map((bill, idx)=>{
+               const paid = isPaid(bill);
+               const brand = allBrands.find(b=>b.id === bill.brandId);
+               const isLast = idx === bills.length - 1;
+               return <SwipeRow key={bill.id} onEdit={()=>openBillAdd(bill)} onDelete={()=>setConfirmDelete({type:"bill", id:bill.id})}>
+                  <div style={{background:paid?C.surface:C.card, opacity:paid?0.6:1, borderBottom:isLast?"none":`1px solid ${C.border}`, transition:"all 0.3s"}}>
+                    <div style={{display:"flex", alignItems:"center", gap:12, padding:"14px 16px 8px"}}>
+                       {brand ? (
+                         <div style={{width:42, height:42, borderRadius:12, background:brand.color, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", flexShrink:0}}>
+                            <img src={brand.logo} alt={brand.name} style={{width:"65%", height:"65%", objectFit:"contain", filter:"brightness(0) invert(1)"}}/>
+                         </div>
+                       ) : (
+                         <div style={{width:42, height:42, borderRadius:12, background:C.border, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0}}>⚡</div>
+                       )}
+                       <div style={{flex:1, minWidth:0}}>
+                          <div style={{color:C.text, fontWeight:700, fontSize:15, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{bill.name}</div>
+                          <div style={{color:C.muted, fontSize:12, marginTop:2}}>Due on {bill.dueDay}</div>
+                          {(()=>{const r=getReminderStatus(bill);return r?<div style={{color:r.overdue?C.red:C.yellow, fontSize:10, fontWeight:700, marginTop:4}}>{r.overdue?"🔴 Overdue by "+r.days+"d":"🟡 Due in "+r.days+"d"}</div>:null;})()}
+                       </div>
+                       <div style={{textAlign:"right", flexShrink:0}}>
+                          <div style={{color:paid?C.muted:C.red, fontSize:16, fontWeight:800}}>{fmt(bill.amount)}</div>
+                       </div>
                     </div>
-                  )
-              })}
-            </div>
-          ))}
-        </div>
-      ) : (
-        // ── عرض الشهر المحدد (تفاعلي) ──
-        <>
-          <div style={{color:C.muted,fontSize:13,marginBottom:16}}>{paidCount}/{bills.length} paid</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
-            <Card style={{padding:"14px 14px 12px"}}><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Total Monthly</div><div style={{color:C.text,fontSize:18,fontWeight:800}}>{fmt(totalMonthly)}</div></Card>
-            <Card style={{padding:"14px 14px 12px"}}><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Paid</div><div style={{color:C.accent,fontSize:18,fontWeight:800}}>{fmt(paidAmount)}</div></Card>
+                    <div style={{padding:"0 16px 14px", display:"flex", gap:8}}>
+                       {!paid ? <button onClick={()=>handlePayBill(bill)} style={{flex:1, background:C.accentDim, border:`1.5px solid ${C.accent}`, color:C.accent, borderRadius:10, padding:"8px", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans', sans-serif"}}>✓ Pay Now</button> : 
+                       <>
+                         <div style={{flex:1, background:C.surface, border:`1px solid ${C.border}`, color:C.muted, borderRadius:10, padding:"8px", fontSize:13, fontWeight:700, textAlign:"center"}}>✓ Paid</div>
+                         <button onClick={()=>setConfirmUndo({type:"bill", id:bill.id, name:bill.name})} style={{background:"transparent", border:`1px solid ${C.yellow}66`, color:C.yellow, borderRadius:10, padding:"0 16px", fontSize:12, fontWeight:700, cursor:"pointer"}}>Undo</button>
+                       </>}
+                    </div>
+                  </div>
+               </SwipeRow>;
+            })}
           </div>
-          <div style={{border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden", marginBottom: 40}}>
-            <SortableList gap={0} items={bills} onReorder={onSave} renderItem={(bill,idx)=>renderBillCard(bill, filterMonth, false, idx)}/>
+        )}
+      </>
+    ) : (
+      <>
+        {installments.length===0 && <EmptyState icon="📦" message="No active installments."/>}
+        {isAllTime && installments.length>0 && (
+          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16}}>
+             <Card style={{padding:"14px"}}><div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>Remaining Debt</div><div style={{color:C.red,fontSize:18,fontWeight:800}}>{fmt(activeInsts.reduce((a,i)=>a+(i.totalAmount-(i.monthlyAmount*i.paidMonths)),0))}</div></Card>
+             <Card style={{padding:"14px"}}><div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>Monthly Load</div><div style={{color:C.yellow,fontSize:18,fontWeight:800}}>{fmt(activeInsts.reduce((a,i)=>a+i.monthlyAmount,0))}</div></Card>
           </div>
-        </>
-      )
+        )}
+        
+        {!isAllTime && installments.length>0 && (
+          <div style={{display:"flex", flexDirection:"column", gap:10, marginBottom:40}}>
+            {sortedInsts.map(inst=>{
+               const paid = isPaid(inst);
+               const remaining = Math.max(0, inst.totalAmount - (inst.paidMonths * inst.monthlyAmount));
+               const pct = inst.totalMonths > 0 ? Math.min(100, Math.round((inst.paidMonths/inst.totalMonths)*100)) : 0;
+               return <SwipeRow key={inst.id} onEdit={()=>openInstAdd(inst)} onDelete={()=>setConfirmDelete({type:"inst", id:inst.id})}>
+                  <div style={{background:C.card, padding:"16px", borderRadius:12, border:`1px solid ${paid?C.accent+"44":C.border}`}}>
+                     <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12}}>
+                        <div>
+                           <div style={{color:C.text, fontWeight:800, fontSize:16}}>{inst.name}</div>
+                           <div style={{color:C.muted, fontSize:12, marginTop:2}}>{inst.store} · Due {inst.dueDay}</div>
+                           {(()=>{const r=getReminderStatus(inst);return r?<div style={{color:r.overdue?C.red:C.yellow, fontSize:10, fontWeight:700, marginTop:4}}>{r.overdue?"🔴 Overdue by "+r.days+"d":"🟡 Due in "+r.days+"d"}</div>:null;})()}
+                        </div>
+                        <div style={{textAlign:"right"}}>
+                           <div style={{color:paid?C.muted:C.red, fontWeight:800, fontSize:18}}>{fmt(inst.monthlyAmount)}</div>
+                           <div style={{color:C.faint, fontSize:11, fontWeight:700}}>Monthly</div>
+                        </div>
+                     </div>
+                     <div style={{display:"flex", justifyContent:"space-between", marginBottom:6}}>
+                        <span style={{color:C.muted, fontSize:11, fontWeight:700}}>Progress: {inst.paidMonths}/{inst.totalMonths}</span>
+                        <span style={{color:C.yellow, fontSize:11, fontWeight:700}}>{fmt(remaining)} left</span>
+                     </div>
+                     <ProgressBar value={inst.paidMonths} max={inst.totalMonths} color={C.yellow}/>
+                     <div style={{display:"flex", gap:8, marginTop:16}}>
+                       {!paid ? <button onClick={()=>handlePayInst(inst)} style={{flex:1, background:C.accentDim, border:`1.5px solid ${C.accent}`, color:C.accent, borderRadius:10, padding:"10px", fontWeight:800, fontSize:14, cursor:"pointer", fontFamily:"'DM Sans', sans-serif"}}>✓ Pay Installment</button> : 
+                       <>
+                         <div style={{flex:1, background:C.surface, border:`1px solid ${C.border}`, color:C.accent, borderRadius:10, padding:"10px", fontSize:14, fontWeight:800, textAlign:"center"}}>✓ Paid for this month</div>
+                         <button onClick={()=>setConfirmUndo({type:"inst", id:inst.id, name:inst.name})} style={{background:"transparent", border:`1px solid ${C.yellow}66`, color:C.yellow, borderRadius:10, padding:"0 16px", fontSize:12, fontWeight:700, cursor:"pointer"}}>Undo</button>
+                       </>}
+                     </div>
+                  </div>
+               </SwipeRow>;
+            })}
+          </div>
+        )}
+      </>
     )}
 
-    {showAdd&&<Modal title={editItem?"Edit Bill":"New Monthly Bill"} onClose={()=>{setShowAdd(false);setEditItem(null);}} center={false}>
-      <Input label="Bill Name" value={name} onChange={e=>setName(e.target.value)}/>
-      <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Amount</div><input type="number" step="any" value={amount} onChange={e=>setAmount(e.target.value)} style={IS}/></div>
-      <Select label="Pay from Account" value={bankId} onChange={e=>setBankId(e.target.value)}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select>
-      <Select label="Category" value={catId} onChange={e=>setCatId(e.target.value)}>{expCats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]||"📌"} {c.name}</option>)}</Select>
+    {/* Bill Modal */}
+    {showAddBill && <Modal title={editBill?"Edit Bill":"New Bill"} onClose={()=>setShowAddBill(false)} center={false}>
+      <Select label="Brand / Company" value={billForm.brandId} onChange={e=>{
+        const brandId = e.target.value;
+        const brand = allBrands.find(b=>b.id===brandId);
+        setBillForm({...billForm, brandId, name: brand ? brand.name : (brandId==="custom"?"":billForm.name)});
+      }}>
+        <option value="">-- Select Company --</option>
+        {Object.keys(BRAND_PRESETS).map(category => (
+           <optgroup key={category} label={category.toUpperCase()}>
+             {BRAND_PRESETS[category].map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+           </optgroup>
+        ))}
+        <optgroup label="OTHER"><option value="custom">✏️ Custom Company...</option></optgroup>
+      </Select>
+      {billForm.brandId === "custom" && <Input label="Bill Name" placeholder="e.g. Gym Membership" value={billForm.name} onChange={e=>setBillForm({...billForm, name:e.target.value})}/>}
+      
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
-        <div><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Due Day</div><input type="number" min="1" max="28" value={dueDay} onChange={e=>setDueDay(e.target.value)} style={IS}/><div style={{color:C.faint,fontSize:10,marginTop:4}}>Day of month (1–28)</div></div>
-        <div><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Remind Before</div><input type="number" min="0" max="7" value={reminderDays} onChange={e=>setReminderDays(e.target.value)} style={IS}/><div style={{color:C.faint,fontSize:10,marginTop:4}}>Days before (0–7)</div></div>
+        <Input label="Amount" type="number" step="any" value={billForm.amount} onChange={e=>setBillForm({...billForm, amount:e.target.value})}/>
+        <Select label="Account" value={billForm.bankId} onChange={e=>setBillForm({...billForm, bankId:e.target.value})}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select>
       </div>
-      <Btn full onClick={handleSave} style={{marginTop:12}}>{editItem?"Update Bill":"Add Bill"}</Btn>
+      <Select label="Category" value={billForm.catId} onChange={e=>setBillForm({...billForm, catId:e.target.value})}>{expCats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]||"📌"} {c.name}</option>)}</Select>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
+        <Input label="Due Day (1-28)" type="number" min="1" max="28" value={billForm.dueDay} onChange={e=>setBillForm({...billForm, dueDay:e.target.value})}/>
+        <Input label="Remind before (Days)" type="number" min="0" max="7" value={billForm.reminderDays} onChange={e=>setBillForm({...billForm, reminderDays:e.target.value})}/>
+      </div>
+      <Btn full onClick={handleSaveBill} style={{marginTop:12}}>{editBill?"Update Bill":"Add Bill"}</Btn>
     </Modal>}
-    {confirmDelete&&<ConfirmModal title="Delete Bill?" message="This removes the bill from your recurring list.\n\nPast payment records in History will remain." onClose={()=>setConfirmDelete(null)} onConfirm={async()=>{await onSave(bills.filter(b=>b.id!==confirmDelete));setConfirmDelete(null);}}/>}
-    {confirmUndo&&<ConfirmModal title="Undo Payment?" message={`This will mark "${confirmUndo.name}" as unpaid for this month and remove the payment transaction.`} confirmColor={C.yellow} onClose={()=>setConfirmUndo(null)} onConfirm={handleUndoConfirm}/>}
+
+    {/* Installment Modal */}
+    {showAddInst && <Modal title={editInst?"Edit Installment":"New Installment"} onClose={()=>setShowAddInst(false)} center={false}>
+      <Input label="Item Name" placeholder="e.g. iPhone 16 Pro" value={instForm.name} onChange={e=>setInstForm({...instForm, name:e.target.value})}/>
+      <Input label="Store / Provider" placeholder="e.g. Amazon" value={instForm.store} onChange={e=>setInstForm({...instForm, store:e.target.value})}/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
+        <Input label="Total Price" type="number" step="any" value={instForm.totalAmount} onChange={e=>setInstForm({...instForm, totalAmount:e.target.value})}/>
+        <Input label="Monthly Pay" type="number" step="any" value={instForm.monthlyAmount} onChange={e=>setInstForm({...instForm, monthlyAmount:e.target.value})}/>
+        <Input label="Total Months" type="number" min="1" value={instForm.totalMonths} onChange={e=>setInstForm({...instForm, totalMonths:e.target.value})}/>
+        <Input label="Already Paid" type="number" min="0" value={instForm.paidMonths} onChange={e=>setInstForm({...instForm, paidMonths:e.target.value})}/>
+      </div>
+      <Select label="Pay from Account" value={instForm.bankId} onChange={e=>setInstForm({...instForm, bankId:e.target.value})}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
+        <Input label="Due Day (1-28)" type="number" min="1" max="28" value={instForm.dueDay} onChange={e=>setInstForm({...instForm, dueDay:e.target.value})}/>
+        <Input label="Remind before (Days)" type="number" min="0" max="7" value={instForm.reminderDays} onChange={e=>setInstForm({...instForm, reminderDays:e.target.value})}/>
+      </div>
+      <Input label="Notes (Optional)" placeholder="Order #, info..." value={instForm.note} onChange={e=>setInstForm({...instForm, note:e.target.value})}/>
+      <Btn full onClick={handleSaveInst} style={{marginTop:12}}>{editInst?"Update Installment":"Add Installment"}</Btn>
+    </Modal>}
+
+    {/* Delete & Undo Confirmations */}
+    {confirmDelete && <ConfirmModal title="Delete item?" message="This removes it from obligations. Past history records remain." onClose={()=>setConfirmDelete(null)} onConfirm={async()=>{
+       if(confirmDelete.type==="bill") await onSave(bills.filter(b=>b.id!==confirmDelete.id));
+       else await onSaveInstallments(installments.filter(i=>i.id!==confirmDelete.id));
+       setConfirmDelete(null);
+    }}/>}
+    {confirmUndo && <ConfirmModal title="Undo Payment?" message={`Mark "${confirmUndo.name}" as unpaid for this month and remove the transaction?`} confirmColor={C.yellow} onClose={()=>setConfirmUndo(null)} onConfirm={handleUndoConfirm}/>}
   </div>;
 }
 
