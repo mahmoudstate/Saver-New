@@ -2114,321 +2114,278 @@ function QuickActionsSetup({quickActions,expCats,banks,onSave,onBack}){
   </div>;
 }
 
-// ── MonthlyBills (Bills & Installments) ───────────────────────────────────────
-function MonthlyBills({bills,onSave,installments,onSaveInstallments,banks,expCats,onAddTxn,delTxn,currency,setAppAlert}){
-  useEffect(()=>{window.scrollTo(0,0);},[]);
-  const getLocalMonth = () => {
-    const d = new Date();
-    const offset = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - offset).toISOString().slice(0,7);
-  };
-  const curMonth = getLocalMonth();
+// ── Add Bill Form (Full Page & Spacious) ──────────────────────────────────────
+function AddBillForm({ brand, editItem, banks, expCats, onSave, onCancel }) {
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+  const [form, setForm] = useState(editItem || { name: brand?.name||"", amount: "", bankId: banks[0]?.id||"", catId: expCats[0]?.id||"", dueDay: "1", reminderDays: "2", brandId: brand?.id||"custom" });
 
-  const [activeTab, setActiveTab] = useState("bills");
-  const [filterMonth, setFilterMonth] = useState(curMonth);
-  const isReportMode = filterMonth !== "all" && filterMonth !== curMonth;
-  const isAllTime = filterMonth === "all";
-
-  // استخراج كل الشركات من الكتالوج
-  const allBrands = Object.keys(BRAND_PRESETS).reduce((acc, key) => [...acc, ...BRAND_PRESETS[key]], []);
-
-  // حالات الفواتير
-  const [showAddBill, setShowAddBill] = useState(false);
-  const [editBill, setEditBill] = useState(null);
-  const [billForm, setBillForm] = useState({name:"", amount:"", bankId:banks[0]?.id||"", catId:expCats[0]?.id||"", dueDay:"1", reminderDays:"2", brandId:""});
-
-  // حالات الأقساط
-  const [showAddInst, setShowAddInst] = useState(false);
-  const [editInst, setEditInst] = useState(null);
-  const [instForm, setInstForm] = useState({name:"", store:"", totalAmount:"", monthlyAmount:"", totalMonths:"", paidMonths:"0", bankId:banks[0]?.id||"", dueDay:"1", reminderDays:"2", note:""});
-
-  const [confirmDelete, setConfirmDelete] = useState(null);
-  const [confirmUndo, setConfirmUndo] = useState(null);
-  const payingRef = useRef({});
-
-  const availMonths = [...new Set([
-    ...bills.flatMap(b=>b.payments?.map(p=>p.month)||[]),
-    ...installments.flatMap(i=>i.payments?.map(p=>p.month)||[]),
-    curMonth
-  ])].sort().reverse();
-
-  // ── دوال الفواتير ──
-  const isPaid = (item, mStr=filterMonth) => item.payments?.some(p=>p.month===mStr);
-  const getReminderStatus = (item) => {
-    if(!item.dueDay || isPaid(item) || filterMonth!==curMonth) return null;
-    const now=new Date(), due=new Date(now.getFullYear(),now.getMonth(),item.dueDay);
-    const diff=Math.ceil((due-now)/(1000*60*60*24));
-    if(diff<0) return {overdue:true, days:Math.abs(diff)};
-    if(diff<=(item.reminderDays||2)) return {overdue:false, days:diff};
-    return null;
+  const handleSave = () => {
+    const pa = parseFloat(form.amount);
+    if (!form.name || isNaN(pa) || pa <= 0) return;
+    onSave({ ...form, amount: pa, dueDay: parseInt(form.dueDay)||1, reminderDays: parseInt(form.reminderDays)||2 });
   };
 
-  const handleSaveBill = async () => {
-    const pa = parseFloat(billForm.amount);
-    if(!billForm.name||!billForm.amount||isNaN(pa)||pa<=0) return;
-    const dd = Math.min(28,Math.max(1,parseInt(billForm.dueDay)||1)), rd = Math.min(7,Math.max(0,parseInt(billForm.reminderDays)||2));
-    
-    // سحب اسم الشركة لو تم اختيارها من الكتالوج
-    let finalName = billForm.name;
-    if(billForm.brandId && billForm.brandId !== "custom"){
-      const brand = allBrands.find(b=>b.id === billForm.brandId);
-      if(brand) finalName = brand.name;
-    }
+  return (
+    <div style={{ padding: "24px 16px", minHeight: "100vh", background: C.bg }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 32 }}>
+        <button onClick={onCancel} style={{ background: "transparent", border: "none", color: C.text, fontSize: 22, cursor: "pointer", marginRight: 16 }}>❮</button>
+        <div style={{ color: C.text, fontSize: 24, fontWeight: 800 }}>{editItem ? "Edit Bill" : "New Bill Details"}</div>
+      </div>
 
-    if(editBill) await onSave(bills.map(b=>b.id===editBill.id?{...b, ...billForm, name:finalName, amount:pa, dueDay:dd, reminderDays:rd}:b));
-    else await onSave([...bills,{id:Date.now().toString(), ...billForm, name:finalName, amount:pa, dueDay:dd, reminderDays:rd, payments:[]}]);
-    setShowAddBill(false); setEditBill(null);
-  };
-
-  const handlePayBill = async (bill) => {
-    if(payingRef.current[bill.id]||isPaid(bill)) return;
-    payingRef.current[bill.id]=true;
-    try{
-      const bank=banks.find(b=>b.id===bill.bankId), cat=expCats.find(c=>c.id===bill.catId);
-      const dateStr=today();
-      const ms=`${MONTHS[+filterMonth.split("-")[1]-1]} ${filterMonth.split("-")[0]}`;
-      const id=await onAddTxn({type:"expense", amount:bill.amount, date:dateStr, bankId:bill.bankId, bankName:bank?.name, catId:bill.catId, catName:cat?.name||bill.name, catIcon:cat?.icon||"bills", note:`Monthly Bill: ${bill.name} ${ms}`});
-      if(id!==false){ HAPTICS.success(); await onSave(bills.map(b=>b.id===bill.id?{...b,payments:[...(b.payments||[]),{month:filterMonth,date:dateStr,txnId:id}]}:b)); }
-    }finally{setTimeout(()=>{payingRef.current[bill.id]=false;},1000);}
-  };
-
-  // ── دوال الأقساط ──
-  const handleSaveInst = async () => {
-    const total = parseFloat(instForm.totalAmount), monthly = parseFloat(instForm.monthlyAmount), months = parseInt(instForm.totalMonths), paid = parseInt(instForm.paidMonths)||0;
-    if(!instForm.name||isNaN(total)||isNaN(monthly)||isNaN(months)) return;
-    const dd = Math.min(28,Math.max(1,parseInt(instForm.dueDay)||1)), rd = Math.min(7,Math.max(0,parseInt(instForm.reminderDays)||2));
-    
-    if(editInst) await onSaveInstallments(installments.map(i=>i.id===editInst.id?{...i, ...instForm, totalAmount:total, monthlyAmount:monthly, totalMonths:months, paidMonths:paid, dueDay:dd, reminderDays:rd}:i));
-    else await onSaveInstallments([...installments,{id:Date.now().toString(), ...instForm, totalAmount:total, monthlyAmount:monthly, totalMonths:months, paidMonths:paid, dueDay:dd, reminderDays:rd, payments:[], status:"active"}]);
-    setShowAddInst(false); setEditInst(null);
-  };
-
-  const handlePayInst = async (inst) => {
-    if(payingRef.current[inst.id]||isPaid(inst)) return;
-    payingRef.current[inst.id]=true;
-    try{
-      const bank=banks.find(b=>b.id===inst.bankId);
-      const dateStr=today();
-      const ms=`${MONTHS[+filterMonth.split("-")[1]-1]} ${filterMonth.split("-")[0]}`;
-      const id=await onAddTxn({type:"expense", amount:inst.monthlyAmount, date:dateStr, bankId:inst.bankId, bankName:bank?.name, catId:"", catName:"Installment", catIcon:"shopping", note:`Installment: ${inst.name} (${inst.paidMonths + 1}/${inst.totalMonths}) - ${ms}`});
-      if(id!==false){ 
-        HAPTICS.success(); 
-        const newPaid = inst.paidMonths + 1;
-        await onSaveInstallments(installments.map(i=>i.id===inst.id?{...i, paidMonths: newPaid, status: newPaid>=i.totalMonths?"completed":"active", payments:[...(i.payments||[]),{month:filterMonth,date:dateStr,txnId:id}]}:i)); 
-      }
-    }finally{setTimeout(()=>{payingRef.current[inst.id]=false;},1000);}
-  };
-
-  const handleUndoConfirm = async () => {
-    if(!confirmUndo) return;
-    const targetList = confirmUndo.type === "bill" ? bills : installments;
-    const saveFunc = confirmUndo.type === "bill" ? onSave : onSaveInstallments;
-    const item = targetList.find(x=>x.id===confirmUndo.id);
-    const p = item.payments.find(x=>x.month===filterMonth);
-    if(p?.txnId) await delTxn(p.txnId);
-    
-    if(confirmUndo.type === "inst"){
-       await saveFunc(targetList.map(i=>i.id===item.id?{...i, paidMonths: Math.max(0, i.paidMonths - 1), status: "active", payments:i.payments.filter(x=>x.month!==filterMonth)}:i));
-    } else {
-       await saveFunc(targetList.map(b=>b.id===item.id?{...b, payments:b.payments.filter(x=>x.month!==filterMonth)}:b));
-    }
-    setConfirmUndo(null);
-  };
-
-  // ── ترتيب ذكي ──
-  const sortedBills = [...bills].sort((a,b)=>{
-     const aPaid = isPaid(a), bPaid = isPaid(b);
-     if(aPaid && !bPaid) return 1; if(!aPaid && bPaid) return -1;
-     return (a.dueDay||99) - (b.dueDay||99);
-  });
-
-  const activeInsts = installments.filter(i => i.status !== "completed");
-  const completedInsts = installments.filter(i => i.status === "completed");
-  const sortedInsts = [...activeInsts].sort((a,b)=>{
-     const aPaid = isPaid(a), bPaid = isPaid(b);
-     if(aPaid && !bPaid) return 1; if(!aPaid && bPaid) return -1;
-     return (a.dueDay||99) - (b.dueDay||99);
-  });
-
-  const openBillAdd = (item=null) => {
-    setEditBill(item);
-    setBillForm({
-      name:item?.name||"", amount:item?.amount?String(item.amount):"", bankId:item?.bankId||banks[0]?.id||"",
-      catId:item?.catId||expCats[0]?.id||"", dueDay:item?.dueDay?String(item.dueDay):"1", reminderDays:item?.reminderDays?String(item.reminderDays):"2", brandId:item?.brandId||""
-    });
-    setShowAddBill(true);
-  };
-
-  const openInstAdd = (item=null) => {
-    setEditInst(item);
-    setInstForm({
-      name:item?.name||"", store:item?.store||"", totalAmount:item?.totalAmount?String(item.totalAmount):"",
-      monthlyAmount:item?.monthlyAmount?String(item.monthlyAmount):"", totalMonths:item?.totalMonths?String(item.totalMonths):"", paidMonths:item?.paidMonths?String(item.paidMonths):"0",
-      bankId:item?.bankId||banks[0]?.id||"", dueDay:item?.dueDay?String(item.dueDay):"1", reminderDays:item?.reminderDays?String(item.reminderDays):"2", note:item?.note||""
-    });
-    setShowAddInst(true);
-  };
-
-  return <div style={{padding:"24px 16px 0"}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-      <div style={{color:C.text,fontSize:22,fontWeight:800}}>Obligations</div>
-      <Btn small onClick={()=>activeTab==="bills"?openBillAdd():openInstAdd()}>+ Add {activeTab==="bills"?"Bill":"Installment"}</Btn>
-    </div>
-
-    {/* Tabs Switcher */}
-    <div style={{display:"flex",gap:8,marginBottom:16}}>
-      <button onClick={()=>setActiveTab("bills")} style={{flex:1,padding:"10px 0",borderRadius:10,border:`1.5px solid ${activeTab==="bills"?C.accent:C.border}`,background:activeTab==="bills"?C.accentDim:"transparent",color:activeTab==="bills"?C.accent:C.muted,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>⚡ Bills</button>
-      <button onClick={()=>setActiveTab("installments")} style={{flex:1,padding:"10px 0",borderRadius:10,border:`1.5px solid ${activeTab==="installments"?C.accent:C.border}`,background:activeTab==="installments"?C.accentDim:"transparent",color:activeTab==="installments"?C.accent:C.muted,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>💳 Installments</button>
-    </div>
-
-    <div style={{marginBottom:16}}><MonthSelect value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} availMonths={availMonths}/></div>
-
-    {activeTab === "bills" ? (
-      <>
-        {bills.length===0 && <EmptyState icon="📋" message="No monthly bills added yet."/>}
-        {bills.length>0 && !isAllTime && (
-          <div style={{border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden", marginBottom:40}}>
-            {sortedBills.map((bill, idx)=>{
-               const paid = isPaid(bill);
-               const brand = allBrands.find(b=>b.id === bill.brandId);
-               const isLast = idx === bills.length - 1;
-               return <SwipeRow key={bill.id} onEdit={()=>openBillAdd(bill)} onDelete={()=>setConfirmDelete({type:"bill", id:bill.id})}>
-                  <div style={{background:paid?C.surface:C.card, opacity:paid?0.6:1, borderBottom:isLast?"none":`1px solid ${C.border}`, transition:"all 0.3s"}}>
-                    <div style={{display:"flex", alignItems:"center", gap:12, padding:"14px 16px 8px"}}>
-                       {brand ? (
-                         <div style={{width:42, height:42, borderRadius:12, background:brand.color, display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", flexShrink:0}}>
-                            <img src={brand.logo} alt={brand.name} style={{width:"65%", height:"65%", objectFit:"contain", filter:"brightness(0) invert(1)"}}/>
-                         </div>
-                       ) : (
-                         <div style={{width:42, height:42, borderRadius:12, background:C.border, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0}}>⚡</div>
-                       )}
-                       <div style={{flex:1, minWidth:0}}>
-                          <div style={{color:C.text, fontWeight:700, fontSize:15, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{bill.name}</div>
-                          <div style={{color:C.muted, fontSize:12, marginTop:2}}>Due on {bill.dueDay}</div>
-                          {(()=>{const r=getReminderStatus(bill);return r?<div style={{color:r.overdue?C.red:C.yellow, fontSize:10, fontWeight:700, marginTop:4}}>{r.overdue?"🔴 Overdue by "+r.days+"d":"🟡 Due in "+r.days+"d"}</div>:null;})()}
-                       </div>
-                       <div style={{textAlign:"right", flexShrink:0}}>
-                          <div style={{color:paid?C.muted:C.red, fontSize:16, fontWeight:800}}>{fmt(bill.amount)}</div>
-                       </div>
-                    </div>
-                    <div style={{padding:"0 16px 14px", display:"flex", gap:8}}>
-                       {!paid ? <button onClick={()=>handlePayBill(bill)} style={{flex:1, background:C.accentDim, border:`1.5px solid ${C.accent}`, color:C.accent, borderRadius:10, padding:"8px", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans', sans-serif"}}>✓ Pay Now</button> : 
-                       <>
-                         <div style={{flex:1, background:C.surface, border:`1px solid ${C.border}`, color:C.muted, borderRadius:10, padding:"8px", fontSize:13, fontWeight:700, textAlign:"center"}}>✓ Paid</div>
-                         <button onClick={()=>setConfirmUndo({type:"bill", id:bill.id, name:bill.name})} style={{background:"transparent", border:`1px solid ${C.yellow}66`, color:C.yellow, borderRadius:10, padding:"0 16px", fontSize:12, fontWeight:700, cursor:"pointer"}}>Undo</button>
-                       </>}
-                    </div>
-                  </div>
-               </SwipeRow>;
-            })}
+      {/* Brand Display (لو اختار شركة من الكتالوج) */}
+      {brand && brand !== "custom" && !editItem && (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 32 }}>
+          <div style={{ width: 80, height: 80, borderRadius: 24, background: C.surface, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 12, padding: 12, boxShadow: `0 8px 24px ${C.border}66` }}>
+            <img src={brand.logo} alt={brand.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
           </div>
-        )}
-      </>
-    ) : (
-      <>
-        {installments.length===0 && <EmptyState icon="📦" message="No active installments."/>}
-        {isAllTime && installments.length>0 && (
-          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16}}>
-             <Card style={{padding:"14px"}}><div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>Remaining Debt</div><div style={{color:C.red,fontSize:18,fontWeight:800}}>{fmt(activeInsts.reduce((a,i)=>a+(i.totalAmount-(i.monthlyAmount*i.paidMonths)),0))}</div></Card>
-             <Card style={{padding:"14px"}}><div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>Monthly Load</div><div style={{color:C.yellow,fontSize:18,fontWeight:800}}>{fmt(activeInsts.reduce((a,i)=>a+i.monthlyAmount,0))}</div></Card>
-          </div>
+          <div style={{ color: C.text, fontSize: 20, fontWeight: 800 }}>{brand.name}</div>
+        </div>
+      )}
+
+      {/* Spacious Form */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        {/* حقل الاسم يظهر بس لو بيعمل خدمة Custom */}
+        {(!brand || brand === "custom" || editItem?.brandId === "custom") && (
+          <Input label="Bill Name" placeholder="e.g. Gym Membership" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
         )}
         
-        {!isAllTime && installments.length>0 && (
-          <div style={{display:"flex", flexDirection:"column", gap:10, marginBottom:40}}>
-            {sortedInsts.map(inst=>{
-               const paid = isPaid(inst);
-               const remaining = Math.max(0, inst.totalAmount - (inst.paidMonths * inst.monthlyAmount));
-               const pct = inst.totalMonths > 0 ? Math.min(100, Math.round((inst.paidMonths/inst.totalMonths)*100)) : 0;
-               return <SwipeRow key={inst.id} onEdit={()=>openInstAdd(inst)} onDelete={()=>setConfirmDelete({type:"inst", id:inst.id})}>
-                  <div style={{background:C.card, padding:"16px", borderRadius:12, border:`1px solid ${paid?C.accent+"44":C.border}`}}>
-                     <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12}}>
-                        <div>
-                           <div style={{color:C.text, fontWeight:800, fontSize:16}}>{inst.name}</div>
-                           <div style={{color:C.muted, fontSize:12, marginTop:2}}>{inst.store} · Due {inst.dueDay}</div>
-                           {(()=>{const r=getReminderStatus(inst);return r?<div style={{color:r.overdue?C.red:C.yellow, fontSize:10, fontWeight:700, marginTop:4}}>{r.overdue?"🔴 Overdue by "+r.days+"d":"🟡 Due in "+r.days+"d"}</div>:null;})()}
-                        </div>
-                        <div style={{textAlign:"right"}}>
-                           <div style={{color:paid?C.muted:C.red, fontWeight:800, fontSize:18}}>{fmt(inst.monthlyAmount)}</div>
-                           <div style={{color:C.faint, fontSize:11, fontWeight:700}}>Monthly</div>
-                        </div>
-                     </div>
-                     <div style={{display:"flex", justifyContent:"space-between", marginBottom:6}}>
-                        <span style={{color:C.muted, fontSize:11, fontWeight:700}}>Progress: {inst.paidMonths}/{inst.totalMonths}</span>
-                        <span style={{color:C.yellow, fontSize:11, fontWeight:700}}>{fmt(remaining)} left</span>
-                     </div>
-                     <ProgressBar value={inst.paidMonths} max={inst.totalMonths} color={C.yellow}/>
-                     <div style={{display:"flex", gap:8, marginTop:16}}>
-                       {!paid ? <button onClick={()=>handlePayInst(inst)} style={{flex:1, background:C.accentDim, border:`1.5px solid ${C.accent}`, color:C.accent, borderRadius:10, padding:"10px", fontWeight:800, fontSize:14, cursor:"pointer", fontFamily:"'DM Sans', sans-serif"}}>✓ Pay Installment</button> : 
-                       <>
-                         <div style={{flex:1, background:C.surface, border:`1px solid ${C.border}`, color:C.accent, borderRadius:10, padding:"10px", fontSize:14, fontWeight:800, textAlign:"center"}}>✓ Paid for this month</div>
-                         <button onClick={()=>setConfirmUndo({type:"inst", id:inst.id, name:inst.name})} style={{background:"transparent", border:`1px solid ${C.yellow}66`, color:C.yellow, borderRadius:10, padding:"0 16px", fontSize:12, fontWeight:700, cursor:"pointer"}}>Undo</button>
-                       </>}
-                     </div>
-                  </div>
-               </SwipeRow>;
-            })}
-          </div>
-        )}
-      </>
-    )}
-
-    {/* Bill Modal */}
-    {showAddBill && <Modal title={editBill?"Edit Bill":"New Bill"} onClose={()=>setShowAddBill(false)} center={false}>
-      <Select label="Brand / Company" value={billForm.brandId} onChange={e=>{
-        const brandId = e.target.value;
-        const brand = allBrands.find(b=>b.id===brandId);
-        setBillForm({...billForm, brandId, name: brand ? brand.name : (brandId==="custom"?"":billForm.name)});
-      }}>
-        <option value="">-- Select Company --</option>
-        {Object.keys(BRAND_PRESETS).map(category => (
-           <optgroup key={category} label={category.toUpperCase()}>
-             {BRAND_PRESETS[category].map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-           </optgroup>
-        ))}
-        <optgroup label="OTHER"><option value="custom">✏️ Custom Company...</option></optgroup>
-      </Select>
-      {billForm.brandId === "custom" && <Input label="Bill Name" placeholder="e.g. Gym Membership" value={billForm.name} onChange={e=>setBillForm({...billForm, name:e.target.value})}/>}
+        <div style={{ background: C.surface, padding: 20, borderRadius: 16, border: `1px solid ${C.border}` }}>
+           <div style={{ color: C.muted, fontSize: 12, fontWeight: 800, textTransform: "uppercase", marginBottom: 16, letterSpacing: 1 }}>Payment Details</div>
+           <Input label="Amount" type="number" step="any" placeholder="0.00" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} />
+           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 16 }}>
+             <Select label="Account" value={form.bankId} onChange={e => setForm({ ...form, bankId: e.target.value })}>{banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</Select>
+             <Select label="Category" value={form.catId} onChange={e => setForm({ ...form, catId: e.target.value })}>{expCats.map(c => <option key={c.id} value={c.id}>{ICONS[c.icon]||"📌"} {c.name}</option>)}</Select>
+           </div>
+        </div>
+        
+        <div style={{ background: C.surface, padding: 20, borderRadius: 16, border: `1px solid ${C.border}` }}>
+           <div style={{ color: C.muted, fontSize: 12, fontWeight: 800, textTransform: "uppercase", marginBottom: 16, letterSpacing: 1 }}>Schedule & Alerts</div>
+           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+             <Input label="Due Day (1-28)" type="number" min="1" max="28" value={form.dueDay} onChange={e => setForm({ ...form, dueDay: e.target.value })} />
+             <Input label="Remind Before (Days)" type="number" min="0" max="7" value={form.reminderDays} onChange={e => setForm({ ...form, reminderDays: e.target.value })} />
+           </div>
+        </div>
+      </div>
       
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
-        <Input label="Amount" type="number" step="any" value={billForm.amount} onChange={e=>setBillForm({...billForm, amount:e.target.value})}/>
-        <Select label="Account" value={billForm.bankId} onChange={e=>setBillForm({...billForm, bankId:e.target.value})}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select>
+      <div style={{ marginTop: 32, paddingBottom: 40 }}>
+        <Btn full onClick={handleSave} style={{ padding: 16, fontSize: 16, borderRadius: 16 }}>{editItem ? "Save Changes" : "Create Bill"}</Btn>
       </div>
-      <Select label="Category" value={billForm.catId} onChange={e=>setBillForm({...billForm, catId:e.target.value})}>{expCats.map(c=><option key={c.id} value={c.id}>{ICONS[c.icon]||"📌"} {c.name}</option>)}</Select>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
-        <Input label="Due Day (1-28)" type="number" min="1" max="28" value={billForm.dueDay} onChange={e=>setBillForm({...billForm, dueDay:e.target.value})}/>
-        <Input label="Remind before (Days)" type="number" min="0" max="7" value={billForm.reminderDays} onChange={e=>setBillForm({...billForm, reminderDays:e.target.value})}/>
-      </div>
-      <Btn full onClick={handleSaveBill} style={{marginTop:12}}>{editBill?"Update Bill":"Add Bill"}</Btn>
-    </Modal>}
+    </div>
+  );
+}
 
-    {/* Installment Modal */}
-    {showAddInst && <Modal title={editInst?"Edit Installment":"New Installment"} onClose={()=>setShowAddInst(false)} center={false}>
-      <Input label="Item Name" placeholder="e.g. iPhone 16 Pro" value={instForm.name} onChange={e=>setInstForm({...instForm, name:e.target.value})}/>
-      <Input label="Store / Provider" placeholder="e.g. Amazon" value={instForm.store} onChange={e=>setInstForm({...instForm, store:e.target.value})}/>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
-        <Input label="Total Price" type="number" step="any" value={instForm.totalAmount} onChange={e=>setInstForm({...instForm, totalAmount:e.target.value})}/>
-        <Input label="Monthly Pay" type="number" step="any" value={instForm.monthlyAmount} onChange={e=>setInstForm({...instForm, monthlyAmount:e.target.value})}/>
-        <Input label="Total Months" type="number" min="1" value={instForm.totalMonths} onChange={e=>setInstForm({...instForm, totalMonths:e.target.value})}/>
-        <Input label="Already Paid" type="number" min="0" value={instForm.paidMonths} onChange={e=>setInstForm({...instForm, paidMonths:e.target.value})}/>
-      </div>
-      <Select label="Pay from Account" value={instForm.bankId} onChange={e=>setInstForm({...instForm, bankId:e.target.value})}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
-        <Input label="Due Day (1-28)" type="number" min="1" max="28" value={instForm.dueDay} onChange={e=>setInstForm({...instForm, dueDay:e.target.value})}/>
-        <Input label="Remind before (Days)" type="number" min="0" max="7" value={instForm.reminderDays} onChange={e=>setInstForm({...instForm, reminderDays:e.target.value})}/>
-      </div>
-      <Input label="Notes (Optional)" placeholder="Order #, info..." value={instForm.note} onChange={e=>setInstForm({...instForm, note:e.target.value})}/>
-      <Btn full onClick={handleSaveInst} style={{marginTop:12}}>{editInst?"Update Installment":"Add Installment"}</Btn>
-    </Modal>}
+// ── Add Installment Form (Full Page & Spacious) ───────────────────────────────
+function AddInstForm({ editItem, banks, onSave, onCancel }) {
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+  const [form, setForm] = useState(editItem || { name: "", store: "", totalAmount: "", monthlyAmount: "", totalMonths: "", paidMonths: "0", bankId: banks[0]?.id||"", dueDay: "1", reminderDays: "2", note: "" });
 
-    {/* Delete & Undo Confirmations */}
-    {confirmDelete && <ConfirmModal title="Delete item?" message="This removes it from obligations. Past history records remain." onClose={()=>setConfirmDelete(null)} onConfirm={async()=>{
-       if(confirmDelete.type==="bill") await onSave(bills.filter(b=>b.id!==confirmDelete.id));
-       else await onSaveInstallments(installments.filter(i=>i.id!==confirmDelete.id));
-       setConfirmDelete(null);
-    }}/>}
-    {confirmUndo && <ConfirmModal title="Undo Payment?" message={`Mark "${confirmUndo.name}" as unpaid for this month and remove the transaction?`} confirmColor={C.yellow} onClose={()=>setConfirmUndo(null)} onConfirm={handleUndoConfirm}/>}
-  </div>;
+  const handleSave = () => {
+    const total = parseFloat(form.totalAmount), monthly = parseFloat(form.monthlyAmount), months = parseInt(form.totalMonths);
+    if (!form.name || isNaN(total) || isNaN(monthly) || isNaN(months)) return;
+    onSave({ ...form, totalAmount: total, monthlyAmount: monthly, totalMonths: months, paidMonths: parseInt(form.paidMonths)||0, dueDay: parseInt(form.dueDay)||1, reminderDays: parseInt(form.reminderDays)||2 });
+  };
+
+  return (
+    <div style={{ padding: "24px 16px", minHeight: "100vh", background: C.bg }}>
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 32 }}>
+        <button onClick={onCancel} style={{ background: "transparent", border: "none", color: C.text, fontSize: 22, cursor: "pointer", marginRight: 16 }}>❮</button>
+        <div style={{ color: C.text, fontSize: 24, fontWeight: 800 }}>{editItem ? "Edit Installment" : "New Installment"}</div>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ background: C.surface, padding: 20, borderRadius: 16, border: `1px solid ${C.border}` }}>
+          <Input label="Item Name" placeholder="e.g. iPhone 16 Pro" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+          <div style={{ marginTop: 16 }}>
+            <Input label="Store / Provider" placeholder="e.g. Amazon, BestBuy" value={form.store} onChange={e => setForm({ ...form, store: e.target.value })} />
+          </div>
+        </div>
+
+        <div style={{ background: C.surface, padding: 20, borderRadius: 16, border: `1px solid ${C.border}` }}>
+          <div style={{ color: C.muted, fontSize: 12, fontWeight: 800, textTransform: "uppercase", marginBottom: 16, letterSpacing: 1 }}>Financials</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <Input label="Total Price" type="number" step="any" placeholder="0.00" value={form.totalAmount} onChange={e => setForm({ ...form, totalAmount: e.target.value })} />
+            <Input label="Monthly Pay" type="number" step="any" placeholder="0.00" value={form.monthlyAmount} onChange={e => setForm({ ...form, monthlyAmount: e.target.value })} />
+            <Input label="Total Months" type="number" min="1" value={form.totalMonths} onChange={e => setForm({ ...form, totalMonths: e.target.value })} />
+            <Input label="Already Paid" type="number" min="0" value={form.paidMonths} onChange={e => setForm({ ...form, paidMonths: e.target.value })} />
+          </div>
+        </div>
+
+        <div style={{ background: C.surface, padding: 20, borderRadius: 16, border: `1px solid ${C.border}` }}>
+          <div style={{ color: C.muted, fontSize: 12, fontWeight: 800, textTransform: "uppercase", marginBottom: 16, letterSpacing: 1 }}>Payment Settings</div>
+          <Select label="Pay from Account" value={form.bankId} onChange={e => setForm({ ...form, bankId: e.target.value })}>{banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</Select>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 16 }}>
+            <Input label="Due Day (1-28)" type="number" min="1" max="28" value={form.dueDay} onChange={e => setForm({ ...form, dueDay: e.target.value })} />
+            <Input label="Remind Before" type="number" min="0" max="7" value={form.reminderDays} onChange={e => setForm({ ...form, reminderDays: e.target.value })} />
+          </div>
+        </div>
+      </div>
+      
+      <div style={{ marginTop: 32, paddingBottom: 40 }}>
+        <Btn full onClick={handleSave} style={{ padding: 16, fontSize: 16, borderRadius: 16 }}>{editItem ? "Save Changes" : "Create Installment"}</Btn>
+      </div>
+    </div>
+  );
+}
+
+// ── Provider Selector Screen (Full Page Grid) ────────────────────────────────
+function ProviderSelector({ onSelect, onCancel }) {
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+  
+  return (
+    <div style={{ padding: "24px 16px", minHeight: "100vh", background: C.bg }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 32 }}>
+        <button onClick={onCancel} style={{ background: "transparent", border: "none", color: C.text, fontSize: 22, cursor: "pointer", marginRight: 16, display: "flex", alignItems: "center" }}>
+          ❮
+        </button>
+        <div style={{ color: C.text, fontSize: 24, fontWeight: 800 }}>Choose Provider</div>
+      </div>
+
+      {/* Custom Option Button */}
+      <div onClick={() => onSelect("custom")} style={{ background: C.card, border: `2px dashed ${C.border}`, borderRadius: 20, padding: "24px", textAlign: "center", cursor: "pointer", marginBottom: 32, transition: "all 0.2s" }}>
+        <div style={{ fontSize: 28, marginBottom: 12 }}>✏️</div>
+        <div style={{ color: C.text, fontWeight: 800, fontSize: 17 }}>Custom Service</div>
+        <div style={{ color: C.muted, fontSize: 13, marginTop: 4, fontWeight: 600 }}>Add a company that is not in the list</div>
+      </div>
+
+      {/* Categories & Logos Grid */}
+      {Object.keys(BRAND_PRESETS).map(category => (
+        <div key={category} style={{ marginBottom: 40 }}>
+          <div style={{ color: C.muted, fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 16, marginLeft: 8 }}>
+            {category}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(85px, 1fr))", gap: 16 }}>
+            {BRAND_PRESETS[category].map(brand => (
+              <div key={brand.id} onClick={() => onSelect(brand)} style={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}>
+                <div style={{ width: 72, height: 72, borderRadius: 20, background: C.surface, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 10, padding: 12, boxShadow: `0 4px 12px ${C.border}44` }}>
+                  {/* الصورة هنا بتتعرض بألوانها الأصلية بدون أي فلاتر تبوظها */}
+                  <img src={brand.logo} alt={brand.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                </div>
+                <div style={{ color: C.text, fontSize: 13, fontWeight: 700, textAlign: "center", wordBreak: "break-word", lineHeight: 1.2 }}>
+                  {brand.name}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Add Bill Form (Full Page & Spacious) ──────────────────────────────────────
+function AddBillForm({ brand, editItem, banks, expCats, onSave, onCancel }) {
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+  const [form, setForm] = useState(editItem || { name: brand?.name||"", amount: "", bankId: banks[0]?.id||"", catId: expCats[0]?.id||"", dueDay: "1", reminderDays: "2", brandId: brand?.id||"custom" });
+
+  const handleSave = () => {
+    const pa = parseFloat(form.amount);
+    if (!form.name || isNaN(pa) || pa <= 0) return;
+    onSave({ ...form, amount: pa, dueDay: parseInt(form.dueDay)||1, reminderDays: parseInt(form.reminderDays)||2 });
+  };
+
+  return (
+    <div style={{ padding: "24px 16px", minHeight: "100vh", background: C.bg }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 32 }}>
+        <button onClick={onCancel} style={{ background: "transparent", border: "none", color: C.text, fontSize: 22, cursor: "pointer", marginRight: 16 }}>❮</button>
+        <div style={{ color: C.text, fontSize: 24, fontWeight: 800 }}>{editItem ? "Edit Bill" : "New Bill Details"}</div>
+      </div>
+
+      {/* Brand Display (لو اختار شركة من الكتالوج) */}
+      {brand && brand !== "custom" && !editItem && (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 32 }}>
+          <div style={{ width: 80, height: 80, borderRadius: 24, background: C.surface, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 12, padding: 12, boxShadow: `0 8px 24px ${C.border}66` }}>
+            <img src={brand.logo} alt={brand.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+          </div>
+          <div style={{ color: C.text, fontSize: 20, fontWeight: 800 }}>{brand.name}</div>
+        </div>
+      )}
+
+      {/* Spacious Form */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        {/* حقل الاسم يظهر بس لو بيعمل خدمة Custom */}
+        {(!brand || brand === "custom" || editItem?.brandId === "custom") && (
+          <Input label="Bill Name" placeholder="e.g. Gym Membership" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+        )}
+        
+        <div style={{ background: C.surface, padding: 20, borderRadius: 16, border: `1px solid ${C.border}` }}>
+           <div style={{ color: C.muted, fontSize: 12, fontWeight: 800, textTransform: "uppercase", marginBottom: 16, letterSpacing: 1 }}>Payment Details</div>
+           <Input label="Amount" type="number" step="any" placeholder="0.00" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} />
+           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 16 }}>
+             <Select label="Account" value={form.bankId} onChange={e => setForm({ ...form, bankId: e.target.value })}>{banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</Select>
+             <Select label="Category" value={form.catId} onChange={e => setForm({ ...form, catId: e.target.value })}>{expCats.map(c => <option key={c.id} value={c.id}>{ICONS[c.icon]||"📌"} {c.name}</option>)}</Select>
+           </div>
+        </div>
+        
+        <div style={{ background: C.surface, padding: 20, borderRadius: 16, border: `1px solid ${C.border}` }}>
+           <div style={{ color: C.muted, fontSize: 12, fontWeight: 800, textTransform: "uppercase", marginBottom: 16, letterSpacing: 1 }}>Schedule & Alerts</div>
+           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+             <Input label="Due Day (1-28)" type="number" min="1" max="28" value={form.dueDay} onChange={e => setForm({ ...form, dueDay: e.target.value })} />
+             <Input label="Remind Before (Days)" type="number" min="0" max="7" value={form.reminderDays} onChange={e => setForm({ ...form, reminderDays: e.target.value })} />
+           </div>
+        </div>
+      </div>
+      
+      <div style={{ marginTop: 32, paddingBottom: 40 }}>
+        <Btn full onClick={handleSave} style={{ padding: 16, fontSize: 16, borderRadius: 16 }}>{editItem ? "Save Changes" : "Create Bill"}</Btn>
+      </div>
+    </div>
+  );
+}
+
+// ── Add Installment Form (Full Page & Spacious) ───────────────────────────────
+function AddInstForm({ editItem, banks, onSave, onCancel }) {
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+  const [form, setForm] = useState(editItem || { name: "", store: "", totalAmount: "", monthlyAmount: "", totalMonths: "", paidMonths: "0", bankId: banks[0]?.id||"", dueDay: "1", reminderDays: "2", note: "" });
+
+  const handleSave = () => {
+    const total = parseFloat(form.totalAmount), monthly = parseFloat(form.monthlyAmount), months = parseInt(form.totalMonths);
+    if (!form.name || isNaN(total) || isNaN(monthly) || isNaN(months)) return;
+    onSave({ ...form, totalAmount: total, monthlyAmount: monthly, totalMonths: months, paidMonths: parseInt(form.paidMonths)||0, dueDay: parseInt(form.dueDay)||1, reminderDays: parseInt(form.reminderDays)||2 });
+  };
+
+  return (
+    <div style={{ padding: "24px 16px", minHeight: "100vh", background: C.bg }}>
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 32 }}>
+        <button onClick={onCancel} style={{ background: "transparent", border: "none", color: C.text, fontSize: 22, cursor: "pointer", marginRight: 16 }}>❮</button>
+        <div style={{ color: C.text, fontSize: 24, fontWeight: 800 }}>{editItem ? "Edit Installment" : "New Installment"}</div>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ background: C.surface, padding: 20, borderRadius: 16, border: `1px solid ${C.border}` }}>
+          <Input label="Item Name" placeholder="e.g. iPhone 16 Pro" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+          <div style={{ marginTop: 16 }}>
+            <Input label="Store / Provider" placeholder="e.g. Amazon, BestBuy" value={form.store} onChange={e => setForm({ ...form, store: e.target.value })} />
+          </div>
+        </div>
+
+        <div style={{ background: C.surface, padding: 20, borderRadius: 16, border: `1px solid ${C.border}` }}>
+          <div style={{ color: C.muted, fontSize: 12, fontWeight: 800, textTransform: "uppercase", marginBottom: 16, letterSpacing: 1 }}>Financials</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <Input label="Total Price" type="number" step="any" placeholder="0.00" value={form.totalAmount} onChange={e => setForm({ ...form, totalAmount: e.target.value })} />
+            <Input label="Monthly Pay" type="number" step="any" placeholder="0.00" value={form.monthlyAmount} onChange={e => setForm({ ...form, monthlyAmount: e.target.value })} />
+            <Input label="Total Months" type="number" min="1" value={form.totalMonths} onChange={e => setForm({ ...form, totalMonths: e.target.value })} />
+            <Input label="Already Paid" type="number" min="0" value={form.paidMonths} onChange={e => setForm({ ...form, paidMonths: e.target.value })} />
+          </div>
+        </div>
+
+        <div style={{ background: C.surface, padding: 20, borderRadius: 16, border: `1px solid ${C.border}` }}>
+          <div style={{ color: C.muted, fontSize: 12, fontWeight: 800, textTransform: "uppercase", marginBottom: 16, letterSpacing: 1 }}>Payment Settings</div>
+          <Select label="Pay from Account" value={form.bankId} onChange={e => setForm({ ...form, bankId: e.target.value })}>{banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</Select>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 16 }}>
+            <Input label="Due Day (1-28)" type="number" min="1" max="28" value={form.dueDay} onChange={e => setForm({ ...form, dueDay: e.target.value })} />
+            <Input label="Remind Before" type="number" min="0" max="7" value={form.reminderDays} onChange={e => setForm({ ...form, reminderDays: e.target.value })} />
+          </div>
+        </div>
+      </div>
+      
+      <div style={{ marginTop: 32, paddingBottom: 40 }}>
+        <Btn full onClick={handleSave} style={{ padding: 16, fontSize: 16, borderRadius: 16 }}>{editItem ? "Save Changes" : "Create Installment"}</Btn>
+      </div>
+    </div>
+  );
 }
 
 // ── UserManual (New Design) ───────────────────────────────────────────────────
