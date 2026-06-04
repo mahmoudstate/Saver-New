@@ -37,26 +37,6 @@ const fmt = (n, ov) => {
   } catch { return `${cur} ${n}`; }
 };
 
-// ── Brands Catalog (Real Logos & Colors) ───────────────────────────────────
-const BRAND_PRESETS = {
-  "Telecom & Internet": [
-    { id: "vodafone", name: "Vodafone", color: "#E60000", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Vodafone_icon.svg/512px-Vodafone_icon.svg.png" },
-    { id: "orange", name: "Orange", color: "#FF7900", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Orange_logo.svg/512px-Orange_logo.svg.png" },
-    { id: "etisalat", name: "Etisalat", color: "#74AA50", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Etisalat_Logo.svg/512px-Etisalat_Logo.svg.png" },
-    { id: "we", name: "WE", color: "#5C2D91", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/WE_logo.svg/512px-WE_logo.svg.png" }
-  ],
-  "Entertainment & Subscriptions": [
-    { id: "netflix", name: "Netflix", color: "#E50914", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Netflix_2015_N_logo.svg/512px-Netflix_2015_N_logo.svg.png" },
-    { id: "spotify", name: "Spotify", color: "#1DB954", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/512px-Spotify_logo_without_text.svg.png" },
-    { id: "youtube", name: "YouTube Premium", color: "#FF0000", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/YouTube_full-color_icon_%282017%29.svg/512px-YouTube_full-color_icon_%282017%29.svg.png" },
-    { id: "apple", name: "Apple Services", color: "#555555", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Apple_logo_black.svg/512px-Apple_logo_black.svg.png" }
-  ],
-  "E-Commerce & Stores": [
-    { id: "amazon", name: "Amazon Prime", color: "#FF9900", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Amazon_icon.svg/512px-Amazon_icon.svg.png" },
-    { id: "noon", name: "Noon", color: "#FEE000", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Noon_Logo.svg/512px-Noon_Logo.svg.png" },
-    { id: "jumia", name: "Jumia", color: "#222222", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Jumia_Logo.svg/512px-Jumia_Logo.svg.png" }
-  ]
-};
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
