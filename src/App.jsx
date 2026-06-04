@@ -197,14 +197,6 @@ function Input({label,error,...props}){
   </div>;
 }
 
-function ProgressBar({ value, max, color }) {
-  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
-  return (
-    <div style={{ width: "100%", height: 8, background: C.border, borderRadius: 4, overflow: "hidden" }}>
-      <div style={{ width: `${pct}%`, height: "100%", background: color, transition: "width 0.3s ease" }} />
-    </div>
-  );
-}
 
 function Select({label,children,...props}){
   return <div style={{marginBottom:14}}>
