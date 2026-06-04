@@ -111,13 +111,67 @@ const DEFAULT_QUICK_ACTIONS = [
   {id:"q3",catId:"",amount:"",bankId:""},{id:"q4",catId:"",amount:"",bankId:""}
 ];
 
+// ── كتالوج الشركات مصنف حسب النوع (Saver Global Presets by Category) ──
+const BRAND_PRESETS = {
+  streaming: [
+    { id: "netflix", name: "Netflix", color: "#E50914", logo: "https://logo.clearbit.com/netflix.com" },
+    { id: "spotify", name: "Spotify", color: "#1DB954", logo: "https://logo.clearbit.com/spotify.com" },
+    { id: "youtube", name: "YouTube Premium", color: "#FF0000", logo: "https://logo.clearbit.com/youtube.com" },
+    { id: "apple_music", name: "Apple Music", color: "#FA243C", logo: "https://logo.clearbit.com/apple.com" },
+    { id: "disney", name: "Disney+", color: "#113CCF", logo: "https://logo.clearbit.com/disneyplus.com" },
+    { id: "amazon_prime", name: "Amazon Prime", color: "#00A8E8", logo: "https://logo.clearbit.com/amazon.com" },
+    { id: "shahid", name: "Shahid VIP", color: "#00E5FF", logo: "https://logo.clearbit.com/shahid.net" },
+    { id: "watchit", name: "Watch IT", color: "#FFB300", logo: "https://logo.clearbit.com/watchit.com" },
+    { id: "anghami", name: "Anghami", color: "#9C27B0", logo: "https://logo.clearbit.com/anghami.com" },
+    { id: "tod", name: "TOD", color: "#76FF03", logo: "https://logo.clearbit.com/tod.tv" }
+  ],
+  telecom: [
+    { id: "vodafone", name: "Vodafone", color: "#E60000", logo: "https://logo.clearbit.com/vodafone.com" },
+    { id: "orange", name: "Orange", color: "#FF6600", logo: "https://logo.clearbit.com/orange.eg" },
+    { id: "etisalat", name: "Etisalat by e&", color: "#74A22C", logo: "https://logo.clearbit.com/etisalat.eg" },
+    { id: "we", name: "WE", color: "#51267B", logo: "https://logo.clearbit.com/te.eg" },
+    { id: "stc", name: "stc", color: "#4F2D7F", logo: "https://logo.clearbit.com/stc.com.sa" },
+    { id: "mobily", name: "Mobily", color: "#007CC3", logo: "https://logo.clearbit.com/mobily.com.sa" },
+    { id: "zain", name: "Zain", color: "#231F20", logo: "https://logo.clearbit.com/sa.zain.com" },
+    { id: "ooredoo", name: "Ooredoo", color: "#ED1C24", logo: "https://logo.clearbit.com/ooredoo.com.kw" },
+    { id: "ee", name: "EE", color: "#007C92", logo: "https://logo.clearbit.com/ee.co.uk" },
+    { id: "o2", name: "O2", color: "#0019A5", logo: "https://logo.clearbit.com/o2.co.uk" },
+    { id: "three", name: "Three (3)", color: "#000000", logo: "https://logo.clearbit.com/three.co.uk" },
+    { id: "sky", name: "Sky Broadband", color: "#0072C6", logo: "https://logo.clearbit.com/sky.com" },
+    { id: "bt", name: "BT Broadband", color: "#551A8B", logo: "https://logo.clearbit.com/bt.com" }
+  ],
+  utilities: [
+    { id: "electricity", name: "Electricity Bill", color: "#FFD600", logo: "https://logo.clearbit.com/eehc.gov.eg" },
+    { id: "gas", name: "Gas Bill", color: "#0D47A1", logo: "https://logo.clearbit.com/petrotrade.com.eg" },
+    { id: "water", name: "Water Bill", color: "#00B0FF", logo: "https://logo.clearbit.com/nwc.com.sa" },
+    { id: "british_gas", name: "British Gas", color: "#005EA5", logo: "https://logo.clearbit.com/britishgas.co.uk" },
+    { id: "octopus", name: "Octopus Energy", color: "#FF007A", logo: "https://logo.clearbit.com/octopus.energy" },
+    { id: "tv_license", name: "TV Licence (BBC)", color: "#2B2B2B", logo: "https://logo.clearbit.com/tvlicensing.co.uk" }
+  ],
+  productivity: [
+    { id: "chatgpt", name: "ChatGPT Plus", color: "#74AA9C", logo: "https://logo.clearbit.com/openai.com" },
+    { id: "claude", name: "Claude Pro", color: "#D97706", logo: "https://logo.clearbit.com/anthropic.com" },
+    { id: "icloud", name: "iCloud+", color: "#29B6F6", logo: "https://logo.clearbit.com/icloud.com" },
+    { id: "google_one", name: "Google One", color: "#4285F4", logo: "https://logo.clearbit.com/google.com" },
+    { id: "microsoft365", name: "Microsoft 365", color: "#D83B01", logo: "https://logo.clearbit.com/microsoft.com" },
+    { id: "notion", name: "Notion", color: "#000000", logo: "https://logo.clearbit.com/notion.so" }
+  ],
+  gaming: [
+    { id: "playstation", name: "PlayStation Plus", color: "#003087", logo: "https://logo.clearbit.com/playstation.com" },
+    { id: "xbox", name: "Xbox Game Pass", color: "#107C10", logo: "https://logo.clearbit.com/xbox.com" },
+    { id: "nintendo", name: "Nintendo Switch Online", color: "#E60012", logo: "https://logo.clearbit.com/nintendo.com" }
+  ]
+};
+
 // ── Storage keys ──────────────────────────────────────────────────────────────
 const KEYS = {
   txns:"et_txns",banks:"et_banks",expCats:"et_expCats",incCats:"et_incCats",
   groups:"et_groups",savings:"et_savings",currency:"et_currency",
   username:"et_username",lastBackup:"et_lastBackup",bills:"et_bills",
-  budgets:"et_budgets",quickActions:"et_quick_actions",seenWelcome:"et_seenWelcome"
+  budgets:"et_budgets",quickActions:"et_quick_actions",seenWelcome:"et_seenWelcome",
+  installments:"et_installments"
 };
+
 async function load(key,fallback){try{const r=localStorage.getItem(key);return r?JSON.parse(r):fallback;}catch{return fallback;}}
 async function save(key,val){try{localStorage.setItem(key,JSON.stringify(val));return true;}catch(e){console.warn("Storage:",e);return false;}}
 
@@ -491,6 +545,7 @@ function SaverApp(){
   const[groups,setGroups]=useState(DEFAULT_GROUPS);
   const[savings,setSavings]=useState([]);
   const[bills,setBills]=useState([]);
+  const[installments,setInstallments]=useState([]);
   const[budgets,setBudgets]=useState([]);
   const[quickActions,setQuickActions]=useState(DEFAULT_QUICK_ACTIONS);
   const[showSplash,setShowSplash]=useState(true);
@@ -514,15 +569,16 @@ function SaverApp(){
 
   useEffect(()=>{
     (async()=>{
-      const[t,b,ec,ic,g,s,cur,uname,bl,bdg,lb,qa,seen]=await Promise.all([
+      const[t,b,ec,ic,g,s,cur,uname,bl,bdg,lb,qa,seen,inst]=await Promise.all([
         load(KEYS.txns,[]),load(KEYS.banks,DEFAULT_BANKS),load(KEYS.expCats,DEFAULT_EXP_CATS),
         load(KEYS.incCats,DEFAULT_INC_CATS),load(KEYS.groups,DEFAULT_GROUPS),load(KEYS.savings,[]),
         load(KEYS.currency,"EGP"),load(KEYS.username,""),load(KEYS.bills,[]),load(KEYS.budgets,[]),
-        load(KEYS.lastBackup,null),load(KEYS.quickActions,DEFAULT_QUICK_ACTIONS),load(KEYS.seenWelcome,false)
+        load(KEYS.lastBackup,null),load(KEYS.quickActions,DEFAULT_QUICK_ACTIONS),load(KEYS.seenWelcome,false),
+        load(KEYS.installments,[])
       ]);
       setTxns(t);setBanks(b);setExpCats(ec);setIncCats(ic);setGroups(g);setSavings(s);
       setCurrencyState(cur);setCurrencyGlobal(cur);setUsernameState(uname);setBills(bl);setBudgets(bdg);setLastBackup(lb);
-      setQuickActions(qa);setHasSeenWelcome(seen);
+      setQuickActions(qa);setHasSeenWelcome(seen);setInstallments(inst);
       const localCurMonth = currentMonth();
       setFilterMonth(localCurMonth);
       setTimeout(()=>setShowSplash(false),2700);
