@@ -908,6 +908,7 @@ return <ThemeContext.Provider value={{theme,setTheme:saveThemeHandler}}>
       {pendingCurrency&&<ConfirmModal title="Change Currency?" message={`Switching from ${currency} to ${pendingCurrency} only changes how amounts are displayed. Your actual numbers will NOT be converted.\n\nContinue?`} confirmColor={C.blue} onClose={()=>setPendingCurrency(null)} onConfirm={confirmCurrencyChange}/>}
     </div>
   </ThemeContext.Provider>;
+  }
 
 function NavBtn({id,icon,label,tab,navigateTo}){
   const a=tab===id;
