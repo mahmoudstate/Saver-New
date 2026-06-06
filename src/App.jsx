@@ -511,128 +511,8 @@ function calcBankBalance(bankId,txns){return txns.reduce((acc,t)=>{if(t.bankId==
 function calcGoalSaved(goalId,txns){return txns.reduce((acc,t)=>{if(t.goalId===goalId&&t.type==="saving")return acc+t.amount;if(t.goalId===goalId&&t.type==="goal_withdraw")return acc-t.amount;if(t.goalId===goalId&&t.type==="goal_return")return acc-t.amount;return acc;},0);}
 function calcFrozenForBank(bankId,savings,txns){return txns.reduce((acc,t)=>{if(t.bankId===bankId&&t.type==="saving")return acc+t.amount;if(t.bankId===bankId&&t.type==="goal_withdraw")return acc-t.amount;if(t.bankId===bankId&&t.type==="goal_return")return acc-t.amount;return acc;},0);}
 
-// =========================================================================
-// 1. Bento Dashboard Concept
-// =========================================================================
-function BentoDashboard({ totalSafe, quickActions, expCats, onQuickAdd, onNavigate }) {
-  return (
-    <div style={{ padding: "24px 16px", minHeight: "100vh" }}>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom: 20 }}>
-        <div style={{ color: C.text, fontSize: 28, fontWeight: 800 }}>Overview</div>
-      </div>
-      
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-        <div style={{ gridColumn: "span 2", background: C.card, borderRadius: 24, padding: 24, border:`1px solid ${C.border}` }}>
-          <div style={{ color: C.muted, fontSize: 13, fontWeight: 600, textTransform: "uppercase", marginBottom: 8 }}>Total Safe to Spend</div>
-          <div style={{ color: C.text, fontSize: 42, fontWeight: 800, letterSpacing: "-1px" }}>{fmt(totalSafe)}</div>
-        </div>
-
-        {quickActions.filter(q => q.catId).slice(0, 2).map((qa, idx) => {
-          const cat = expCats.find(c => c.id === qa.catId);
-          return (
-            <div key={idx} onClick={() => onQuickAdd(qa)} 
-                 style={{ background: C.card, borderRadius: 24, padding: 20, cursor: "pointer", border:`1px solid ${C.border}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>{ICONS[cat?.icon] || "📌"}</div>
-              <div style={{ color: C.text, fontSize: 15, fontWeight: 700 }}>{cat?.name}</div>
-              <div style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>- {fmt(parseFloat(qa.amount))}</div>
-            </div>
-          );
-        })}
-
-        <div onClick={()=>onNavigate("history")} style={{ gridColumn: "span 1", background: C.card, borderRadius: 24, padding: 20, cursor: "pointer", border:`1px solid ${C.border}`, textAlign:"center" }}>
-          <div style={{fontSize: 24}}>☰</div><div style={{fontWeight: 700, marginTop:10, color:C.text}}>History</div>
-        </div>
-        <div onClick={()=>onNavigate("monthly")} style={{ gridColumn: "span 1", background: C.card, borderRadius: 24, padding: 20, cursor: "pointer", border:`1px solid ${C.border}`, textAlign:"center" }}>
-          <div style={{fontSize: 24}}>⚡</div><div style={{fontWeight: 700, marginTop:10, color:C.text}}>Bills</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// =========================================================================
-// 2. Liquid Gestures Concept (Add Modal)
-// =========================================================================
-function LiquidAddModal({ expCats, onAddTransaction, onClose, defaultBankId }) {
-  const [amount, setAmount] = useState("");
-  const handleRapidSave = (cat) => {
-    if (!amount || parseFloat(amount) <= 0) return;
-    onAddTransaction({ type: "expense", amount: parseFloat(amount), date: today(), catId: cat.id, bankId: defaultBankId, catName: cat.name, catIcon: cat.icon, note: "" });
-    onClose();
-  };
-
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 999, background: C.isDark?"rgba(15,15,19,0.9)":"rgba(244,244,248,0.9)", backdropFilter: "blur(20px)", display: "flex", flexDirection: "column" }}>
-      <div style={{ padding: 24, textAlign: "right" }}><button onClick={onClose} style={{ background: C.border, border: "none", color: C.text, width: 40, height: 40, borderRadius: 99, fontSize: 18 }}>✕</button></div>
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: C.accent, fontSize: 72, fontWeight: 800 }}>{amount || "0"}</div>
-      
-      <div style={{ display: "flex", gap: 12, overflowX: "auto", padding: "0 24px 24px" }}>
-        {expCats.map(cat => (
-          <button key={cat.id} onClick={() => handleRapidSave(cat)} style={{ flexShrink: 0, background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: "16px 24px", color: C.text, fontSize: 24, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-            <span>{ICONS[cat.icon] || "📌"}</span><span style={{ fontSize: 12, fontWeight: 600 }}>{cat.name}</span>
-          </button>
-        ))}
-      </div>
-      
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, padding: "0 24px 40px" }}>
-        {[1,2,3,4,5,6,7,8,9,".",0,"⌫"].map((btn) => (
-          <button key={btn} onClick={() => btn === "⌫" ? setAmount(amount.slice(0,-1)) : (amount.length<6 && setAmount(prev => prev + btn))} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 24, padding: "20px 0", color: C.text, fontSize: 28, fontWeight: 500 }}>{btn}</button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// =========================================================================
-// 3. Smart Ledger Concept
-// =========================================================================
-function SmartLedger({ txns, safeToSpend, expCats, defaultBankId, onSmartAdd, onNavigate }) {
-  const [inputText, setInputText] = useState("");
-  const parseAndSubmit = (e) => {
-    e.preventDefault();
-    if (!inputText) return;
-    const amountMatch = inputText.match(/\d+(\.\d+)?/);
-    const amount = amountMatch ? parseFloat(amountMatch[0]) : 0;
-    const matchedCat = expCats.find(c => inputText.toLowerCase().includes(c.name.toLowerCase()));
-
-    if (amount > 0 && matchedCat) {
-      onSmartAdd({ type: "expense", amount: amount, catId: matchedCat.id, bankId: defaultBankId, catName: matchedCat.name, catIcon: matchedCat.icon, date: today(), note: inputText });
-      setInputText(""); HAPTICS.success();
-    } else { alert("Type a number and category (e.g., '50 Coffee')"); }
-  };
-
-  return (
-    <div style={{ background: C.bg, minHeight: "100vh", paddingBottom: 80 }}>
-      <div style={{ padding: "24px 20px", borderBottom: `1px solid ${C.border}`, display:"flex", justifyContent:"space-between" }}>
-        <div>
-          <div style={{ fontSize: 12, fontWeight: "bold", textTransform: "uppercase", letterSpacing: 2, color: C.muted }}>Safe to spend</div>
-          <div style={{ fontSize: 36, fontWeight: "bold", color: C.text }}>{fmt(safeToSpend)}</div>
-        </div>
-      </div>
-      <div style={{ padding: "0 20px" }}>
-        {txns.slice(0, 15).map(t => (
-          <div key={t.id} style={{ display: "flex", justifyContent: "space-between", padding: "16px 0", borderBottom: `1px dashed ${C.border}` }}>
-            <div>
-              <div style={{ fontWeight: "bold", fontSize: 14, color:C.text }}>{ICONS[t.catIcon]} {t.catName || t.type}</div>
-              <div style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>{t.note || t.date}</div>
-            </div>
-            <div style={{ fontWeight: "bold", fontSize: 14, color: t.type==="expense"?C.red:C.accent }}>{t.type === "expense" ? "-" : "+"}{fmt(t.amount)}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{ position: "fixed", bottom: 0, width: "100%", maxWidth: 520, background: C.surface, borderTop: `1px solid ${C.border}`, padding: "12px 20px", boxSizing: "border-box" }}>
-        <form onSubmit={parseAndSubmit} style={{ display: "flex", gap: 10 }}>
-          <input value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="e.g. 50 Coffee..." style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 16, color: C.text }} />
-          <button type="submit" style={{ background: C.accent, color: "#111", border: "none", borderRadius:10, padding: "10px 20px", fontWeight: "bold", cursor: "pointer" }}>LOG</button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 function SaverApp(){
   const[tab,setTab]=useState("dashboard");
-  const [uiMode, setUiMode] = useState("classic");
   const[scrollState,setScrollState]=useState({y:0,restore:false});
   const[showPrivacyBeforeWelcome,setShowPrivacyBeforeWelcome]=useState(false);
   const[txns,setTxns]=useState([]);
@@ -825,14 +705,6 @@ function SaverApp(){
     return <WelcomeScreen onStart={completeWelcome} onManual={()=>{completeWelcome();navigateTo("manual");}} onPrivacy={()=>setShowPrivacyBeforeWelcome(true)}/>;
   }
 
-  const handleQuickAddExecute = async(qa) => {
-  const amt = parseFloat(qa.amount);
-  if(isNaN(amt)||amt<=0) return;
-  const cat = expCats.find(c=>c.id===qa.catId);
-  const bank = banks.find(b=>b.id===qa.bankId) || banks[0];
-  await addTxn({ type:"expense", amount:amt, date:today(), bankId:bank.id, bankName:bank.name, catId:qa.catId, catName:cat?.name, catIcon:cat?.icon });
-};
-
   const curMonth=currentMonth();
   const filteredTxns=filterMonth==="all"?txns:txns.filter(t=>t.date.startsWith(filterMonth));
   const availMonths=[...new Set([curMonth,...txns.map(t=>t.date.slice(0,7))])].sort().reverse();
@@ -840,75 +712,40 @@ function SaverApp(){
   const isSubPageActive=ledgerBank||ledgerGroup||ledgerSaving||ledgerBudget||["savings","budgets","quickactions","manual","privacy"].includes(tab);
   const activeSavings=savings.filter(s=>s.status!=="archived");
   const sharedProps={bankBalance,safeToSpend,frozenForBank,goalSaved};
-  
-return <ThemeContext.Provider value={{theme,setTheme:saveThemeHandler}}>
+
+  return <ThemeContext.Provider value={{theme,setTheme:saveThemeHandler}}>
     <div style={{background:C.bg,minHeight:"100vh",color:C.text,fontFamily:"'DM Sans', sans-serif",maxWidth:520,margin:"0 auto",paddingBottom:isSubPageActive?0:130,position:"relative",userSelect:"none",WebkitUserSelect:"none"}}>
-      
-      {/* --- شريط التبديل بين التصاميم --- */}
-      <div style={{ display:"flex", justifyContent:"center", gap:5, padding:10, background:C.border }}>
-        {["classic", "bento", "liquid", "smart"].map(m => (
-          <button key={m} onClick={()=>setUiMode(m)} style={{ fontSize:10, padding:"6px 12px", background: uiMode===m?C.accent:C.bg, color: uiMode===m?"#000":C.text, border:"none", borderRadius:8, fontWeight:700, cursor:"pointer" }}>
-            {m.toUpperCase()}
-          </button>
-        ))}
-      </div>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+      {goalToast&&<GoalToast message={goalToast} onClose={()=>setGoalToast(null)}/>}
+      {showBackupAlert&&tab==="dashboard"&&!isSubPageActive&&<div style={{background:C.yellowDim,color:C.yellow,padding:"10px 16px",fontSize:12,fontWeight:700,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span>⚠️ {lastBackup?"Over 3 days since last backup!":"Back up your data to keep it safe!"}</span><button onClick={()=>navigateTo("settings")} style={{background:"transparent",border:`1px solid ${C.yellow}`,color:C.yellow,borderRadius:8,padding:"4px 8px",fontSize:10,cursor:"pointer"}}>Backup Now</button></div>}
 
-      {/* --- 1. تصميمك الأصلي (كامل كما هو) --- */}
-      {uiMode === "classic" && (
+      {!ledgerBank&&!ledgerGroup&&!ledgerSaving&&!ledgerBudget?(
         <>
-          {goalToast&&<GoalToast message={goalToast} onClose={()=>setGoalToast(null)}/>}
-          {showBackupAlert&&tab==="dashboard"&&!isSubPageActive&&<div style={{background:C.yellowDim,color:C.yellow,padding:"10px 16px",fontSize:12,fontWeight:700,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span>⚠️ {lastBackup?"Over 3 days since last backup!":"Back up your data to keep it safe!"}</span><button onClick={()=>navigateTo("settings")} style={{background:"transparent",border:`1px solid ${C.yellow}`,color:C.yellow,borderRadius:8,padding:"4px 8px",fontSize:10,cursor:"pointer"}}>Backup Now</button></div>}
-
-          {!ledgerBank&&!ledgerGroup&&!ledgerSaving&&!ledgerBudget?(
-            <>
-              {tab==="dashboard"&&<Dashboard txns={filteredTxns} txnsAll={txns} bills={bills} budgets={budgets} banks={banks} groups={groups} expCats={expCats} savings={activeSavings} filterMonth={filterMonth} setFilterMonth={setFilterMonth} availMonths={availMonths} username={username} {...sharedProps} onDeleteTxn={delTxn} onUpdateTxn={updateTxn} onOpenBank={(b)=>{setScrollState({y:window.scrollY,restore:true});setLedgerBank(b);}} onOpenGroup={(g)=>{setScrollState({y:window.scrollY,restore:true});setLedgerGroup(g);}} onOpenSaving={(s)=>{setScrollState({y:window.scrollY,restore:true});setLedgerSaving(s);}} onOpenBudget={(bdg)=>{setScrollState({y:window.scrollY,restore:true});setLedgerBudget(bdg);}} hideTotal={hideTotal} setHideTotal={setHideTotal} navigateTo={navigateTo} scrollState={scrollState} setScrollState={setScrollState} onBanks={saveBanks} onBudgets={saveBudgets} onSavings={saveSavings} onGroups={saveGroups}/>}
-              {tab==="add"&&<AddTransaction banks={banks} expCats={expCats} incCats={incCats} savings={activeSavings} currency={currency} onAdd={addTxn} onDone={()=>navigateTo("dashboard")} {...sharedProps} setAppAlert={setAppAlert} onGoalToast={setGoalToast} txns={txns}/>}
-              {tab==="savings"&&<SavingsPage savings={savings} onSave={saveSavings} txns={txns} banks={banks} onBack={()=>navigateTo("settings")} addTxn={addTxn} delTxn={delTxn} onGoalToast={setGoalToast} {...sharedProps} setAppAlert={setAppAlert} onOpenSaving={(s)=>{setScrollState({y:window.scrollY,restore:true});setLedgerSaving(s);}}/>}
-              {tab==="history"&&<History txns={txns} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} currency={currency} availMonths={availMonths} savings={savings} setAppAlert={setAppAlert}/>}
-              {tab==="budgets"&&<BudgetsPage budgets={budgets} expCats={expCats} onSave={saveBudgets} onBack={()=>navigateTo("settings")} currency={currency} txns={txns}/>}
-              {tab==="quickactions"&&<QuickActionsSetup quickActions={quickActions} expCats={expCats} banks={banks} onSave={saveQuickActions} onBack={()=>navigateTo("settings")}/>}
-              {tab==="manual"&&<UserManual onBack={()=>navigateTo("settings")} navigateTo={navigateTo}/>}
-              {tab==="monthly"&&<MonthlyBillsPage bills={bills} installments={installments} onSaveBills={saveBills} onSaveInstallments={saveInstallments} banks={banks} expCats={expCats} onAddTxn={addTxn} delTxn={delTxn} currency={currency} setAppAlert={setAppAlert}/>}
-              {tab==="settings"&&<Settings banks={banks} expCats={expCats} incCats={incCats} groups={groups} onBanks={saveBanks} onExpCats={saveExpCats} onIncCats={saveIncCats} onGroups={saveGroups} currency={currency} onCurrency={saveCurrencyHandler} username={username} onUsername={saveUsernameHandler} theme={theme} onTheme={saveThemeHandler} {...sharedProps} onOpenSavings={()=>navigateTo("savings")} onOpenBudgets={()=>navigateTo("budgets")} onOpenQuickActions={()=>navigateTo("quickactions")} onOpenManual={()=>navigateTo("manual")} setLastBackup={setLastBackup} txns={txns} bills={bills} savings={savings} budgets={budgets} onRestore={handleRestorePayload} setAppAlert={setAppAlert} navigateTo={navigateTo}/>}
-              {tab==="privacy"&&<Privacy onBack={()=>navigateTo("dashboard")}/>}
-              {tab!=="privacy"&&<BottomNav tab={tab} navigateTo={navigateTo} expCats={expCats} banks={banks} savings={activeSavings} onAdd={addTxn} currency={currency} {...sharedProps} setAppAlert={setAppAlert} quickActions={quickActions} txns={txns}/>}
-            </>
-          ):(
-            <>
-              {ledgerBank&&<DeepLedgerView title={ledgerBank.name} headerType="bank" headerData={{balance:bankBalance(ledgerBank.id),safe:safeToSpend(ledgerBank.id),frozen:frozenForBank(ledgerBank.id)}} txns={txns.filter(t=>t.bankId===ledgerBank.id||t.fromBankId===ledgerBank.id||t.toBankId===ledgerBank.id)} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerBank(null)}/>}
-              {ledgerGroup&&(()=>{const spent=txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerGroup.cats.includes(t.catId)).reduce((a,t)=>a+t.amount,0);return <DeepLedgerView title={ledgerGroup.name} headerType="group" headerData={{spent,color:ledgerGroup.color}} txns={txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerGroup.cats.includes(t.catId))} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerGroup(null)}/>;})()}
-              {ledgerSaving&&(()=>{const saved=goalSaved(ledgerSaving.id);return <SavingDetailView goal={ledgerSaving} saved={saved} txns={txns} onDelete={delTxn} addTxn={addTxn} banks={banks} savings={savings} onSave={saveSavings} onGoalToast={setGoalToast} setAppAlert={setAppAlert} goalSaved={goalSaved} onClose={()=>setLedgerSaving(null)}/>;})()}
-              {ledgerBudget&&(()=>{const spent=txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerBudget.cats.includes(t.catId)).reduce((a,t)=>a+t.amount,0);return <DeepLedgerView title={ledgerBudget.name} headerType="budget" headerData={{spent,limit:ledgerBudget.amount}} txns={txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerBudget.cats.includes(t.catId))} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerBudget(null)}/>;})()}
-            </>
-          )}
+          {tab==="dashboard"&&<Dashboard txns={filteredTxns} txnsAll={txns} bills={bills} budgets={budgets} banks={banks} groups={groups} expCats={expCats} savings={activeSavings} filterMonth={filterMonth} setFilterMonth={setFilterMonth} availMonths={availMonths} username={username} {...sharedProps} onDeleteTxn={delTxn} onUpdateTxn={updateTxn} onOpenBank={(b)=>{setScrollState({y:window.scrollY,restore:true});setLedgerBank(b);}} onOpenGroup={(g)=>{setScrollState({y:window.scrollY,restore:true});setLedgerGroup(g);}} onOpenSaving={(s)=>{setScrollState({y:window.scrollY,restore:true});setLedgerSaving(s);}} onOpenBudget={(bdg)=>{setScrollState({y:window.scrollY,restore:true});setLedgerBudget(bdg);}} hideTotal={hideTotal} setHideTotal={setHideTotal} navigateTo={navigateTo} scrollState={scrollState} setScrollState={setScrollState} onBanks={saveBanks} onBudgets={saveBudgets} onSavings={saveSavings} onGroups={saveGroups}/>}
+          {tab==="add"&&<AddTransaction banks={banks} expCats={expCats} incCats={incCats} savings={activeSavings} currency={currency} onAdd={addTxn} onDone={()=>navigateTo("dashboard")} {...sharedProps} setAppAlert={setAppAlert} onGoalToast={setGoalToast} txns={txns}/>}
+          {tab==="savings"&&<SavingsPage savings={savings} onSave={saveSavings} txns={txns} banks={banks} onBack={()=>navigateTo("settings")} addTxn={addTxn} delTxn={delTxn} onGoalToast={setGoalToast} {...sharedProps} setAppAlert={setAppAlert} onOpenSaving={(s)=>{setScrollState({y:window.scrollY,restore:true});setLedgerSaving(s);}}/>}
+          {tab==="history"&&<History txns={txns} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} currency={currency} availMonths={availMonths} savings={savings} setAppAlert={setAppAlert}/>}
+          {tab==="budgets"&&<BudgetsPage budgets={budgets} expCats={expCats} onSave={saveBudgets} onBack={()=>navigateTo("settings")} currency={currency} txns={txns}/>}
+          {tab==="quickactions"&&<QuickActionsSetup quickActions={quickActions} expCats={expCats} banks={banks} onSave={saveQuickActions} onBack={()=>navigateTo("settings")}/>}
+          {tab==="manual"&&<UserManual onBack={()=>navigateTo("settings")} navigateTo={navigateTo}/>}
+          {tab==="monthly"&&<MonthlyBillsPage bills={bills} installments={installments} onSaveBills={saveBills} onSaveInstallments={saveInstallments} banks={banks} expCats={expCats} onAddTxn={addTxn} delTxn={delTxn} currency={currency} setAppAlert={setAppAlert}/>}
+          {tab==="settings"&&<Settings banks={banks} expCats={expCats} incCats={incCats} groups={groups} onBanks={saveBanks} onExpCats={saveExpCats} onIncCats={saveIncCats} onGroups={saveGroups} currency={currency} onCurrency={saveCurrencyHandler} username={username} onUsername={saveUsernameHandler} theme={theme} onTheme={saveThemeHandler} {...sharedProps} onOpenSavings={()=>navigateTo("savings")} onOpenBudgets={()=>navigateTo("budgets")} onOpenQuickActions={()=>navigateTo("quickactions")} onOpenManual={()=>navigateTo("manual")} setLastBackup={setLastBackup} txns={txns} bills={bills} savings={savings} budgets={budgets} onRestore={handleRestorePayload} setAppAlert={setAppAlert} navigateTo={navigateTo}/>}
+          {tab==="privacy"&&<Privacy onBack={()=>navigateTo("dashboard")}/>}
+          {tab!=="privacy"&&<BottomNav tab={tab} navigateTo={navigateTo} expCats={expCats} banks={banks} savings={activeSavings} onAdd={addTxn} currency={currency} {...sharedProps} setAppAlert={setAppAlert} quickActions={quickActions} txns={txns}/>}
+        </>
+      ):(
+        <>
+          {ledgerBank&&<DeepLedgerView title={ledgerBank.name} headerType="bank" headerData={{balance:bankBalance(ledgerBank.id),safe:safeToSpend(ledgerBank.id),frozen:frozenForBank(ledgerBank.id)}} txns={txns.filter(t=>t.bankId===ledgerBank.id||t.fromBankId===ledgerBank.id||t.toBankId===ledgerBank.id)} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerBank(null)}/>}
+          {ledgerGroup&&(()=>{const spent=txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerGroup.cats.includes(t.catId)).reduce((a,t)=>a+t.amount,0);return <DeepLedgerView title={ledgerGroup.name} headerType="group" headerData={{spent,color:ledgerGroup.color}} txns={txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerGroup.cats.includes(t.catId))} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerGroup(null)}/>;})()}
+          {ledgerSaving&&(()=>{const saved=goalSaved(ledgerSaving.id);return <SavingDetailView goal={ledgerSaving} saved={saved} txns={txns} onDelete={delTxn} addTxn={addTxn} banks={banks} savings={savings} onSave={saveSavings} onGoalToast={setGoalToast} setAppAlert={setAppAlert} goalSaved={goalSaved} onClose={()=>setLedgerSaving(null)}/>;})()}
+          {ledgerBudget&&(()=>{const spent=txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerBudget.cats.includes(t.catId)).reduce((a,t)=>a+t.amount,0);return <DeepLedgerView title={ledgerBudget.name} headerType="budget" headerData={{spent,limit:ledgerBudget.amount}} txns={txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerBudget.cats.includes(t.catId))} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerBudget(null)}/>;})()}
         </>
       )}
-
-      {/* --- 2. المفهوم الأول: Bento Grid --- */}
-      {uiMode === "bento" && (
-        <BentoDashboard totalSafe={banks.reduce((s,b)=>s+safeToSpend(b.id),0)} quickActions={quickActions} expCats={expCats} onQuickAdd={handleQuickAddExecute} onNavigate={(t)=>{setUiMode("classic"); navigateTo(t);}} />
-      )}
-
-      {/* --- 3. المفهوم الثاني: Liquid Gestures --- */}
-      {uiMode === "liquid" && (
-        <div style={{padding:20, textAlign:"center", paddingTop:100}}>
-           <div style={{color:C.muted, fontSize:14, marginBottom:10}}>Available Balance</div>
-           <div style={{fontSize:48, color:C.text, fontWeight:800}}>{fmt(banks.reduce((s,b)=>s+safeToSpend(b.id),0))}</div>
-           <button onClick={()=>navigateTo("add_liquid")} style={{position:"fixed", bottom:40, left:"50%", transform:"translateX(-50%)", width:72, height:72, borderRadius:99, background:C.accent, color:"#111", fontSize:36, border:"none", boxShadow:"0 10px 20px rgba(0,0,0,0.3)", cursor:"pointer"}}>+</button>
-           {tab==="add_liquid" && <LiquidAddModal expCats={expCats} onAddTransaction={addTxn} onClose={()=>navigateTo("dashboard")} defaultBankId={banks[0]?.id} />}
-        </div>
-      )}
-
-      {/* --- 4. المفهوم الثالث: Smart Ledger --- */}
-      {uiMode === "smart" && (
-        <SmartLedger txns={txns} safeToSpend={banks.reduce((s,b)=>s+safeToSpend(b.id),0)} expCats={expCats} defaultBankId={banks[0]?.id} onSmartAdd={addTxn} onNavigate={(t)=>{setUiMode("classic"); navigateTo(t);}} />
-      )}
-
       {appAlert&&<AlertModal title={appAlert.title} message={appAlert.message} btnColor={appAlert.color} onClose={()=>setAppAlert(null)}/>}
       {pendingCurrency&&<ConfirmModal title="Change Currency?" message={`Switching from ${currency} to ${pendingCurrency} only changes how amounts are displayed. Your actual numbers will NOT be converted.\n\nContinue?`} confirmColor={C.blue} onClose={()=>setPendingCurrency(null)} onConfirm={confirmCurrencyChange}/>}
     </div>
   </ThemeContext.Provider>;
-  }
+}
 
 function NavBtn({id,icon,label,tab,navigateTo}){
   const a=tab===id;
