@@ -2191,6 +2191,8 @@ function SubscriptionsTab({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,s
   const[confirmStop,setConfirmStop]=useState(null); // bill id
   const payingRef=useRef({});
   const is=getIS();
+  // When opened from the dashboard on a past month, jump the history straight to that month
+  useEffect(()=>{if(showHistory&&initialMonth&&initialMonth!==curMonth){const t=setTimeout(()=>{const el=document.getElementById("hist-"+initialMonth);if(el)el.scrollIntoView({block:"start"});},90);return()=>clearTimeout(t);}},[]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isPaid=(bill,mStr)=>bill.payments?.some(p=>p.month===mStr);
   const typeOf=(bill)=>{
@@ -2448,101 +2450,96 @@ function SubscriptionsTab({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,s
         </SwipeRow>
       );};
 
-      // ── HISTORY screen (year → month, lifecycle-aware) ──
-      if(showHistory){
-        const yearsMap={};availMonths.forEach(m=>{const y=m.split("-")[0];(yearsMap[y]=yearsMap[y]||[]).push(m);});
-        const years=Object.keys(yearsMap).sort().reverse();
-        const anyPayments=bills.some(b=>(b.payments||[]).length>0);
-        return <>
-          <button onClick={()=>setShowHistory(false)} style={{display:"inline-flex",alignItems:"center",gap:6,background:"transparent",border:"none",color:C.accent,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",padding:"4px 0",marginBottom:12}}><Ico name="chevR" size={15} color={C.accent} style={{transform:"rotate(180deg)"}}/>Back to bills</button>
-          <div style={{color:C.text,fontSize:20,fontWeight:800,marginBottom:18}}>Payment history</div>
-          {!anyPayments?<EmptyState glyph="receipt" message="No payments recorded yet. Pay a bill and it'll show up here."/>:
-          <div style={{display:"flex",flexDirection:"column",gap:24,paddingBottom:40}}>
-            {years.map(year=>(
-              <div key={year}>
-                <div style={{color:C.text,fontSize:26,fontWeight:800,marginBottom:14,borderBottom:`1px solid ${C.border}`,paddingBottom:8}}>{year}</div>
-                {yearsMap[year].map(mStr=>{
-                  const monthBills=bills.filter(b=>showsInMonth(b,mStr));
-                  if(!monthBills.length)return null;
-                  const pdCnt=monthBills.filter(b=>isPaid(b,mStr)).length;
-                  return <div key={mStr} style={{marginBottom:20}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                      <span style={{color:C.muted,fontSize:14,fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}>{MONTHS[+mStr.split("-")[1]-1]}</span>
-                      <Pill color={pdCnt===monthBills.length?C.accent:C.red}>{pdCnt}/{monthBills.length} Paid</Pill>
-                    </div>
-                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                      {[...monthBills].sort((a,b)=>{const pa=isPaid(a,mStr)?1:0,pb=isPaid(b,mStr)?1:0;if(pa!==pb)return pa-pb;return (a.dueDay||99)-(b.dueDay||99);}).map(bill=>{const paid=isPaid(bill,mStr);const type=typeOf(bill);return (
-                        <div key={bill.id} onClick={()=>openDetail(bill)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:paid?C.accentDim+"33":C.redDim+"22",border:`1px solid ${paid?C.accent:C.red}55`,borderRadius:12,cursor:"pointer"}}>
-                          <ServiceLogo domain={bill.domain} name={bill.name} color={bill.color||C.accent} size={38} style={{borderRadius:11}}/>
-                          <div style={{flex:1,minWidth:0}}>
-                            <div style={{color:C.text,fontWeight:700,fontSize:15,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{bill.name}</div>
-                            <div style={{color:C.muted,fontSize:11,marginTop:2,display:"flex",alignItems:"center",gap:5}}><CatIcon glyph={type.glyph} color={type.color} name={type.name} size={15}/>{type.name}</div>
-                          </div>
-                          <div style={{textAlign:"right",flexShrink:0}}>
-                            <div style={{color:C.text,fontSize:15,fontWeight:800}}>{fmt(bill.amount)}</div>
-                            <div style={{color:paid?C.accent:C.red,fontSize:10,fontWeight:800,letterSpacing:.5,marginTop:3}}>{paid?<span style={{display:"inline-flex",alignItems:"center",gap:3}}><Ico name="check" size={10} color={C.accent} stroke={3}/>PAID</span>:<span style={{display:"inline-flex",alignItems:"center",gap:3}}><Ico name="close" size={10} color={C.red} stroke={3}/>UNPAID</span>}</div>
-                          </div>
+      // ── Monthly history content (shown via the History tab) ──
+      const yearsMap={};availMonths.forEach(m=>{const y=m.split("-")[0];(yearsMap[y]=yearsMap[y]||[]).push(m);});
+      const years=Object.keys(yearsMap).sort().reverse();
+      const anyPayments=bills.some(b=>(b.payments||[]).length>0);
+      const historyContent=(!anyPayments
+        ?<div style={{paddingTop:8}}><EmptyState glyph="receipt" message="No payments recorded yet. Pay a bill and it'll show up here."/></div>
+        :<div style={{display:"flex",flexDirection:"column",gap:24,paddingBottom:40}}>
+          {years.map(year=>(
+            <div key={year}>
+              <div style={{color:C.text,fontSize:26,fontWeight:800,marginBottom:14,borderBottom:`1px solid ${C.border}`,paddingBottom:8}}>{year}</div>
+              {yearsMap[year].map(mStr=>{
+                const mBills=bills.filter(b=>showsInMonth(b,mStr));
+                if(!mBills.length)return null;
+                const pdCnt=mBills.filter(b=>isPaid(b,mStr)).length;
+                return <div key={mStr} id={"hist-"+mStr} style={{marginBottom:20,scrollMarginTop:14}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                    <span style={{color:C.muted,fontSize:14,fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}>{MONTHS[+mStr.split("-")[1]-1]}</span>
+                    <Pill color={pdCnt===mBills.length?C.accent:C.red}>{pdCnt}/{mBills.length} Paid</Pill>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    {[...mBills].sort((a,b)=>{const pa=isPaid(a,mStr)?1:0,pb=isPaid(b,mStr)?1:0;if(pa!==pb)return pa-pb;return (a.dueDay||99)-(b.dueDay||99);}).map(bill=>{const paid=isPaid(bill,mStr);const type=typeOf(bill);return (
+                      <div key={bill.id} onClick={()=>openDetail(bill)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:paid?C.accentDim+"33":C.redDim+"22",border:`1px solid ${paid?C.accent:C.red}55`,borderRadius:12,cursor:"pointer"}}>
+                        <ServiceLogo domain={bill.domain} name={bill.name} color={bill.color||C.accent} size={38} style={{borderRadius:11}}/>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{color:C.text,fontWeight:700,fontSize:15,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{bill.name}</div>
+                          <div style={{color:C.muted,fontSize:11,marginTop:2,display:"flex",alignItems:"center",gap:5}}><CatIcon glyph={type.glyph} color={type.color} name={type.name} size={15}/>{type.name}</div>
                         </div>
-                      );})}
-                    </div>
-                  </div>;
-                })}
-              </div>
-            ))}
-          </div>}
-        </>;
-      }
-
-      // ── TIMELINE / CATEGORIES lenses ──
-      return <>
-        <Btn full onClick={openPicker} color={C.accent} style={{marginBottom:16,borderRadius:14,padding:"15px"}}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8}}><Ico name="plus" size={18} color="#111" stroke={2.5}/>Add subscription</span></Btn>
-        <div style={{display:"flex",gap:8,marginBottom:20}}>
-          {[{id:"timeline",label:"Timeline"},{id:"categories",label:"Categories"}].map(l=>{const on=lens===l.id;return <button key={l.id} onClick={()=>setLens(l.id)} style={{flex:1,padding:"11px 0",borderRadius:12,border:`1.5px solid ${on?C.accent:C.border}`,background:on?C.accentDim:"transparent",color:on?C.accent:C.muted,fontWeight:700,fontSize:13.5,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>{l.label}</button>;})}
-        </div>
-
-        {activeBills.length===0
-          ?<div style={{padding:"8px 0 28px"}}><EmptyState glyph="zap" message="No active subscriptions this month. Add one, or check your history below."/></div>
-          :lens==="timeline"?(()=>{
-              const unpaid=activeBills.filter(b=>!isPaid(b,curMonth));
-              const paidList=activeBills.filter(b=>isPaid(b,curMonth));
-              const groups=[
-                {label:"Overdue",color:C.red,items:unpaid.filter(b=>dueDiff(b)<0).sort((a,b)=>dueDiff(a)-dueDiff(b))},
-                {label:"Due soon",color:C.yellow,items:unpaid.filter(b=>{const d=dueDiff(b);return d>=0&&d<=7;}).sort((a,b)=>dueDiff(a)-dueDiff(b))},
-                {label:"Upcoming",color:C.muted,items:unpaid.filter(b=>dueDiff(b)>7).sort((a,b)=>dueDiff(a)-dueDiff(b))},
-                {label:"Paid",color:C.accent,items:paidList},
-              ];
-              return <div style={{display:"flex",flexDirection:"column",gap:26,paddingBottom:8}}>
-                {groups.filter(g=>g.items.length).map(g=>(
-                  <div key={g.label}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                      <span style={{display:"inline-flex",alignItems:"center",gap:8,color:g.color,fontSize:12,fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}><span style={{width:8,height:8,borderRadius:99,background:g.color,flexShrink:0}}/>{g.label} · {g.items.length}</span>
-                      <span style={{color:C.muted,fontSize:12,fontWeight:700}}>{fmt(g.items.reduce((a,b)=>a+b.amount,0))}</span>
-                    </div>
-                    <div style={{display:"flex",flexDirection:"column",gap:12}}>{g.items.map(billCard)}</div>
-                  </div>
-                ))}
-              </div>;
-            })()
-          :(()=>{
-              const byType={};activeBills.forEach(b=>{const t=typeOf(b);if(!byType[t.id])byType[t.id]={type:t,items:[],total:0};byType[t.id].items.push(b);byType[t.id].total+=b.amount;});
-              const groups=Object.values(byType).sort((a,b)=>b.total-a.total);
-              return <div style={{display:"flex",flexDirection:"column",gap:26,paddingBottom:8}}>
-                {groups.map(g=>(
-                  <div key={g.type.id}>
-                    <div style={{marginBottom:12}}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                        <span style={{display:"inline-flex",alignItems:"center",gap:8,color:C.text,fontSize:14,fontWeight:800}}><CatIcon glyph={g.type.glyph} color={g.type.color} name={g.type.name} size={22}/>{g.type.name} · {g.items.length}</span>
-                        <span style={{color:C.text,fontSize:14,fontWeight:800}}>{fmt(g.total)}<span style={{color:C.muted,fontSize:11,fontWeight:600}}> /mo</span></span>
+                        <div style={{textAlign:"right",flexShrink:0}}>
+                          <div style={{color:C.text,fontSize:15,fontWeight:800}}>{fmt(bill.amount)}</div>
+                          <div style={{color:paid?C.accent:C.red,fontSize:10,fontWeight:800,letterSpacing:.5,marginTop:3}}>{paid?<span style={{display:"inline-flex",alignItems:"center",gap:3}}><Ico name="check" size={10} color={C.accent} stroke={3}/>PAID</span>:<span style={{display:"inline-flex",alignItems:"center",gap:3}}><Ico name="close" size={10} color={C.red} stroke={3}/>UNPAID</span>}</div>
+                        </div>
                       </div>
-                      <div style={{height:6,borderRadius:6,background:C.border,overflow:"hidden"}}><div style={{height:"100%",width:`${totalMonthly>0?Math.round(g.total/totalMonthly*100):0}%`,background:g.type.color,borderRadius:6}}/></div>
-                    </div>
-                    <div style={{display:"flex",flexDirection:"column",gap:12}}>{g.items.map(billCard)}</div>
+                    );})}
                   </div>
-                ))}
-              </div>;
-            })()}
+                </div>;
+              })}
+            </div>
+          ))}
+        </div>);
 
-        <button onClick={()=>setShowHistory(true)} style={{marginTop:20,marginBottom:40,width:"100%",padding:"13px",borderRadius:12,border:`1px solid ${C.border}`,background:"transparent",color:C.muted,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8}}><Ico name="receipt" size={15} color={C.muted}/>View monthly payment history</button>
+      const timelineContent=(()=>{
+        const unpaid=activeBills.filter(b=>!isPaid(b,curMonth));
+        const paidList=activeBills.filter(b=>isPaid(b,curMonth));
+        const groups=[
+          {label:"Overdue",color:C.red,items:unpaid.filter(b=>dueDiff(b)<0).sort((a,b)=>dueDiff(a)-dueDiff(b))},
+          {label:"Due soon",color:C.yellow,items:unpaid.filter(b=>{const d=dueDiff(b);return d>=0&&d<=7;}).sort((a,b)=>dueDiff(a)-dueDiff(b))},
+          {label:"Upcoming",color:C.muted,items:unpaid.filter(b=>dueDiff(b)>7).sort((a,b)=>dueDiff(a)-dueDiff(b))},
+          {label:"Paid",color:C.accent,items:paidList},
+        ];
+        return <div style={{display:"flex",flexDirection:"column",gap:26,paddingBottom:8}}>
+          {groups.filter(g=>g.items.length).map(g=>(
+            <div key={g.label}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                <span style={{display:"inline-flex",alignItems:"center",gap:8,color:g.color,fontSize:12,fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}><span style={{width:8,height:8,borderRadius:99,background:g.color,flexShrink:0}}/>{g.label} · {g.items.length}</span>
+                <span style={{color:C.muted,fontSize:12,fontWeight:700}}>{fmt(g.items.reduce((a,b)=>a+b.amount,0))}</span>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>{g.items.map(billCard)}</div>
+            </div>
+          ))}
+        </div>;
+      })();
+      const categoriesContent=(()=>{
+        const byType={};activeBills.forEach(b=>{const t=typeOf(b);if(!byType[t.id])byType[t.id]={type:t,items:[],total:0};byType[t.id].items.push(b);byType[t.id].total+=b.amount;});
+        const groups=Object.values(byType).sort((a,b)=>b.total-a.total);
+        return <div style={{display:"flex",flexDirection:"column",gap:26,paddingBottom:8}}>
+          {groups.map(g=>(
+            <div key={g.type.id}>
+              <div style={{marginBottom:12}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                  <span style={{display:"inline-flex",alignItems:"center",gap:8,color:C.text,fontSize:14,fontWeight:800}}><CatIcon glyph={g.type.glyph} color={g.type.color} name={g.type.name} size={22}/>{g.type.name} · {g.items.length}</span>
+                  <span style={{color:C.text,fontSize:14,fontWeight:800}}>{fmt(g.total)}<span style={{color:C.muted,fontSize:11,fontWeight:600}}> /mo</span></span>
+                </div>
+                <div style={{height:6,borderRadius:6,background:C.border,overflow:"hidden"}}><div style={{height:"100%",width:`${totalMonthly>0?Math.round(g.total/totalMonthly*100):0}%`,background:g.type.color,borderRadius:6}}/></div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>{g.items.map(billCard)}</div>
+            </div>
+          ))}
+        </div>;
+      })();
+
+      const segs=[{id:"timeline",label:"Timeline"},{id:"categories",label:"Categories"},{id:"history",label:"History"}];
+      return <>
+        <Btn full onClick={openPicker} color={C.accent} style={{marginBottom:14,borderRadius:14,padding:"15px"}}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8}}><Ico name="plus" size={18} color="#111" stroke={2.5}/>Add subscription</span></Btn>
+        <div style={{display:"flex",gap:8,marginBottom:22}}>
+          {segs.map(s=>{const on=s.id==="history"?showHistory:(!showHistory&&lens===s.id);return <button key={s.id} onClick={()=>{if(s.id==="history")setShowHistory(true);else{setShowHistory(false);setLens(s.id);}}} style={{flex:1,padding:"11px 0",borderRadius:12,border:`1.5px solid ${on?C.accent:C.border}`,background:on?C.accentDim:"transparent",color:on?C.accent:C.muted,fontWeight:700,fontSize:13.5,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>{s.label}</button>;})}
+        </div>
+        {showHistory?historyContent
+          :activeBills.length===0
+            ?<div style={{padding:"8px 0 28px"}}><EmptyState glyph="zap" message="No active subscriptions this month. Add one, or tap History to see past months."/></div>
+            :lens==="timeline"?timelineContent:categoriesContent}
       </>;
     })()}
 
@@ -2568,6 +2565,8 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,d
   const payingRef=useRef({});
   const savingRef=useRef(false);
   const is=getIS();
+  // When opened from the dashboard on a past month, jump the history straight to that month
+  useEffect(()=>{if(showHistory&&initialMonth&&initialMonth!==curMonth){const t=setTimeout(()=>{const el=document.getElementById("hist-"+initialMonth);if(el)el.scrollIntoView({block:"start"});},90);return()=>clearTimeout(t);}},[]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Derived helpers (payments[] is the source of truth; migrate old paidInstallments count)
   const paidOf=(inst)=>inst.payments?inst.payments.length:(inst.paidInstallments||0);
@@ -2946,67 +2945,60 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,d
     {installments.length===0&&<><EmptyState glyph="card" message="No installment plans yet. Add your BNPL, loan, or any plan."/><Btn full onClick={openPicker} style={{marginTop:4}}>+ Add Installment</Btn></>}
 
     {installments.length>0&&(()=>{
-      // ── Monthly payment-history screen (separated from day-to-day management) ──
-      if(showHistory){
-        const payMonths=[...new Set(installments.flatMap(i=>(i.payments||[]).map(p=>p.month)))].sort().reverse();
-        const yearsMap={};payMonths.forEach(m=>{const y=m.split("-")[0];(yearsMap[y]=yearsMap[y]||[]).push(m);});
-        const years=Object.keys(yearsMap).sort().reverse();
-        return <>
-          <button onClick={()=>setShowHistory(false)} style={{display:"inline-flex",alignItems:"center",gap:6,background:"transparent",border:"none",color:C.accent,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",padding:"4px 0",marginBottom:12}}><Ico name="chevR" size={15} color={C.accent} style={{transform:"rotate(180deg)"}}/>Back to plans</button>
-          <div style={{color:C.text,fontSize:20,fontWeight:800,marginBottom:18}}>Payment history</div>
-          {years.length===0?<EmptyState glyph="receipt" message="No payments recorded yet. Pay an installment and it'll show up here."/>:
-          <div style={{display:"flex",flexDirection:"column",gap:24,paddingBottom:40}}>
-            {years.map(year=>(
-              <div key={year}>
-                <div style={{color:C.text,fontSize:26,fontWeight:800,marginBottom:14,borderBottom:`1px solid ${C.border}`,paddingBottom:8}}>{year}</div>
-                {yearsMap[year].map(mStr=>{
-                  const paidThis=installments.filter(i=>paidInMonth(i,mStr));
-                  if(!paidThis.length)return null;
-                  const monthTotal=paidThis.reduce((a,i)=>a+i.installmentAmount,0);
-                  return <div key={mStr} style={{marginBottom:20}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                      <span style={{color:C.muted,fontSize:14,fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}>{MONTHS[+mStr.split("-")[1]-1]}</span>
-                      <Pill color={C.accent}>{fmt(monthTotal)}</Pill>
-                    </div>
-                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                      {paidThis.map(inst=>{const p=inst.payments.find(x=>x.month===mStr);return (
-                        <div key={inst.id} onClick={()=>openDetail(inst)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:C.accentDim+"33",border:`1px solid ${C.accent}55`,borderRadius:12,cursor:"pointer"}}>
-                          <ServiceLogo domain={inst.domain} name={inst.company||inst.itemType} color={inst.color||C.accent} size={38} style={{borderRadius:11}}/>
-                          <div style={{flex:1,minWidth:0}}>
-                            <div style={{color:C.text,fontWeight:700,fontSize:15,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{inst.itemType||inst.company}</div>
-                            <div style={{color:C.muted,fontSize:11,marginTop:2}}>Payment {p?.num||"?"} of {inst.totalInstallments}</div>
-                          </div>
-                          <div style={{color:C.accent,fontSize:14,fontWeight:800,display:"flex",alignItems:"center",gap:4}}><Ico name="check" size={13} color={C.accent} stroke={3}/>{fmt(inst.installmentAmount)}</div>
+      // ── Monthly payment history (shown via the History tab) ──
+      const payMonths=[...new Set(installments.flatMap(i=>(i.payments||[]).map(p=>p.month)))].sort().reverse();
+      const histYears={};payMonths.forEach(m=>{const y=m.split("-")[0];(histYears[y]=histYears[y]||[]).push(m);});
+      const years=Object.keys(histYears).sort().reverse();
+      const historyContent=(years.length===0
+        ?<div style={{paddingTop:8}}><EmptyState glyph="receipt" message="No payments recorded yet. Pay an installment and it'll show up here."/></div>
+        :<div style={{display:"flex",flexDirection:"column",gap:24,paddingBottom:40}}>
+          {years.map(year=>(
+            <div key={year}>
+              <div style={{color:C.text,fontSize:26,fontWeight:800,marginBottom:14,borderBottom:`1px solid ${C.border}`,paddingBottom:8}}>{year}</div>
+              {histYears[year].map(mStr=>{
+                const paidThis=installments.filter(i=>paidInMonth(i,mStr));
+                if(!paidThis.length)return null;
+                const monthTotal=paidThis.reduce((a,i)=>a+i.installmentAmount,0);
+                return <div key={mStr} id={"hist-"+mStr} style={{marginBottom:20,scrollMarginTop:14}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                    <span style={{color:C.muted,fontSize:14,fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}>{MONTHS[+mStr.split("-")[1]-1]}</span>
+                    <Pill color={C.accent}>{fmt(monthTotal)}</Pill>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    {paidThis.map(inst=>{const p=inst.payments.find(x=>x.month===mStr);return (
+                      <div key={inst.id} onClick={()=>openDetail(inst)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:C.accentDim+"33",border:`1px solid ${C.accent}55`,borderRadius:12,cursor:"pointer"}}>
+                        <ServiceLogo domain={inst.domain} name={inst.company||inst.itemType} color={inst.color||C.accent} size={38} style={{borderRadius:11}}/>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{color:C.text,fontWeight:700,fontSize:15,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{inst.itemType||inst.company}</div>
+                          <div style={{color:C.muted,fontSize:11,marginTop:2}}>Payment {p?.num||"?"} of {inst.totalInstallments}</div>
                         </div>
-                      );})}
-                    </div>
-                  </div>;
-                })}
-              </div>
-            ))}
-          </div>}
-        </>;
-      }
+                        <div style={{color:C.accent,fontSize:14,fontWeight:800,display:"flex",alignItems:"center",gap:4}}><Ico name="check" size={13} color={C.accent} stroke={3}/>{fmt(inst.installmentAmount)}</div>
+                      </div>
+                    );})}
+                  </div>
+                </div>;
+              })}
+            </div>
+          ))}
+        </div>);
 
-      // ── Status-filtered plan list ──
+      // ── Status-filtered plans ──
       const dueNow=active.filter(i=>!paidInMonth(i,curMonth));
       const completed=installments.filter(i=>isCompleted(i));
-      const segs=[{id:"due",label:"Due now",count:dueNow.length},{id:"active",label:"Active",count:active.length},{id:"completed",label:"Completed",count:completed.length},{id:"all",label:"All",count:installments.length}];
+      const chips=[{id:"due",label:"Due now",count:dueNow.length},{id:"active",label:"Active",count:active.length},{id:"completed",label:"Completed",count:completed.length},{id:"all",label:"All",count:installments.length}];
       const urgency=arr=>[...arr].sort((a,b)=>{const ca=isCompleted(a)?1:0,cb=isCompleted(b)?1:0;if(ca!==cb)return ca-cb;const pa=paidInMonth(a,curMonth)?1:0,pb=paidInMonth(b,curMonth)?1:0;if(pa!==pb)return pa-pb;return (a.dueDay||99)-(b.dueDay||99);});
       const list=listFilter==="completed"?urgency(completed):listFilter==="all"?urgency(installments):listFilter==="active"?urgency(active):urgency(dueNow);
       const emptyMsg=listFilter==="due"?"Nothing due right now — you're all caught up this month.":listFilter==="completed"?"No fully-paid plans yet.":"No plans here.";
-      return <>
-        <Btn full onClick={openPicker} color={C.accent} style={{marginBottom:16,borderRadius:14,padding:"15px"}}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8}}><Ico name="plus" size={18} color="#111" stroke={2.5}/>Add installment</span></Btn>
-        <div style={{color:C.text,fontSize:18,fontWeight:800,marginBottom:14}}>Your plans</div>
-        <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4,marginBottom:16,WebkitOverflowScrolling:"touch"}}>
-          {segs.map(s=>{const on=listFilter===s.id;return (
+      const plansContent=<>
+        <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4,marginBottom:18,WebkitOverflowScrolling:"touch"}}>
+          {chips.map(s=>{const on=listFilter===s.id;return (
             <button key={s.id} onClick={()=>setListFilter(s.id)} style={{flexShrink:0,padding:"9px 13px",borderRadius:99,border:`1.5px solid ${on?C.accent:C.border}`,background:on?C.accentDim:"transparent",color:on?C.accent:C.muted,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",display:"inline-flex",alignItems:"center",gap:6}}>
               {s.label}<span style={{background:on?C.accent:C.border,color:on?"#111":C.muted,borderRadius:99,fontSize:11,fontWeight:800,minWidth:18,height:18,padding:"0 5px",display:"inline-flex",alignItems:"center",justifyContent:"center"}}>{s.count}</span>
             </button>
           );})}
         </div>
         {list.length===0?<div style={{padding:"8px 0 28px"}}><EmptyState glyph="card" message={emptyMsg}/></div>:
-        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        <div style={{display:"flex",flexDirection:"column",gap:12,paddingBottom:8}}>
           {list.map(inst=>{
             const done=isCompleted(inst);const paidM=paidInMonth(inst,curMonth);const paid=paidOf(inst);
             const pct=Math.round((paid/inst.totalInstallments)*100);const di=dueInfo(inst);
@@ -3040,7 +3032,15 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,d
             </SwipeRow>;
           })}
         </div>}
-        <button onClick={()=>setShowHistory(true)} style={{marginTop:16,marginBottom:40,width:"100%",padding:"13px",borderRadius:12,border:`1px solid ${C.border}`,background:"transparent",color:C.muted,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8}}><Ico name="receipt" size={15} color={C.muted}/>View monthly payment history</button>
+      </>;
+
+      const segs=[{id:"plans",label:"Plans"},{id:"history",label:"History"}];
+      return <>
+        <Btn full onClick={openPicker} color={C.accent} style={{marginBottom:14,borderRadius:14,padding:"15px"}}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8}}><Ico name="plus" size={18} color="#111" stroke={2.5}/>Add installment</span></Btn>
+        <div style={{display:"flex",gap:8,marginBottom:22}}>
+          {segs.map(s=>{const on=s.id==="history"?showHistory:!showHistory;return <button key={s.id} onClick={()=>setShowHistory(s.id==="history")} style={{flex:1,padding:"11px 0",borderRadius:12,border:`1.5px solid ${on?C.accent:C.border}`,background:on?C.accentDim:"transparent",color:on?C.accent:C.muted,fontWeight:700,fontSize:13.5,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>{s.label}</button>;})}
+        </div>
+        {showHistory?historyContent:plansContent}
       </>;
     })()}
 
