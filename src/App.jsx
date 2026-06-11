@@ -2634,6 +2634,7 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,d
     const computedTotal=parseFloat(f.total)||(count*amount);
     const valid=(f.itemType||f.company).trim()&&count>0&&amount>0&&(f.editId||(parseInt(f.paidInit)||0)<=count);
     const lbl={color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8,display:"block"};
+    const hint={color:C.faint,fontSize:11.5,marginTop:6,lineHeight:1.4};
 
     // ── Reusable field fragments (shared by edit screen + new wizard) ──
     const logoPreview=(size)=><div style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:24}}><ServiceLogo domain={f.domain} name={f.company||f.itemType||"?"} color={accent} size={size} style={{borderRadius:size*0.28}}/></div>;
@@ -2646,25 +2647,26 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,d
         </div>
       </div>
     );
-    const itemField=<div style={{marginBottom:20}}><label style={lbl}>What is it?</label><input value={f.itemType} onChange={e=>setF("itemType",e.target.value)} placeholder="e.g. iPhone 15, Car, Sofa..." style={{...is,borderRadius:14}}/></div>;
-    const companyField=<div style={{marginBottom:20}}><label style={lbl}>Company / Place</label><input value={f.company} onChange={e=>setF("company",e.target.value)} placeholder="e.g. ValU, B.TECH, dealership..." style={{...is,borderRadius:14}}/></div>;
+    const itemField=<div style={{marginBottom:20}}><label style={lbl}>What are you paying off?</label><input value={f.itemType} onChange={e=>setF("itemType",e.target.value)} placeholder="e.g. iPhone 15, Car, Sofa..." style={{...is,borderRadius:14}}/><div style={hint}>The product or service this plan is for.</div></div>;
+    const companyField=<div style={{marginBottom:20}}><label style={lbl}>Store or provider</label><input value={f.company} onChange={e=>setF("company",e.target.value)} placeholder="e.g. ValU, B.TECH, dealership..." style={{...is,borderRadius:14}}/><div style={hint}>Who you pay each month — the shop, bank, or BNPL service.</div></div>;
     const countAmountFields=(
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:8}}>
-        <div><label style={lbl}>No. of Installments</label><input type="number" min="1" inputMode="numeric" value={f.count} onChange={e=>setF("count",e.target.value)} placeholder="0" style={{...is,borderRadius:14}}/></div>
-        <div><label style={lbl}>Installment Amount</label><input type="number" step="any" inputMode="decimal" value={f.amount} onChange={e=>setF("amount",e.target.value)} placeholder="0" style={{...is,borderRadius:14}}/></div>
+        <div><label style={lbl}>Number of months</label><input type="number" min="1" inputMode="numeric" value={f.count} onChange={e=>setF("count",e.target.value)} placeholder="e.g. 12" style={{...is,borderRadius:14}}/><div style={hint}>How many monthly payments in total — a count, not money.</div></div>
+        <div><label style={lbl}>Amount each month</label><input type="number" step="any" inputMode="decimal" value={f.amount} onChange={e=>setF("amount",e.target.value)} placeholder="0" style={{...is,borderRadius:14}}/><div style={hint}>The money you pay every month.</div></div>
       </div>
     );
     const totalField=(
       <div style={{marginBottom:20}}>
-        <label style={lbl}>Total Amount (auto · editable)</label>
+        <label style={lbl}>Total amount</label>
         <input type="number" step="any" inputMode="decimal" value={f.total} onChange={e=>setF("total",e.target.value)} placeholder={String(computedTotal||0)} style={{...is,borderRadius:14,fontWeight:800}}/>
-        {count>0&&amount>0&&<div style={{color:C.muted,fontSize:11,marginTop:6}}>{count} × {fmt(amount)} = {fmt(count*amount)}</div>}
+        {count>0&&amount>0?<div style={{color:C.muted,fontSize:11,marginTop:6}}>{count} × {fmt(amount)} = {fmt(count*amount)}</div>:<div style={hint}>The full amount over the whole plan. Fills in by itself — you can also type it and the monthly amount is worked out.</div>}
       </div>
     );
     const downPaymentField=(
       <div style={{marginBottom:20}}>
         <label style={lbl}>Deposit (optional)</label>
         <input type="number" step="any" min="0" inputMode="decimal" value={f.downPayment} onChange={e=>setF("downPayment",e.target.value)} placeholder="0" style={{...is,borderRadius:14}}/>
+        {!(parseFloat(f.downPayment)>0)&&<div style={hint}>An upfront amount you paid before the monthly installments. Leave empty if there's none.</div>}
         {!f.editId&&parseFloat(f.downPayment)>0&&(
           <div onClick={()=>setF("deductDp",!f.deductDp)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:C.bg,border:`1px solid ${C.border}`,borderRadius:12,cursor:"pointer",marginTop:10}}>
             <div style={{flex:1}}><div style={{color:C.text,fontSize:14,fontWeight:700}}>Deduct from account now</div><div style={{color:C.muted,fontSize:11,marginTop:2}}>{f.deductDp?"Records an expense and lowers your account balance":"Info only — no transaction, balance unchanged"}</div></div>
@@ -2676,9 +2678,9 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,d
     );
     const paidCount=parseInt(f.paidInit)||0;
     const paidInitField=!f.editId&&<div style={{marginBottom:20}}>
-      <label style={lbl}>Already Paid (installments)</label>
-      <input type="number" min="0" inputMode="numeric" value={f.paidInit} onChange={e=>setF("paidInit",e.target.value)} style={{...is,borderRadius:14}}/>
-      {paidCount>count?<div style={{color:C.red,fontSize:11,marginTop:6,fontWeight:700}}>That's more than this plan's {count} total installment{count===1?"":"s"}. Enter {count} or less.</div>:<div style={{color:C.faint,fontSize:11,marginTop:6}}>Installments you paid before adding this plan.</div>}
+      <label style={lbl}>Number of months already paid</label>
+      <input type="number" min="0" inputMode="numeric" value={f.paidInit} onChange={e=>setF("paidInit",e.target.value)} placeholder="0" style={{...is,borderRadius:14}}/>
+      {paidCount>count?<div style={{color:C.red,fontSize:11,marginTop:6,fontWeight:700}}>That's more than this plan's {count} total month{count===1?"":"s"}. Enter {count} or less.</div>:<div style={hint}>How many monthly payments you'd already made before adding this plan — a count, not money.</div>}
       {paidCount>0&&paidCount<=count&&(
         <div onClick={()=>setF("deductPaid",!f.deductPaid)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:C.bg,border:`1px solid ${C.border}`,borderRadius:12,cursor:"pointer",marginTop:10}}>
           <div style={{flex:1}}><div style={{color:C.text,fontSize:14,fontWeight:700}}>Deduct from account now</div><div style={{color:C.muted,fontSize:11,marginTop:2}}>{f.deductPaid?`Records ${paidCount} expense${paidCount===1?"":"s"} and lowers your balance`:"Info only — no transactions, balance unchanged"}</div></div>
@@ -2688,7 +2690,7 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,d
     </div>;
     const bankPicker=(
       <div style={{marginBottom:20}}>
-        <label style={lbl}>Pay from Account</label>
+        <label style={lbl}>Pay from which account?</label>
         {banks.length===0?<div style={{color:C.faint,fontSize:13,padding:"4px 2px"}}>No accounts yet — add one in Settings.</div>:
         <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:6,WebkitOverflowScrolling:"touch"}}>
           {banks.map(b=>{const on=f.bankId===b.id;return (
@@ -2698,16 +2700,20 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,d
             </button>
           );})}
         </div>}
+        {banks.length>0&&<div style={hint}>Each month's payment is taken from this account.</div>}
       </div>
     );
     const dueReminderFields=(
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
-        <div><label style={lbl}>Due Day</label><input type="number" min="1" max="28" inputMode="numeric" value={f.dueDay} onChange={e=>setF("dueDay",e.target.value)} style={{...is,borderRadius:14}}/></div>
-        <div><label style={lbl}>Remind Before (days)</label><input type="number" min="0" max="7" inputMode="numeric" value={f.reminderDays} onChange={e=>setF("reminderDays",e.target.value)} style={{...is,borderRadius:14}}/></div>
+      <div style={{marginBottom:20}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div><label style={lbl}>Due day of month</label><input type="number" min="1" max="28" inputMode="numeric" value={f.dueDay} onChange={e=>setF("dueDay",e.target.value)} placeholder="1" style={{...is,borderRadius:14}}/></div>
+          <div><label style={lbl}>Remind me before</label><input type="number" min="0" max="7" inputMode="numeric" value={f.reminderDays} onChange={e=>setF("reminderDays",e.target.value)} style={{...is,borderRadius:14}}/></div>
+        </div>
+        <div style={hint}>Which day (1–28) the payment is due, and how many days earlier to remind you (0 = no reminder).</div>
       </div>
     );
-    const startDateField=<div style={{marginBottom:20}}><label style={lbl}>Start Date</label><input type="date" value={f.startDate} onChange={e=>setF("startDate",e.target.value)} style={{...is,borderRadius:14,colorScheme:C.isDark?"dark":"light"}}/></div>;
-    const noteField=<div style={{marginBottom:28}}><label style={lbl}>Note (optional)</label><input value={f.note} onChange={e=>setF("note",e.target.value)} placeholder="e.g. 0% interest" style={{...is,borderRadius:14}}/></div>;
+    const startDateField=<div style={{marginBottom:20}}><label style={lbl}>Start date</label><input type="date" value={f.startDate} onChange={e=>setF("startDate",e.target.value)} style={{...is,borderRadius:14,colorScheme:C.isDark?"dark":"light"}}/><div style={hint}>When this plan began (or when you bought the item).</div></div>;
+    const noteField=<div style={{marginBottom:28}}><label style={lbl}>Note (optional)</label><input value={f.note} onChange={e=>setF("note",e.target.value)} placeholder="e.g. 0% interest" style={{...is,borderRadius:14}}/><div style={hint}>Anything you want to remember about this plan.</div></div>;
 
     // ── EDIT: single scrollable screen ──
     if(f.editId){
