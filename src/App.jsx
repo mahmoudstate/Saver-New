@@ -748,6 +748,7 @@ function SaverApp(){
   const[ledgerSaving,setLedgerSaving]=useState(null);
   const[ledgerBudget,setLedgerBudget]=useState(null);
   const[budgetMonth,setBudgetMonth]=useState(currentMonth()); // budgets-page month filter, survives opening a budget ledger
+  const[ledgerBudgetMonth,setLedgerBudgetMonth]=useState(currentMonth()); // month a budget ledger is opened for — kept separate from the dashboard filter
   const[goalToast,setGoalToast]=useState(null);
   const[showWhatsNew,setShowWhatsNew]=useState(false);
   const[appTour,setAppTour]=useState(false);
@@ -996,11 +997,11 @@ function SaverApp(){
 
       {!ledgerBank&&!ledgerGroup&&!ledgerSaving&&!ledgerBudget?(
         <>
-          {tab==="dashboard"&&<Dashboard txns={filteredTxns} txnsAll={txns} bills={bills} installments={installments} budgets={budgets} banks={banks} groups={groups} expCats={expCats} savings={activeSavings} filterMonth={filterMonth} setFilterMonth={setFilterMonth} availMonths={availMonths} username={username} {...sharedProps} onDeleteTxn={delTxn} onUpdateTxn={updateTxn} onOpenBank={(b)=>{setScrollState({y:window.scrollY,restore:true});setLedgerBank(b);}} onOpenGroup={(g)=>{setScrollState({y:window.scrollY,restore:true});setLedgerGroup(g);}} onOpenSaving={(s)=>{setScrollState({y:window.scrollY,restore:true});setLedgerSaving(s);}} onOpenBudget={(bdg)=>{setScrollState({y:window.scrollY,restore:true});setLedgerBudget(bdg);}} hideTotal={hideTotal} setHideTotal={setHideTotal} navigateTo={navigateTo} openMonthly={openMonthly} scrollState={scrollState} setScrollState={setScrollState} onBanks={saveBanks} onBudgets={saveBudgets} onSavings={saveSavings} onGroups={saveGroups}/>}
+          {tab==="dashboard"&&<Dashboard txns={filteredTxns} txnsAll={txns} bills={bills} installments={installments} budgets={budgets} banks={banks} groups={groups} expCats={expCats} savings={activeSavings} filterMonth={filterMonth} setFilterMonth={setFilterMonth} availMonths={availMonths} username={username} {...sharedProps} onDeleteTxn={delTxn} onUpdateTxn={updateTxn} onOpenBank={(b)=>{setScrollState({y:window.scrollY,restore:true});setLedgerBank(b);}} onOpenGroup={(g)=>{setScrollState({y:window.scrollY,restore:true});setLedgerGroup(g);}} onOpenSaving={(s)=>{setScrollState({y:window.scrollY,restore:true});setLedgerSaving(s);}} onOpenBudget={(bdg)=>{setLedgerBudgetMonth(filterMonth);setScrollState({y:window.scrollY,restore:true});setLedgerBudget(bdg);}} hideTotal={hideTotal} setHideTotal={setHideTotal} navigateTo={navigateTo} openMonthly={openMonthly} scrollState={scrollState} setScrollState={setScrollState} onBanks={saveBanks} onBudgets={saveBudgets} onSavings={saveSavings} onGroups={saveGroups}/>}
           {tab==="add"&&<AddTransaction banks={banks} expCats={expCats} incCats={incCats} savings={activeSavings} currency={currency} onAdd={addTxn} onDone={()=>navigateTo("dashboard")} {...sharedProps} setAppAlert={setAppAlert} onGoalToast={setGoalToast} txns={txns}/>}
           {tab==="savings"&&<SavingsPage savings={savings} onSave={saveSavings} txns={txns} banks={banks} onBack={()=>navigateTo("settings")} addTxn={addTxn} delTxn={delTxn} onGoalToast={setGoalToast} {...sharedProps} setAppAlert={setAppAlert} onOpenSaving={(s)=>{setScrollState({y:window.scrollY,restore:true});setLedgerSaving(s);}}/>}
           {tab==="history"&&<History txns={txns} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} currency={currency} availMonths={availMonths} savings={savings} setAppAlert={setAppAlert}/>}
-          {tab==="budgets"&&<BudgetsPage budgets={budgets} expCats={expCats} onSave={saveBudgets} onBack={()=>navigateTo("settings")} currency={currency} txns={txns} filterMonth={budgetMonth} setFilterMonth={setBudgetMonth} onOpenBudget={(b,m)=>{if(m&&m!=="all")setFilterMonth(m);else setFilterMonth(currentMonth());setScrollState({y:window.scrollY,restore:true});setLedgerBudget(b);}}/>}
+          {tab==="budgets"&&<BudgetsPage budgets={budgets} expCats={expCats} onSave={saveBudgets} onBack={()=>navigateTo("settings")} currency={currency} txns={txns} filterMonth={budgetMonth} setFilterMonth={setBudgetMonth} onOpenBudget={(b,m)=>{setLedgerBudgetMonth(m&&m!=="all"?m:currentMonth());setScrollState({y:window.scrollY,restore:true});setLedgerBudget(b);}}/>}
           {tab==="quickactions"&&<QuickActionsSetup quickActions={quickActions} expCats={expCats} banks={banks} onSave={saveQuickActions} onBack={()=>navigateTo("settings")}/>}
           {tab==="manual"&&<UserManual onBack={()=>navigateTo("settings")} navigateTo={navigateTo} onCoach={startCoach}/>}
           {tab==="monthly"&&<MonthlyBillsPage bills={bills} installments={installments} initialTab={monthlyTab} initialMonth={monthlyMonth} onSaveBills={saveBills} onSaveInstallments={saveInstallments} banks={banks} expCats={expCats} onAddTxn={addTxn} onAddTxns={addTxns} delTxn={delTxn} currency={currency} setAppAlert={setAppAlert}/>}
@@ -1013,7 +1014,7 @@ function SaverApp(){
           {ledgerBank&&<DeepLedgerView title={ledgerBank.name} headerType="bank" headerData={{balance:bankBalance(ledgerBank.id),safe:safeToSpend(ledgerBank.id),frozen:frozenForBank(ledgerBank.id)}} txns={txns.filter(t=>t.bankId===ledgerBank.id||t.fromBankId===ledgerBank.id||t.toBankId===ledgerBank.id)} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerBank(null)}/>}
           {ledgerGroup&&(()=>{const spent=txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerGroup.cats.includes(t.catId)).reduce((a,t)=>a+t.amount,0);return <DeepLedgerView title={ledgerGroup.name} headerType="group" headerData={{spent,color:ledgerGroup.color,glyph:ledgerGroup.glyph,name:ledgerGroup.name}} txns={txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerGroup.cats.includes(t.catId))} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerGroup(null)}/>;})()}
           {ledgerSaving&&(()=>{const saved=goalSaved(ledgerSaving.id);return <SavingDetailView goal={ledgerSaving} saved={saved} txns={txns} onDelete={delTxn} addTxn={addTxn} banks={banks} savings={savings} onSave={saveSavings} onGoalToast={setGoalToast} setAppAlert={setAppAlert} goalSaved={goalSaved} onClose={()=>setLedgerSaving(null)}/>;})()}
-          {ledgerBudget&&(()=>{const inB=t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerBudget.cats.includes(t.catId)&&t.date.startsWith(filterMonth);const spent=txns.filter(inB).reduce((a,t)=>a+t.amount,0);return <DeepLedgerView title={`${ledgerBudget.name} · ${MONTHS[+filterMonth.split("-")[1]-1]} ${filterMonth.split("-")[0]}`} headerType="budget" headerData={{spent,limit:ledgerBudget.amount}} txns={txns.filter(inB)} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerBudget(null)}/>;})()}
+          {ledgerBudget&&(()=>{const inB=t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerBudget.cats.includes(t.catId)&&t.date.startsWith(ledgerBudgetMonth);const spent=txns.filter(inB).reduce((a,t)=>a+t.amount,0);return <DeepLedgerView title={`${ledgerBudget.name} · ${MONTHS[+ledgerBudgetMonth.split("-")[1]-1]} ${ledgerBudgetMonth.split("-")[0]}`} headerType="budget" headerData={{spent,limit:ledgerBudget.amount}} txns={txns.filter(inB)} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerBudget(null)}/>;})()}
         </>
       )}
       {coachTour&&tab==="dashboard"&&!isSubPageActive&&<CoachTour onClose={()=>setCoachTour(false)}/>}
@@ -1443,9 +1444,8 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
         const budPct=budTotal>0?Math.min(100,Math.round((budSpent/budTotal)*100)):0;
         const budCol=budPct>=90?C.red:budPct>=70?C.yellow:C.accent;
         const hasLimited=limited.length>0;
-        // Surface what needs attention first: over-limit -> near-limit -> on-track -> no-limit
-        const rankB=(b)=>{const sp=spentOf(b);if(b.amount>0&&sp>b.amount)return 0;if(b.amount>0&&sp/b.amount>=0.9)return 1;if(b.amount>0)return 2;return 3;};
-        const sorted=[...active].sort((a,b)=>rankB(a)-rankB(b));
+        // Drag-to-reorder writes the new order of the active budgets back into the full saved list
+        const reorderActive=(newOrder)=>{const ids=new Set(active.map(b=>b.id));let i=0;onBudgets(budgets.map(b=>ids.has(b.id)?newOrder[i++]:b));};
         const selLabel=`${MONTHS[+selMonth.split("-")[1]-1]} ${selMonth.split("-")[0]}`;
         return <div key="budgets">
           <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Monthly Budgets</div>
@@ -1463,26 +1463,26 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
             </div>
             {hasLimited&&<ProgressBar value={budSpent} max={budTotal} color={budCol}/>}
             <div style={{height:1,background:C.border,margin:"16px 0 14px"}}/>
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>{sorted.map((bdg)=>{
-              const spent=spentOf(bdg),hasLimit=bdg.amount>0;
+            <SortableList items={active} onReorder={reorderActive} gap={10} renderItem={(bdg)=>{
+              const spent=spentOf(bdg),hasLimit=bdg.amount>0,over=hasLimit&&spent>bdg.amount;
               const rem=Math.max(0,bdg.amount-spent),pct=hasLimit?Math.min(100,Math.round((spent/bdg.amount)*100)):0,barColor=pct>=90?C.red:pct>=70?C.yellow:C.accent;
               const fc=expCats.find(c=>bdg.cats.includes(c.id));
-              return <div key={bdg.id} onClick={()=>onOpenBudget(bdg)} className="ic" style={{padding:"13px 14px",background:C.bg,border:`1px solid ${C.border}`,borderLeft:`4px solid ${hasLimit?barColor:C.blue}`,borderRadius:14,cursor:"pointer",transition:"transform 0.1s ease"}}>
+              return <div onClick={()=>onOpenBudget(bdg)} className="ic" style={{padding:"13px 14px",background:C.bg,border:`1px solid ${C.border}`,borderLeft:`4px solid ${hasLimit?barColor:C.blue}`,borderRadius:14,cursor:"pointer",transition:"transform 0.1s ease"}}>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:hasLimit?10:0}}>
                   <CatIcon glyph={bdg.glyph} color={bdg.color||(fc?undefined:(hasLimit?barColor:C.blue))} cat={bdg.glyph?undefined:fc} name={bdg.name} size={30}/>
                   <span style={{color:C.text,fontSize:14,fontWeight:700,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{bdg.name}</span>
-                  {hasLimit?<Pill color={barColor}>{pct}%</Pill>:<span style={{color:C.text,fontSize:14,fontWeight:800}}>{hideTotal?"••••":fmt(spent)}</span>}
+                  {hasLimit?<Pill color={barColor}>{over?"Over":pct+"%"}</Pill>:<span style={{color:C.text,fontSize:14,fontWeight:800}}>{hideTotal?"••••":fmt(spent)}</span>}
                 </div>
                 {hasLimit?<>
                   <ProgressBar value={spent} max={bdg.amount} color={barColor}/>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginTop:10}}>
                     <span style={{color:C.muted,fontSize:11}}>Spent {hideTotal?"••••":fmt(spent)} of {hideTotal?"••••":fmt(bdg.amount)}</span>
-                    <span style={{color:rem===0?C.red:C.accent,fontSize:12,fontWeight:800}}>{hideTotal?"••••":fmt(rem)} left</span>
+                    <span style={{color:over?C.red:C.accent,fontSize:13,fontWeight:800}}>{hideTotal?"••••":(over?`${fmt(spent-bdg.amount)} over`:`${fmt(rem)} left`)}</span>
                   </div>
-                  {isCurrentMonth&&rem>0&&!hideTotal&&<div style={{color:C.faint,fontSize:10,fontWeight:600,marginTop:4}}>≈ {fmt(rem/daysLeft)}/day for {daysLeft} day{daysLeft!==1?"s":""} left</div>}
+                  {isCurrentMonth&&!over&&rem>0&&!hideTotal&&<div style={{color:C.faint,fontSize:10,fontWeight:600,marginTop:4}}>≈ {fmt(rem/daysLeft)}/day for {daysLeft} day{daysLeft!==1?"s":""} left</div>}
                 </>:<div style={{color:C.faint,fontSize:11,marginTop:2}}>Spent this month · no limit set</div>}
               </div>;
-            })}</div>
+            }}/>
             </>}
           </Card>
         </div>;
@@ -1577,7 +1577,7 @@ function LedgerHeader({type,data}){
   if(type==="bank"){const neg=data.safe<0,hF=data.frozen>0;return <div style={{marginBottom:20,padding:"16px 18px",background:C.card,border:`1px solid ${C.border}`,borderRadius:16}}><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",marginBottom:6}}>Available Balance</div><div style={{color:neg?C.red:C.accent,fontSize:32,fontWeight:800,letterSpacing:-1}}>{fmt(data.safe??data.balance)}</div>{hF&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:6,padding:"8px 10px",background:C.yellowDim,borderRadius:8}}><span style={{color:C.yellow,fontSize:12}}>{fmt(data.frozen)}</span><div style={{display:"flex",alignItems:"center",gap:4}}><Ico name="lock" size={12} color={C.yellow}/><span style={{color:C.yellow,fontSize:11,fontWeight:600}}>Frozen</span></div></div>}</div>;}
   if(type==="group")return <div style={{marginBottom:20,padding:"16px 18px",background:C.card,border:`1px solid ${C.border}`,borderRadius:16,display:"flex",alignItems:"center",gap:14}}><CatIcon glyph={data.glyph} color={data.color} name={data.name} size={48} style={{borderRadius:14}}/><div><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",marginBottom:6}}>Total Spent</div><div style={{color:data.color||C.purple,fontSize:32,fontWeight:800,letterSpacing:-1}}>{fmt(data.spent)}</div></div></div>;
   if(type==="saving"){const pct=data.goal>0?Math.min(110,Math.round((data.saved/data.goal)*100)):0,left=Math.max(0,data.goal-data.saved);return <div style={{marginBottom:20,padding:"16px 18px",background:C.card,border:`1px solid ${C.border}`,borderRadius:16}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}><div><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",marginBottom:6}}>Saved</div><div style={{color:C.yellow,fontSize:28,fontWeight:800,letterSpacing:-0.5}}>{fmt(data.saved)}</div></div><div style={{textAlign:"right"}}><div style={{color:C.faint,fontSize:11,marginBottom:4}}>of {fmt(data.goal)}</div><div style={{color:C.muted,fontSize:12,fontWeight:600}}>{fmt(left)} left</div></div></div><ProgressBar value={data.saved} max={data.goal} color={C.yellow} allowOver/><div style={{color:C.faint,fontSize:10,fontWeight:700,marginTop:5,textAlign:"right"}}>{pct}% complete</div></div>;}
-  if(type==="budget"){const rem=Math.max(0,data.limit-data.spent),pct=data.limit>0?Math.min(100,Math.round((data.spent/data.limit)*100)):0,bc=pct>=90?C.red:pct>=70?C.yellow:C.accent;return <div style={{marginBottom:20,padding:"16px 18px",background:C.card,border:`1px solid ${C.border}`,borderRadius:16}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:10}}><div><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",marginBottom:6}}>Spent</div><div style={{color:C.red,fontSize:28,fontWeight:800,letterSpacing:-0.5}}>{fmt(data.spent)}</div></div><div style={{textAlign:"right"}}><div style={{color:C.faint,fontSize:11,marginBottom:4}}>of {fmt(data.limit)}</div><div style={{color:rem===0?C.red:C.accent,fontSize:15,fontWeight:700}}>{fmt(rem)} left</div></div></div><ProgressBar value={data.spent} max={data.limit} color={bc}/><div style={{color:C.faint,fontSize:10,fontWeight:700,marginTop:5,textAlign:"right"}}>{pct}% of budget used</div></div>;}
+  if(type==="budget"){const hasLimit=data.limit>0,over=hasLimit&&data.spent>data.limit,rem=Math.max(0,data.limit-data.spent),pct=hasLimit?Math.min(100,Math.round((data.spent/data.limit)*100)):0,bc=pct>=90?C.red:pct>=70?C.yellow:C.accent;return <div style={{marginBottom:20,padding:"16px 18px",background:C.card,border:`1px solid ${C.border}`,borderRadius:16}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:hasLimit?12:0}}><div><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",marginBottom:6}}>Spent</div><div style={{color:hasLimit?bc:C.text,fontSize:28,fontWeight:800,letterSpacing:-0.5}}>{fmt(data.spent)}</div></div>{hasLimit?<div style={{textAlign:"right"}}><div style={{color:C.faint,fontSize:11,marginBottom:4}}>of {fmt(data.limit)}</div><div style={{color:over?C.red:C.accent,fontSize:15,fontWeight:800}}>{over?`${fmt(data.spent-data.limit)} over`:`${fmt(rem)} left`}</div></div>:<div style={{textAlign:"right",color:C.faint,fontSize:12,fontWeight:600,paddingBottom:4}}>No limit · tracking only</div>}</div>{hasLimit&&<><ProgressBar value={data.spent} max={data.limit} color={bc}/><div style={{color:over?C.red:C.faint,fontSize:10,fontWeight:700,marginTop:5,textAlign:"right"}}>{over?`Over budget by ${fmt(data.spent-data.limit)}`:`${pct}% of budget used`}</div></>}</div>;}
   return null;
 }
 
@@ -1961,9 +1961,9 @@ function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[],onOpenBudge
   let worst=null;limited.forEach(b=>{const sp=isAll?avgSpentB(b):spentBM(b,refMonth);if(sp>b.amount){const ov=sp-b.amount;if(!worst||ov>worst.ov)worst={name:b.name,ov};}});
   const is=getIS();
   const KPI=({label,value,color})=>(<div><div style={{color:C.muted,fontSize:9.5,fontWeight:700,letterSpacing:.5,textTransform:"uppercase",marginBottom:2}}>{label}</div><div style={{color:color||C.text,fontSize:16,fontWeight:800}}>{value}</div></div>);
-  // Surface what needs attention: over-budget first, then near-limit, then on-track, then no-limit
-  const rankB=(b)=>{const s=statB(b);if(s.over)return 0;if(s.hasLimit&&s.pct>=80)return 1;if(s.hasLimit)return 2;return 3;};
-  const sortedBudgets=[...displayBudgets].sort((a,b)=>rankB(a)-rankB(b));
+  // Drag-to-reorder: write the new order of the visible (active) budgets back into the full saved list,
+  // leaving budgets that aren't active this month untouched in their slots.
+  const reorderBudgets=(newOrder)=>{const ids=new Set(displayBudgets.map(b=>b.id));let i=0;onSave(budgets.map(b=>ids.has(b.id)?newOrder[i++]:b));};
 
   // ════════════ FORM (full screen) ════════════
   if(showAdd){
@@ -2055,7 +2055,7 @@ function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[],onOpenBudge
       <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>{isAll?"All-time performance":"Budgets"}</div>
       {displayBudgets.length===0&&<EmptyState glyph="clock" message="No active budgets for this month."/>}
       <div style={{marginBottom:20}}>
-        {sortedBudgets.map((bdg)=>{
+        <SortableList items={displayBudgets} onReorder={reorderBudgets} gap={10} renderItem={(bdg)=>{
           const st=statB(bdg);
           return <SwipeRow key={bdg.id} onEdit={()=>startEdit(bdg)} onDelete={()=>setConfirmId(bdg.id)}>
             <div onClick={()=>onOpenBudget&&onOpenBudget(bdg,filterMonth)} className="ic" style={{padding:"16px",background:C.card,border:`1px solid ${C.border}`,borderLeft:`4px solid ${st.col}`,borderRadius:14,cursor:"pointer",transition:"transform 0.1s ease"}}>
@@ -2076,13 +2076,9 @@ function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[],onOpenBudge
                   <span>{st.over?<span style={{color:C.red,fontWeight:700}}>{fmt(st.spent-bdg.amount)} over</span>:<span><span style={{color:C.accent,fontWeight:700}}>{fmt(bdg.amount-st.spent)}</span> left</span>}</span>
                   <span>{isAll?`on track ${st.onTrackMonths}/${st.monthsCount} mo`:(isCurrent&&!st.over?`≈ ${fmt((bdg.amount-st.spent)/daysLeft)}/day`:"")}</span>
                 </div></>}
-              <div style={{marginTop:12}}>
-                <Sparkbars data={st.spark} color={bdg.color||C.accent} height={30}/>
-                <div style={{display:"flex",gap:4,marginTop:5}}>{trendMonths.map((m,i)=><div key={m} style={{flex:1,textAlign:"center",color:i===5?C.muted:C.faint,fontSize:8.5,fontWeight:700}}>{mLabel(m)}</div>)}</div>
-              </div>
             </div>
           </SwipeRow>;
-        })}
+        }}/>
       </div>
     </>}
     {confirmId&&<ConfirmModal title="Delete Budget?" message="This removes the limit tracking without deleting any transactions." onClose={()=>setConfirmId(null)} onConfirm={async()=>{await onSave(budgets.filter(b=>b.id!==confirmId));setConfirmId(null);}}/>}
