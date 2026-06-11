@@ -1838,7 +1838,7 @@ function SavingsPage({savings,onSave,txns,banks,onBack,addTxn,delTxn,onGoalToast
   };
   return <div style={{padding:"24px 16px",minHeight:"100vh",background:C.bg,boxSizing:"border-box"}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-      <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={onBack} style={{background:"transparent",border:"none",color:C.muted,fontSize:22,cursor:"pointer",padding:"10px 15px 10px 0",display:"flex",alignItems:"center"}}><span style={{display:"block",transform:"translateY(-1px)"}}>❮</span></button><div style={{color:C.text,fontSize:22,fontWeight:800}}>Saving Goals</div></div>
+      <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={onBack} style={{background:"transparent",border:"none",color:C.muted,fontSize:22,cursor:"pointer",padding:"10px 15px 10px 0",display:"flex",alignItems:"center"}}><Ico name="chevR" size={20} color="currentColor" style={{transform:"rotate(180deg)"}}/></button><div style={{color:C.text,fontSize:22,fontWeight:800}}>Saving Goals</div></div>
       <Btn small onClick={openNew}>+ New Goal</Btn>
     </div>
     <div style={{display:"flex",gap:8,marginBottom:20}}>
@@ -1944,11 +1944,61 @@ function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[],onOpenBudge
   let worst=null;limited.forEach(b=>{const sp=isAll?avgSpentB(b):spentBM(b,refMonth);if(sp>b.amount){const ov=sp-b.amount;if(!worst||ov>worst.ov)worst={name:b.name,ov};}});
   const is=getIS();
   const KPI=({label,value,color})=>(<div><div style={{color:C.muted,fontSize:9.5,fontWeight:700,letterSpacing:.5,textTransform:"uppercase",marginBottom:2}}>{label}</div><div style={{color:color||C.text,fontSize:16,fontWeight:800}}>{value}</div></div>);
+  // Surface what needs attention: over-budget first, then near-limit, then on-track, then no-limit
+  const rankB=(b)=>{const s=statB(b);if(s.over)return 0;if(s.hasLimit&&s.pct>=80)return 1;if(s.hasLimit)return 2;return 3;};
+  const sortedBudgets=[...displayBudgets].sort((a,b)=>rankB(a)-rankB(b));
+
+  // ════════════ FORM (full screen) ════════════
+  if(showAdd){
+    const lbl={color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8,display:"block"};
+    const hint={color:C.faint,fontSize:11.5,marginTop:6,lineHeight:1.4};
+    const valid=name.trim()&&selectedCats.length>0;
+    return <FullPage title={editId?"Edit Budget":"New Budget"} onBack={()=>{setShowAdd(false);setEditId(null);}}>
+      <div style={{padding:"4px 16px 48px"}}>
+        <div style={{display:"flex",justifyContent:"center",marginBottom:22}}><CatIcon glyph={glyph} color={color} name={name} size={84} style={{borderRadius:24}}/></div>
+        <div style={{marginBottom:20}}><label style={lbl}>Budget name</label><input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Dining & Coffee" style={{...is,borderRadius:14}}/><div style={hint}>A group of spending you want to keep an eye on — e.g. eating out, transport, shopping.</div></div>
+        <div style={{marginBottom:20}}>
+          <label style={lbl}>Icon</label>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:8,maxHeight:150,overflowY:"auto",padding:4,background:C.bg,borderRadius:10,border:`1px solid ${C.border}`}}>
+            {CAT_GLYPHS_ALL.map(k=>{const on=glyph===k;return <button key={k} onClick={()=>setGlyph(k)} style={{height:40,borderRadius:9,background:on?C.accentDim:C.card,border:`1px solid ${on?C.accent:C.border}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke={on?C.accent:C.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{__html:CAT_GLYPHS[k]}}/></button>;})}
+          </div>
+        </div>
+        <div style={{marginBottom:20}}>
+          <label style={lbl}>Color</label>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+            {CAT_PALETTE.map(col=><button key={col} onClick={()=>setColor(col)} style={{width:32,height:32,borderRadius:99,background:col,border:color===col?`3px solid ${C.text}`:`3px solid transparent`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>{color===col&&<Ico name="check" size={15} color={_lum(col)>0.7?"#111":"#fff"} stroke={3}/>}</button>)}
+            <label style={{width:32,height:32,borderRadius:99,border:`2px dashed ${C.faint}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden"}}><Ico name="palette" size={16} color={C.faint}/><input type="color" value={color} onChange={e=>setColor(e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/></label>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:6}}>
+          <div><label style={lbl}>Monthly limit</label><input type="number" step="any" inputMode="decimal" placeholder="No limit" value={amount} onChange={e=>setAmount(e.target.value)} style={{...is,borderRadius:14}}/></div>
+          <div><label style={lbl}>{repeat?"Starts from":"Month"}</label><input type="month" value={startMonth} onChange={e=>setStartMonth(e.target.value)} style={{...is,borderRadius:14,colorScheme:C.isDark?"dark":"light"}}/></div>
+        </div>
+        <div style={{...hint,marginBottom:20}}>The most you want to spend per month. Leave empty to just track spending with no limit.</div>
+        <div onClick={()=>setRepeat(!repeat)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:C.bg,border:`1px solid ${C.border}`,borderRadius:12,cursor:"pointer",marginBottom:20}}>
+          <div style={{flex:1}}><div style={{color:C.text,fontSize:14,fontWeight:700}}>Repeat every month</div><div style={{color:C.muted,fontSize:11,marginTop:2}}>{repeat?"Active every month from the start month":"Applies to the selected month only"}</div></div>
+          <div style={{width:46,height:27,borderRadius:99,background:repeat?C.accent:C.border,position:"relative",transition:"background .2s",flexShrink:0}}><div style={{position:"absolute",top:3,left:repeat?22:3,width:21,height:21,borderRadius:99,background:"#fff",transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/></div>
+        </div>
+        <div style={{marginBottom:24}}>
+          <label style={lbl}>Categories</label>
+          <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:220,overflow:"auto",background:C.bg,padding:10,borderRadius:10,border:`1px solid ${C.border}`}}>
+            {expCats.map(c=>{const checked=selectedCats.includes(c.id);return <label key={c.id} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"5px 0",userSelect:"none"}}><div onClick={()=>setSelectedCats(checked?selectedCats.filter(x=>x!==c.id):[...selectedCats,c.id])} style={{width:18,height:18,borderRadius:4,border:`2px solid ${checked?C.accent:C.faint}`,background:checked?C.accentDim:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{checked&&<Ico name="check" size={13} color={C.accent} stroke={3}/>}</div><CatIcon cat={c} size={22}/><span style={{color:C.text,fontSize:14}}>{c.name}</span></label>;})}
+            <div style={{display:"flex",alignItems:"center",gap:8,margin:"6px 0 2px"}}><div style={{flex:1,height:1,background:C.border}}/><span style={{color:C.muted,fontSize:10,fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}>Bills</span><div style={{flex:1,height:1,background:C.border}}/></div>
+            {BILL_TYPES.map(t=>{const id="bill_"+t.id;const checked=selectedCats.includes(id);return <label key={id} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"5px 0",userSelect:"none"}}><div onClick={()=>setSelectedCats(checked?selectedCats.filter(x=>x!==id):[...selectedCats,id])} style={{width:18,height:18,borderRadius:4,border:`2px solid ${checked?C.accent:C.faint}`,background:checked?C.accentDim:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{checked&&<Ico name="check" size={13} color={C.accent} stroke={3}/>}</div><CatIcon glyph={t.glyph} color={t.color} name={t.name} size={22}/><span style={{color:C.text,fontSize:14}}>{t.name}</span></label>;})}
+          </div>
+          <div style={hint}>Spending in the categories you tick counts toward this budget.</div>
+        </div>
+        <Btn full onClick={handleAdd} color={color} style={{opacity:valid?1:0.5,pointerEvents:valid?"auto":"none",borderRadius:14,padding:"15px"}}>{editId?"Save changes":"Add budget"}</Btn>
+      </div>
+    </FullPage>;
+  }
+
   return <div style={{padding:"24px 16px 130px",minHeight:"100vh",background:C.bg,boxSizing:"border-box"}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
-      <div style={{display:"flex",alignItems:"center",gap:8}}><button onClick={onBack} style={{background:"transparent",border:"none",color:C.muted,fontSize:22,cursor:"pointer",padding:"10px 15px 10px 0",display:"flex",alignItems:"center"}}><span style={{display:"block",transform:"translateY(-1px)"}}>❮</span></button><div style={{color:C.text,fontSize:22,fontWeight:800}}>Budget Report</div></div>
-      <Btn small onClick={openNew}>+ Add</Btn>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:18}}>
+      <button onClick={onBack} style={{background:"transparent",border:"none",color:C.muted,fontSize:22,cursor:"pointer",padding:"10px 15px 10px 0",display:"flex",alignItems:"center"}}><Ico name="chevR" size={20} color="currentColor" style={{transform:"rotate(180deg)"}}/></button>
+      <div style={{color:C.text,fontSize:22,fontWeight:800}}>Budgets</div>
     </div>
+    <Btn full onClick={openNew} color={C.accent} style={{marginBottom:16,borderRadius:14,padding:"15px"}}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8}}><Ico name="plus" size={18} color="#111" stroke={2.5}/>Add budget</span></Btn>
     {budgets.length>0&&<div style={{marginBottom:16}}><MonthSelect value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} availMonths={availMonths} allowAll={false}/></div>}
     {budgets.length===0&&<EmptyState glyph="layers" message="Create a budget to start tracking your spending."/>}
 
@@ -1988,10 +2038,10 @@ function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[],onOpenBudge
       <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>{isAll?"All-time performance":"Budgets"}</div>
       {displayBudgets.length===0&&<EmptyState glyph="clock" message="No active budgets for this month."/>}
       <div style={{marginBottom:20}}>
-        <SortableList items={displayBudgets} onReorder={onSave} renderItem={(bdg)=>{
+        {sortedBudgets.map((bdg)=>{
           const st=statB(bdg);
           return <SwipeRow key={bdg.id} onEdit={()=>startEdit(bdg)} onDelete={()=>setConfirmId(bdg.id)}>
-            <div onClick={()=>onOpenBudget&&onOpenBudget(bdg,filterMonth)} className="ic" style={{padding:"16px",background:C.card,border:`1px solid ${C.border}`,borderRadius:14,cursor:"pointer",transition:"transform 0.1s ease"}}>
+            <div onClick={()=>onOpenBudget&&onOpenBudget(bdg,filterMonth)} className="ic" style={{padding:"16px",background:C.card,border:`1px solid ${C.border}`,borderLeft:`4px solid ${st.col}`,borderRadius:14,cursor:"pointer",transition:"transform 0.1s ease"}}>
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
                 <CatIcon glyph={bdg.glyph} color={bdg.color} name={bdg.name} size={34}/>
                 <div style={{flex:1,minWidth:0}}><div style={{color:C.text,fontSize:15,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{bdg.name}</div><div style={{color:C.muted,fontSize:10.5,fontWeight:600}}>{isAll?"average / month":isCurrent?"this month":mLabel(refMonth)}</div></div>
@@ -2015,39 +2065,9 @@ function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[],onOpenBudge
               </div>
             </div>
           </SwipeRow>;
-        }}/>
+        })}
       </div>
     </>}
-    {showAdd&&<Modal title={editId?"Edit Budget":"New Budget"} onClose={()=>{setShowAdd(false);setEditId(null);}} center={false}>
-      <div style={{display:"flex",justifyContent:"center",marginBottom:16,marginTop:4}}><CatIcon glyph={glyph} color={color} name={name} size={72} style={{borderRadius:20}}/></div>
-      <Input label="Budget Name" placeholder="e.g. Dining & Coffee" value={name} onChange={e=>setName(e.target.value)}/>
-      <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:"uppercase"}}>Icon</div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:8,maxHeight:130,overflowY:"auto",marginBottom:14,padding:4,background:C.bg,borderRadius:10,border:`1px solid ${C.border}`}}>
-        {CAT_GLYPHS_ALL.map(k=>{const on=glyph===k;return <button key={k} onClick={()=>setGlyph(k)} style={{height:38,borderRadius:9,background:on?C.accentDim:C.card,border:`1px solid ${on?C.accent:C.border}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke={on?C.accent:C.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{__html:CAT_GLYPHS[k]}}/></button>;})}
-      </div>
-      <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:8,textTransform:"uppercase"}}>Color</div>
-      <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center",marginBottom:14}}>
-        {CAT_PALETTE.map(col=><button key={col} onClick={()=>setColor(col)} style={{width:32,height:32,borderRadius:99,background:col,border:color===col?`3px solid ${C.text}`:`3px solid transparent`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>{color===col&&<Ico name="check" size={15} color={_lum(col)>0.7?"#111":"#fff"} stroke={3}/>}</button>)}
-        <label style={{width:32,height:32,borderRadius:99,border:`2px dashed ${C.faint}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden"}}><Ico name="palette" size={16} color={C.faint}/><input type="color" value={color} onChange={e=>setColor(e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/></label>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-        <Input label="Monthly Limit (optional)" type="number" step="any" placeholder="No limit" value={amount} onChange={e=>setAmount(e.target.value)}/>
-        <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>{repeat?"Starts From":"Month"}</div><input type="month" value={startMonth} onChange={e=>setStartMonth(e.target.value)} style={{...is,colorScheme:C.isDark?"dark":"light"}}/></div>
-      </div>
-      <div onClick={()=>setRepeat(!repeat)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:C.bg,border:`1px solid ${C.border}`,borderRadius:12,cursor:"pointer",marginBottom:14}}>
-        <div style={{flex:1}}><div style={{color:C.text,fontSize:14,fontWeight:700}}>Repeat every month</div><div style={{color:C.muted,fontSize:11,marginTop:2}}>{repeat?"Active every month from the start month":"Applies to the selected month only"}</div></div>
-        <div style={{width:46,height:27,borderRadius:99,background:repeat?C.accent:C.border,position:"relative",transition:"background .2s",flexShrink:0}}><div style={{position:"absolute",top:3,left:repeat?22:3,width:21,height:21,borderRadius:99,background:"#fff",transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/></div>
-      </div>
-      <div style={{marginBottom:14}}>
-        <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Categories</div>
-        <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:200,overflow:"auto",background:C.bg,padding:10,borderRadius:10,border:`1px solid ${C.border}`}}>
-          {expCats.map(c=>{const checked=selectedCats.includes(c.id);return <label key={c.id} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"5px 0",userSelect:"none"}}><div onClick={()=>setSelectedCats(checked?selectedCats.filter(x=>x!==c.id):[...selectedCats,c.id])} style={{width:18,height:18,borderRadius:4,border:`2px solid ${checked?C.accent:C.faint}`,background:checked?C.accentDim:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{checked&&<Ico name="check" size={13} color={C.accent} stroke={3}/>}</div><CatIcon cat={c} size={22}/><span style={{color:C.text,fontSize:14}}>{c.name}</span></label>;})}
-          <div style={{display:"flex",alignItems:"center",gap:8,margin:"6px 0 2px"}}><div style={{flex:1,height:1,background:C.border}}/><span style={{color:C.muted,fontSize:10,fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}>Bills</span><div style={{flex:1,height:1,background:C.border}}/></div>
-          {BILL_TYPES.map(t=>{const id="bill_"+t.id;const checked=selectedCats.includes(id);return <label key={id} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"5px 0",userSelect:"none"}}><div onClick={()=>setSelectedCats(checked?selectedCats.filter(x=>x!==id):[...selectedCats,id])} style={{width:18,height:18,borderRadius:4,border:`2px solid ${checked?C.accent:C.faint}`,background:checked?C.accentDim:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{checked&&<Ico name="check" size={13} color={C.accent} stroke={3}/>}</div><CatIcon glyph={t.glyph} color={t.color} name={t.name} size={22}/><span style={{color:C.text,fontSize:14}}>{t.name}</span></label>;})}
-        </div>
-      </div>
-      <Btn full onClick={handleAdd}>Save Budget</Btn>
-    </Modal>}
     {confirmId&&<ConfirmModal title="Delete Budget?" message="This removes the limit tracking without deleting any transactions." onClose={()=>setConfirmId(null)} onConfirm={async()=>{await onSave(budgets.filter(b=>b.id!==confirmId));setConfirmId(null);}}/>}
   </div>;
 }
@@ -2057,7 +2077,7 @@ function QuickActionsSetup({quickActions,expCats,banks,onSave,onBack}){
   const[editingId,setEditingId]=useState(null);const[catId,setCatId]=useState("");const[amount,setAmount]=useState("");const[bankId,setBankId]=useState("");
   const openCfg=(q)=>{setEditingId(q.id);setCatId(q.catId||(expCats[0]?.id||""));setAmount(q.amount||"50");setBankId(q.bankId||(banks[0]?.id||""));};
   return <div style={{padding:"24px 16px",minHeight:"100vh",background:C.bg,boxSizing:"border-box"}}>
-    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}><button onClick={onBack} style={{background:"transparent",border:"none",color:C.muted,fontSize:22,cursor:"pointer",padding:"10px 15px 10px 0",display:"flex",alignItems:"center"}}><span style={{display:"block",transform:"translateY(-1px)"}}>❮</span></button><div style={{color:C.text,fontSize:22,fontWeight:800}}>Quick Actions</div></div>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}><button onClick={onBack} style={{background:"transparent",border:"none",color:C.muted,fontSize:22,cursor:"pointer",padding:"10px 15px 10px 0",display:"flex",alignItems:"center"}}><Ico name="chevR" size={20} color="currentColor" style={{transform:"rotate(180deg)"}}/></button><div style={{color:C.text,fontSize:22,fontWeight:800}}>Quick Actions</div></div>
     <p style={{color:C.muted,fontSize:13,lineHeight:1.5,marginBottom:18}}>Configure up to 4 shortcuts. Long-press the + button to use them.</p>
     <div style={{display:"flex",flexDirection:"column",gap:12}}>
       {quickActions.map((q,idx)=>{const cat=expCats.find(c=>c.id===q.catId),bank=banks.find(b=>b.id===q.bankId);return <Card key={q.id} style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><div style={{display:"flex",alignItems:"center",gap:8,color:C.text,fontWeight:700,fontSize:15}}>{cat&&<CatIcon cat={cat} size={26}/>}<span>Slot #{idx+1}: {cat?cat.name:"Empty"}</span></div>{cat&&<div style={{color:C.muted,fontSize:12,marginTop:4}}>{fmt(parseFloat(q.amount))} · {bank?.name}</div>}</div><div style={{display:"flex",gap:8}}><Btn small onClick={()=>openCfg(q)} color={C.blue} outline>Setup</Btn>{q.catId&&<Btn small onClick={async()=>{await onSave(quickActions.map(a=>a.id===q.id?{...a,catId:"",amount:"",bankId:""}:a));}} color={C.red} outline style={{padding:"5px 10px"}}><Ico name="close" size={15}/></Btn>}</div></Card>;})}
@@ -2074,7 +2094,7 @@ function FullPage({title,onBack,right,children,maxHeader}){
       <style>{`@keyframes fpIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}`}</style>
       <div style={{maxWidth:520,margin:"0 auto",minHeight:"100%",boxSizing:"border-box"}}>
         {!maxHeader&&<div style={{display:"flex",alignItems:"center",gap:6,padding:"18px 12px 10px",position:"sticky",top:0,background:C.bg,zIndex:3}}>
-          <button onClick={onBack} style={{background:"transparent",border:"none",color:C.text,fontSize:22,cursor:"pointer",padding:"8px 12px 8px 4px",display:"flex",alignItems:"center"}}><span style={{display:"block",transform:"translateY(-1px)"}}>❮</span></button>
+          <button onClick={onBack} style={{background:"transparent",border:"none",color:C.text,fontSize:22,cursor:"pointer",padding:"8px 12px 8px 4px",display:"flex",alignItems:"center"}}><Ico name="chevR" size={20} color="currentColor" style={{transform:"rotate(180deg)"}}/></button>
           <div style={{flex:1,color:C.text,fontSize:19,fontWeight:800,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{title}</div>
           {right}
         </div>}
@@ -3319,7 +3339,7 @@ function UserManual({onBack,navigateTo,onCoach}){
     <div style={{padding:"24px 16px 130px",minHeight:"100vh",background:C.bg,boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif"}}>
       <style>{`@keyframes stIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}`}</style>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}>
-        <button onClick={onBack} style={{background:"transparent",border:"none",color:C.muted,fontSize:22,cursor:"pointer",padding:"10px 15px 10px 0",display:"flex",alignItems:"center"}}><span style={{display:"block",transform:"translateY(-1px)"}}>❮</span></button>
+        <button onClick={onBack} style={{background:"transparent",border:"none",color:C.muted,fontSize:22,cursor:"pointer",padding:"10px 15px 10px 0",display:"flex",alignItems:"center"}}><Ico name="chevR" size={20} color="currentColor" style={{transform:"rotate(180deg)"}}/></button>
         <div style={{color:C.text,fontSize:22,fontWeight:800}}>Help & Guide</div>
       </div>
       <div onClick={()=>setTour(true)} style={{cursor:"pointer",background:`linear-gradient(135deg,${C.accentDim} 0%,${C.blueDim} 100%)`,border:`1px solid ${C.accent}33`,borderRadius:20,padding:"20px",marginBottom:26,display:"flex",alignItems:"center",gap:16}}>
