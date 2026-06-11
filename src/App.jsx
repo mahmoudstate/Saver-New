@@ -2441,6 +2441,7 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,delTxn,setA
   const curMonth=getLocalMonth();
   const monthOffset=(n)=>{const d=new Date();const m=new Date(d.getFullYear(),d.getMonth()+n,1);return `${m.getFullYear()}-${String(m.getMonth()+1).padStart(2,"0")}`;};
   const[view,setView]=useState({mode:"list"}); // list | picker | form | detail
+  const[wizStep,setWizStep]=useState(0); // multi-step wizard (new installment only)
   const[providerSearch,setProviderSearch]=useState("");
   const[form,setForm]=useState(null);
   const[detailMonth,setDetailMonth]=useState(curMonth);
@@ -2484,8 +2485,8 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,delTxn,setA
   // ── Navigation ──
   const openPicker=()=>{setProviderSearch("");setView({mode:"picker"});};
   const blankForm=()=>({editId:null,itemType:"",company:"",domain:"",color:"",count:"",amount:"",total:"",paidInit:"0",downPayment:"",deductDp:false,bankId:banks[0]?.id||"",dueDay:"1",reminderDays:"2",note:"",startDate:today()});
-  const pickProvider=(prov)=>{setForm({...blankForm(),company:prov.name,domain:prov.domain,color:prov.color});setView({mode:"form"});};
-  const pickCustom=()=>{setForm(blankForm());setView({mode:"form"});};
+  const pickProvider=(prov)=>{setForm({...blankForm(),company:prov.name,domain:prov.domain,color:prov.color});setWizStep(0);setView({mode:"form"});};
+  const pickCustom=()=>{setForm(blankForm());setWizStep(0);setView({mode:"form"});};
   const openEdit=(inst)=>{setForm({editId:inst.id,itemType:inst.itemType||"",company:inst.company||inst.name||"",domain:inst.domain||"",color:inst.color||"",count:String(inst.totalInstallments||""),amount:String(inst.installmentAmount||""),total:String(inst.totalAmount||""),paidInit:String(paidOf(inst)),downPayment:inst.downPayment?String(inst.downPayment):"",deductDp:false,bankId:inst.bankId,dueDay:String(inst.dueDay||1),reminderDays:String(inst.reminderDays??2),note:inst.note||"",startDate:inst.startDate||today()});setView({mode:"form"});};
   const openDetail=(inst)=>{setDetailMonth(curMonth);setView({mode:"detail",instId:inst.id});};
 
@@ -2584,49 +2585,114 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,delTxn,setA
     const computedTotal=parseFloat(f.total)||(count*amount);
     const valid=(f.itemType||f.company).trim()&&count>0&&amount>0&&(f.editId||(parseInt(f.paidInit)||0)<=count);
     const lbl={color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8,display:"block"};
-    return <FullPage title={f.editId?"Edit Installment":"New Installment"} onBack={()=>setView(f.editId?{mode:"detail",instId:f.editId}:{mode:"picker"})}>
-      <div style={{padding:"4px 16px 48px"}}>
-        <div style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:24}}>
-          <ServiceLogo domain={f.domain} name={f.company||f.itemType||"?"} color={accent} size={72} style={{borderRadius:20}}/>
+
+    // ── Reusable field fragments (shared by edit screen + new wizard) ──
+    const logoPreview=(size)=><div style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:24}}><ServiceLogo domain={f.domain} name={f.company||f.itemType||"?"} color={accent} size={size} style={{borderRadius:size*0.28}}/></div>;
+    const colorField=(
+      <div style={{marginBottom:20}}>
+        <label style={lbl}>Icon Color</label>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+          {CAT_PALETTE.map(col=>{const on=(f.color||C.accent).toLowerCase()===col.toLowerCase();return <button key={col} type="button" onClick={()=>setF("color",col)} style={{width:30,height:30,borderRadius:99,background:col,border:on?`3px solid ${C.text}`:"3px solid transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>{on&&<Ico name="check" size={14} color={_lum(col)>0.7?"#111":"#fff"} stroke={3}/>}</button>;})}
+          <label style={{width:30,height:30,borderRadius:99,border:`2px dashed ${C.faint}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden"}}><Ico name="palette" size={15} color={C.faint}/><input type="color" value={f.color||C.accent} onChange={e=>setF("color",e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/></label>
         </div>
-        <div style={{marginBottom:20}}>
-          <label style={lbl}>Icon Color</label>
-          <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
-            {CAT_PALETTE.map(col=>{const on=(f.color||C.accent).toLowerCase()===col.toLowerCase();return <button key={col} type="button" onClick={()=>setF("color",col)} style={{width:30,height:30,borderRadius:99,background:col,border:on?`3px solid ${C.text}`:"3px solid transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>{on&&<Ico name="check" size={14} color={_lum(col)>0.7?"#111":"#fff"} stroke={3}/>}</button>;})}
-            <label style={{width:30,height:30,borderRadius:99,border:`2px dashed ${C.faint}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden"}}><Ico name="palette" size={15} color={C.faint}/><input type="color" value={f.color||C.accent} onChange={e=>setF("color",e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/></label>
+      </div>
+    );
+    const itemField=<div style={{marginBottom:20}}><label style={lbl}>What is it?</label><input value={f.itemType} onChange={e=>setF("itemType",e.target.value)} placeholder="e.g. iPhone 15, Car, Sofa..." style={{...is,borderRadius:14}}/></div>;
+    const companyField=<div style={{marginBottom:20}}><label style={lbl}>Company / Place</label><input value={f.company} onChange={e=>setF("company",e.target.value)} placeholder="e.g. ValU, B.TECH, dealership..." style={{...is,borderRadius:14}}/></div>;
+    const countAmountFields=(
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:8}}>
+        <div><label style={lbl}>No. of Installments</label><input type="number" min="1" inputMode="numeric" value={f.count} onChange={e=>setF("count",e.target.value)} placeholder="12" style={{...is,borderRadius:14}}/></div>
+        <div><label style={lbl}>Installment Amount</label><input type="number" step="any" inputMode="decimal" value={f.amount} onChange={e=>setF("amount",e.target.value)} placeholder="0" style={{...is,borderRadius:14}}/></div>
+      </div>
+    );
+    const totalField=(
+      <div style={{marginBottom:20}}>
+        <label style={lbl}>Total Amount (auto · editable)</label>
+        <input type="number" step="any" inputMode="decimal" value={f.total} onChange={e=>setF("total",e.target.value)} placeholder={String(computedTotal||0)} style={{...is,borderRadius:14,fontWeight:800}}/>
+        {count>0&&amount>0&&<div style={{color:C.muted,fontSize:11,marginTop:6}}>{count} × {fmt(amount)} = {fmt(count*amount)}</div>}
+      </div>
+    );
+    const downPaymentField=(
+      <div style={{marginBottom:20}}>
+        <label style={lbl}>Down Payment (optional)</label>
+        <input type="number" step="any" min="0" inputMode="decimal" value={f.downPayment} onChange={e=>setF("downPayment",e.target.value)} placeholder="0" style={{...is,borderRadius:14}}/>
+        {!f.editId&&parseFloat(f.downPayment)>0&&(
+          <div onClick={()=>setF("deductDp",!f.deductDp)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:C.bg,border:`1px solid ${C.border}`,borderRadius:12,cursor:"pointer",marginTop:10}}>
+            <div style={{flex:1}}><div style={{color:C.text,fontSize:14,fontWeight:700}}>Deduct from account now</div><div style={{color:C.muted,fontSize:11,marginTop:2}}>{f.deductDp?"Records an expense and lowers your account balance":"Info only — no transaction, balance unchanged"}</div></div>
+            <div style={{width:46,height:27,borderRadius:99,background:f.deductDp?C.accent:C.border,position:"relative",transition:"background .2s",flexShrink:0}}><div style={{position:"absolute",top:3,left:f.deductDp?22:3,width:21,height:21,borderRadius:99,background:"#fff",transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/></div>
           </div>
+        )}
+        {f.editId&&<div style={{color:C.faint,fontSize:11,marginTop:6}}>Recorded as info. Editing the amount won't change past transactions.</div>}
+      </div>
+    );
+    const paidInitField=!f.editId&&<div style={{marginBottom:20}}><label style={lbl}>Already Paid (installments)</label><input type="number" min="0" inputMode="numeric" value={f.paidInit} onChange={e=>setF("paidInit",e.target.value)} style={{...is,borderRadius:14}}/>{(parseInt(f.paidInit)||0)>count?<div style={{color:C.red,fontSize:11,marginTop:6,fontWeight:700}}>That's more than this plan's {count} total installment{count===1?"":"s"}. Enter {count} or less.</div>:<div style={{color:C.faint,fontSize:11,marginTop:6}}>Installments paid before adding here (no transaction created).</div>}</div>;
+    const bankPicker=(
+      <div style={{marginBottom:20}}>
+        <label style={lbl}>Pay from Account</label>
+        {banks.length===0?<div style={{color:C.faint,fontSize:13,padding:"4px 2px"}}>No accounts yet — add one in Settings.</div>:
+        <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:6,WebkitOverflowScrolling:"touch"}}>
+          {banks.map(b=>{const on=f.bankId===b.id;return (
+            <button key={b.id} type="button" onClick={()=>setF("bankId",b.id)} style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",gap:7,width:76,padding:"12px 6px",background:on?C.accentDim:C.card,border:`1.5px solid ${on?C.accent:C.border}`,borderRadius:14,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>
+              <BankIcon bank={b} size={40}/>
+              <span style={{color:on?C.accent:C.text,fontSize:11,fontWeight:700,textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"100%"}}>{b.name}</span>
+            </button>
+          );})}
+        </div>}
+      </div>
+    );
+    const dueReminderFields=(
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
+        <div><label style={lbl}>Due Day</label><input type="number" min="1" max="28" inputMode="numeric" value={f.dueDay} onChange={e=>setF("dueDay",e.target.value)} style={{...is,borderRadius:14}}/></div>
+        <div><label style={lbl}>Remind Before (days)</label><input type="number" min="0" max="7" inputMode="numeric" value={f.reminderDays} onChange={e=>setF("reminderDays",e.target.value)} style={{...is,borderRadius:14}}/></div>
+      </div>
+    );
+    const startDateField=<div style={{marginBottom:20}}><label style={lbl}>Start Date</label><input type="date" value={f.startDate} onChange={e=>setF("startDate",e.target.value)} style={{...is,borderRadius:14,colorScheme:C.isDark?"dark":"light"}}/></div>;
+    const noteField=<div style={{marginBottom:28}}><label style={lbl}>Note (optional)</label><input value={f.note} onChange={e=>setF("note",e.target.value)} placeholder="e.g. 0% interest" style={{...is,borderRadius:14}}/></div>;
+
+    // ── EDIT: single scrollable screen ──
+    if(f.editId){
+      return <FullPage title="Edit Installment" onBack={()=>setView({mode:"detail",instId:f.editId})}>
+        <div style={{padding:"4px 16px 48px"}}>
+          {logoPreview(72)}
+          {colorField}{itemField}{companyField}{countAmountFields}{totalField}{downPaymentField}{paidInitField}{bankPicker}{dueReminderFields}{startDateField}{noteField}
+          <Btn full onClick={handleSave} color={accent} style={{opacity:valid?1:0.5,pointerEvents:valid?"auto":"none",borderRadius:14,padding:"15px"}}>Save Changes</Btn>
         </div>
-        <div style={{marginBottom:20}}><label style={lbl}>What is it?</label><input value={f.itemType} onChange={e=>setF("itemType",e.target.value)} placeholder="e.g. iPhone 15, Car, Sofa..." style={{...is,borderRadius:14}}/></div>
-        <div style={{marginBottom:20}}><label style={lbl}>Company / Place</label><input value={f.company} onChange={e=>setF("company",e.target.value)} placeholder="e.g. ValU, B.TECH, dealership..." style={{...is,borderRadius:14}}/></div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:8}}>
-          <div><label style={lbl}>No. of Installments</label><input type="number" min="1" inputMode="numeric" value={f.count} onChange={e=>setF("count",e.target.value)} placeholder="12" style={{...is,borderRadius:14}}/></div>
-          <div><label style={lbl}>Installment Amount</label><input type="number" step="any" inputMode="decimal" value={f.amount} onChange={e=>setF("amount",e.target.value)} placeholder="0" style={{...is,borderRadius:14}}/></div>
+      </FullPage>;
+    }
+
+    // ── NEW: 3-step wizard ──
+    const summaryCard=(
+      <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:"16px",marginTop:8}}>
+        <div style={{color:C.muted,fontSize:11,fontWeight:800,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Review</div>
+        {[["Item",f.itemType||f.company||"—"],["Plan",count>0&&amount>0?`${count} × ${fmt(amount)}`:"—"],["Total",fmt(computedTotal||0)],...(parseFloat(f.downPayment)>0?[["Down payment",fmt(parseFloat(f.downPayment))+(f.deductDp?"":" · info")]]:[]),["From",banks.find(b=>b.id===f.bankId)?.name||"—"],["Due day",`Day ${Math.min(28,Math.max(1,parseInt(f.dueDay)||1))}`]].map(([k,v],i,arr)=>(
+          <div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:i===arr.length-1?"none":`1px solid ${C.border}`}}>
+            <span style={{color:C.muted,fontSize:13,fontWeight:600}}>{k}</span>
+            <span style={{color:C.text,fontSize:14,fontWeight:700,maxWidth:"60%",textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v}</span>
+          </div>
+        ))}
+      </div>
+    );
+    const stepDefs=[
+      {title:"What is it?",sub:"Name it and pick a color",ok:!!(f.itemType||f.company).trim(),body:<>{logoPreview(92)}{colorField}{itemField}{companyField}</>},
+      {title:"The numbers",sub:"Installments, total & any down payment",ok:count>0&&amount>0&&(parseInt(f.paidInit)||0)<=count,body:<>{countAmountFields}{totalField}{downPaymentField}{paidInitField}</>},
+      {title:"Schedule & account",sub:"When it's due and where it's paid",ok:true,body:<>{bankPicker}{dueReminderFields}{startDateField}{noteField}{summaryCard}</>},
+    ];
+    const cur=stepDefs[wizStep];const isLast=wizStep===stepDefs.length-1;
+    const goBack=()=>{if(wizStep>0){HAPTICS.light();setWizStep(wizStep-1);}else setView({mode:"picker"});};
+    const goNext=()=>{if(cur.ok){HAPTICS.light();setWizStep(wizStep+1);}};
+    return <FullPage title="New Installment" onBack={goBack}>
+      <div style={{padding:"4px 16px 40px"}}>
+        <div style={{display:"flex",gap:6,marginBottom:10}}>{stepDefs.map((_,idx)=><div key={idx} style={{flex:1,height:4,borderRadius:4,background:idx<=wizStep?accent:C.border,transition:"background .3s"}}/>)}</div>
+        <div style={{color:C.muted,fontSize:11,fontWeight:800,letterSpacing:1,textTransform:"uppercase",marginBottom:2}}>Step {wizStep+1} of {stepDefs.length}</div>
+        <div style={{color:C.text,fontSize:22,fontWeight:800,letterSpacing:-0.5}}>{cur.title}</div>
+        <div style={{color:C.muted,fontSize:13,fontWeight:600,marginTop:2,marginBottom:24}}>{cur.sub}</div>
+        <div key={wizStep} style={{animation:"fpIn 0.25s cubic-bezier(0.2,0.8,0.2,1)"}}>{cur.body}</div>
+        <div style={{display:"flex",gap:12,marginTop:28}}>
+          {wizStep>0&&<Btn outline onClick={goBack} color={accent} style={{borderRadius:14,padding:"15px 22px",flexShrink:0}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><Ico name="chevR" size={15} color={accent} style={{transform:"rotate(180deg)"}}/>Back</span></Btn>}
+          {isLast
+            ? <Btn onClick={handleSave} color={accent} style={{flex:1,opacity:valid?1:0.5,pointerEvents:valid?"auto":"none",borderRadius:14,padding:"15px"}}><span style={{display:"inline-flex",alignItems:"center",gap:7}}><Ico name="plus" size={16} color="#111" stroke={2.5}/>Add Installment</span></Btn>
+            : <Btn onClick={goNext} color={accent} style={{flex:1,opacity:cur.ok?1:0.5,pointerEvents:cur.ok?"auto":"none",borderRadius:14,padding:"15px"}}><span style={{display:"inline-flex",alignItems:"center",gap:7}}>Next<Ico name="chevR" size={16} color="#111" stroke={2.5}/></span></Btn>}
         </div>
-        <div style={{marginBottom:20}}>
-          <label style={lbl}>Total Amount (auto · editable)</label>
-          <input type="number" step="any" inputMode="decimal" value={f.total} onChange={e=>setF("total",e.target.value)} placeholder={String(computedTotal||0)} style={{...is,borderRadius:14,fontWeight:800}}/>
-          {count>0&&amount>0&&<div style={{color:C.muted,fontSize:11,marginTop:6}}>{count} × {fmt(amount)} = {fmt(count*amount)}</div>}
-        </div>
-        <div style={{marginBottom:20}}>
-          <label style={lbl}>Down Payment (optional)</label>
-          <input type="number" step="any" min="0" inputMode="decimal" value={f.downPayment} onChange={e=>setF("downPayment",e.target.value)} placeholder="0" style={{...is,borderRadius:14}}/>
-          {!f.editId&&parseFloat(f.downPayment)>0&&(
-            <div onClick={()=>setF("deductDp",!f.deductDp)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:C.bg,border:`1px solid ${C.border}`,borderRadius:12,cursor:"pointer",marginTop:10}}>
-              <div style={{flex:1}}><div style={{color:C.text,fontSize:14,fontWeight:700}}>Deduct from account now</div><div style={{color:C.muted,fontSize:11,marginTop:2}}>{f.deductDp?"Records an expense and lowers your account balance":"Info only — no transaction, balance unchanged"}</div></div>
-              <div style={{width:46,height:27,borderRadius:99,background:f.deductDp?C.accent:C.border,position:"relative",transition:"background .2s",flexShrink:0}}><div style={{position:"absolute",top:3,left:f.deductDp?22:3,width:21,height:21,borderRadius:99,background:"#fff",transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/></div>
-            </div>
-          )}
-          {f.editId&&<div style={{color:C.faint,fontSize:11,marginTop:6}}>Recorded as info. Editing the amount won't change past transactions.</div>}
-        </div>
-        {!f.editId&&<div style={{marginBottom:20}}><label style={lbl}>Already Paid (installments)</label><input type="number" min="0" inputMode="numeric" value={f.paidInit} onChange={e=>setF("paidInit",e.target.value)} style={{...is,borderRadius:14}}/>{(parseInt(f.paidInit)||0)>count?<div style={{color:C.red,fontSize:11,marginTop:6,fontWeight:700}}>That's more than this plan's {count} total installment{count===1?"":"s"}. Enter {count} or less.</div>:<div style={{color:C.faint,fontSize:11,marginTop:6}}>Installments paid before adding here (no transaction created).</div>}</div>}
-        <div style={{marginBottom:20}}><label style={lbl}>Pay from Account</label><select value={f.bankId} onChange={e=>setF("bankId",e.target.value)} style={{...is,borderRadius:14}}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
-          <div><label style={lbl}>Due Day</label><input type="number" min="1" max="28" inputMode="numeric" value={f.dueDay} onChange={e=>setF("dueDay",e.target.value)} style={{...is,borderRadius:14}}/></div>
-          <div><label style={lbl}>Remind Before (days)</label><input type="number" min="0" max="7" inputMode="numeric" value={f.reminderDays} onChange={e=>setF("reminderDays",e.target.value)} style={{...is,borderRadius:14}}/></div>
-        </div>
-        <div style={{marginBottom:20}}><label style={lbl}>Start Date</label><input type="date" value={f.startDate} onChange={e=>setF("startDate",e.target.value)} style={{...is,borderRadius:14,colorScheme:C.isDark?"dark":"light"}}/></div>
-        <div style={{marginBottom:28}}><label style={lbl}>Note (optional)</label><input value={f.note} onChange={e=>setF("note",e.target.value)} placeholder="e.g. 0% interest" style={{...is,borderRadius:14}}/></div>
-        <Btn full onClick={handleSave} color={accent} style={{opacity:valid?1:0.5,pointerEvents:valid?"auto":"none",borderRadius:14,padding:"15px"}}>{f.editId?"Save Changes":"Add Installment"}</Btn>
       </div>
     </FullPage>;
   }
@@ -2685,7 +2751,7 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,delTxn,setA
         ):paidThisMonth?(
           <div style={{display:"flex",gap:8,marginBottom:24}}>
             <div style={{flex:1,background:C.accent,color:"#111",borderRadius:14,height:50,fontSize:15,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Ico name="check" size={15} color="#111" stroke={3}/>Paid {MONTHS[+detailMonth.split("-")[1]-1]}</div>
-            <button onClick={()=>setConfirmUndo({inst,month:detailMonth})} style={{flexShrink:0,background:C.yellowDim,border:`1.5px solid ${C.yellow}`,color:C.yellow,borderRadius:14,height:50,padding:"0 20px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>⟲ Undo</button>
+            <button onClick={()=>setConfirmUndo({inst,month:detailMonth})} style={{flexShrink:0,background:C.yellowDim,border:`1.5px solid ${C.yellow}`,color:C.yellow,borderRadius:14,height:50,padding:"0 20px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><Ico name="rotate" size={15} color={C.yellow}/>Undo</span></button>
           </div>
         ):(
           <button onClick={()=>handlePay(inst,detailMonth)} style={{width:"100%",background:accent,border:"none",color:"#111",borderRadius:14,height:52,fontWeight:800,fontSize:16,cursor:"pointer",marginBottom:24,fontFamily:"'DM Sans', sans-serif"}}><span style={{display:"inline-flex",alignItems:"center",gap:7}}><Ico name="check" size={16} color="#111" stroke={3}/>Pay Installment #{paid+1} ({MONTHS[+detailMonth.split("-")[1]-1]})</span></button>
