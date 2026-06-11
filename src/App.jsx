@@ -877,8 +877,41 @@ function SaverApp(){
       const currentSaved=goalSaved(t.goalId);
       if(currentSaved-t.amount<0){HAPTICS.warning();setAppAlert({title:"Action Blocked",message:"Cannot delete this saving deposit because the funds have already been spent or returned.",color:C.red});return false;}
     }
+    const removedIds=t.splitGroupId?txns.filter(x=>x.splitGroupId===t.splitGroupId).map(x=>x.id):[id];
     const next=t.splitGroupId?txns.filter(x=>x.splitGroupId!==t.splitGroupId):txns.filter(x=>x.id!==id);
-    setTxns(next);await persist(KEYS.txns,next);return next;
+    setTxns(next);await persist(KEYS.txns,next);
+    await reconcileInstallments(removedIds);
+    return next;
+  };
+
+  // Keep installment plans in sync when their linked transactions are deleted from history.
+  const reconcileInstallments=async(removedIds)=>{
+    const removed=new Set(removedIds);let changed=false;
+    const upd=installments.map(inst=>{
+      let n=inst;
+      if(inst.downPaymentTxnId&&removed.has(inst.downPaymentTxnId)){n={...n,downPayment:0,downPaymentTxnId:null};changed=true;}
+      if(n.payments&&n.payments.some(p=>p.txnId&&removed.has(p.txnId))){
+        const np=n.payments.filter(p=>!(p.txnId&&removed.has(p.txnId)));
+        n={...n,payments:np,paidInstallments:np.length,status:np.length>=n.totalInstallments?"completed":"active"};changed=true;
+      }
+      return n;
+    });
+    if(changed){setInstallments(upd);await persist(KEYS.installments,upd);}
+  };
+
+  // Batch-add several transactions at once (used when back-filling a down payment / already-paid installments).
+  const addTxns=async(list)=>{
+    if(!list||!list.length)return [];
+    const byBank={};
+    for(const t of list){if(t.type==="expense"||t.type==="transfer"){const b=t.type==="transfer"?(t.fromBankId||t.bankId):t.bankId;byBank[b]=(byBank[b]||0)+t.amount;}}
+    for(const[bId,total] of Object.entries(byBank)){
+      const avail=safeToSpend(bId);
+      if(avail<total){HAPTICS.warning();setAppAlert({title:"Insufficient Balance",message:`Available balance is ${fmt(avail)}. Not enough.`,color:C.red});return false;}
+    }
+    const ts=Date.now();
+    const withIds=list.map((t,i)=>({...t,id:(ts+i).toString()}));
+    const next=[...withIds,...txns];setTxns(next);await persist(KEYS.txns,next);
+    HAPTICS.success();return withIds.map(t=>t.id);
   };
 
   const updateTxn=async(id,data)=>{
@@ -960,7 +993,7 @@ function SaverApp(){
           {tab==="budgets"&&<BudgetsPage budgets={budgets} expCats={expCats} onSave={saveBudgets} onBack={()=>navigateTo("settings")} currency={currency} txns={txns} onOpenBudget={(b,m)=>{if(m&&m!=="all")setFilterMonth(m);else setFilterMonth(currentMonth());setScrollState({y:window.scrollY,restore:true});setLedgerBudget(b);}}/>}
           {tab==="quickactions"&&<QuickActionsSetup quickActions={quickActions} expCats={expCats} banks={banks} onSave={saveQuickActions} onBack={()=>navigateTo("settings")}/>}
           {tab==="manual"&&<UserManual onBack={()=>navigateTo("settings")} navigateTo={navigateTo} onCoach={startCoach}/>}
-          {tab==="monthly"&&<MonthlyBillsPage bills={bills} installments={installments} initialTab={monthlyTab} onSaveBills={saveBills} onSaveInstallments={saveInstallments} banks={banks} expCats={expCats} onAddTxn={addTxn} delTxn={delTxn} currency={currency} setAppAlert={setAppAlert}/>}
+          {tab==="monthly"&&<MonthlyBillsPage bills={bills} installments={installments} initialTab={monthlyTab} onSaveBills={saveBills} onSaveInstallments={saveInstallments} banks={banks} expCats={expCats} onAddTxn={addTxn} onAddTxns={addTxns} delTxn={delTxn} currency={currency} setAppAlert={setAppAlert}/>}
           {tab==="settings"&&<Settings banks={banks} expCats={expCats} incCats={incCats} groups={groups} onBanks={saveBanks} onExpCats={saveExpCats} onIncCats={saveIncCats} onGroups={saveGroups} currency={currency} onCurrency={saveCurrencyHandler} username={username} onUsername={saveUsernameHandler} theme={theme} onTheme={saveThemeHandler} {...sharedProps} onOpenSavings={()=>navigateTo("savings")} onOpenBudgets={()=>navigateTo("budgets")} onOpenQuickActions={()=>navigateTo("quickactions")} onOpenManual={()=>navigateTo("manual")} setLastBackup={setLastBackup} txns={txns} bills={bills} installments={installments} savings={savings} budgets={budgets} onRestore={handleRestorePayload} setAppAlert={setAppAlert} navigateTo={navigateTo}/>}
           {tab==="privacy"&&<Privacy onBack={()=>navigateTo("dashboard")}/>}
           {tab!=="privacy"&&<BottomNav tab={tab} navigateTo={navigateTo} goHome={goHome} expCats={expCats} banks={banks} savings={activeSavings} onAdd={addTxn} currency={currency} {...sharedProps} setAppAlert={setAppAlert} quickActions={quickActions} txns={txns}/>}
@@ -2118,7 +2151,7 @@ function Privacy({onBack}){
 }
 
 // ── MonthlyBillsPage (Subscriptions + Installments) ───────────────────────────
-function MonthlyBillsPage({bills,installments,initialTab,onSaveBills,onSaveInstallments,banks,expCats,onAddTxn,delTxn,currency,setAppAlert}){
+function MonthlyBillsPage({bills,installments,initialTab,onSaveBills,onSaveInstallments,banks,expCats,onAddTxn,onAddTxns,delTxn,currency,setAppAlert}){
   useEffect(()=>{window.scrollTo(0,0);},[]);
   const[activeTab,setActiveTab]=useState(initialTab||"subscriptions");
   return <div style={{padding:"24px 16px 0",minHeight:"100vh",background:C.bg,boxSizing:"border-box"}}>
@@ -2127,7 +2160,7 @@ function MonthlyBillsPage({bills,installments,initialTab,onSaveBills,onSaveInsta
       {[{id:"subscriptions",icon:"zap",label:"Subscriptions"},{id:"installments",icon:"card",label:"Installments"}].map(t=><button key={t.id} onClick={()=>setActiveTab(t.id)} style={{flex:1,padding:"11px 0",borderRadius:12,border:`1.5px solid ${activeTab===t.id?C.accent:C.border}`,background:activeTab===t.id?C.accentDim:"transparent",color:activeTab===t.id?C.accent:C.muted,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:7}}><Ico name={t.icon} size={15} color={activeTab===t.id?C.accent:C.muted}/>{t.label}</button>)}
     </div>
     {activeTab==="subscriptions"&&<SubscriptionsTab bills={bills} onSave={onSaveBills} banks={banks} expCats={expCats} onAddTxn={onAddTxn} delTxn={delTxn} currency={currency} setAppAlert={setAppAlert}/>}
-    {activeTab==="installments"&&<InstallmentsTab installments={installments} onSave={onSaveInstallments} banks={banks} expCats={expCats} onAddTxn={onAddTxn} delTxn={delTxn} setAppAlert={setAppAlert}/>}
+    {activeTab==="installments"&&<InstallmentsTab installments={installments} onSave={onSaveInstallments} banks={banks} expCats={expCats} onAddTxn={onAddTxn} onAddTxns={onAddTxns} delTxn={delTxn} setAppAlert={setAppAlert}/>}
   </div>;
 }
 
@@ -2436,7 +2469,7 @@ function SubscriptionsTab({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,s
   </div>;
 }
 
-function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,delTxn,setAppAlert}){
+function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,delTxn,setAppAlert}){
   const getLocalMonth=()=>{const d=new Date();const offset=d.getTimezoneOffset()*60000;return new Date(d.getTime()-offset).toISOString().slice(0,7);};
   const curMonth=getLocalMonth();
   const monthOffset=(n)=>{const d=new Date();const m=new Date(d.getFullYear(),d.getMonth()+n,1);return `${m.getFullYear()}-${String(m.getMonth()+1).padStart(2,"0")}`;};
@@ -2449,6 +2482,7 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,delTxn,setA
   const[confirmDel,setConfirmDel]=useState(null);
   const[confirmUndo,setConfirmUndo]=useState(null); // {inst,month}
   const payingRef=useRef({});
+  const savingRef=useRef(false);
   const is=getIS();
 
   // Derived helpers (payments[] is the source of truth; migrate old paidInstallments count)
@@ -2484,15 +2518,23 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,delTxn,setA
 
   // ── Navigation ──
   const openPicker=()=>{setProviderSearch("");setView({mode:"picker"});};
-  const blankForm=()=>({editId:null,itemType:"",company:"",domain:"",color:"",count:"",amount:"",total:"",paidInit:"0",downPayment:"",deductDp:false,bankId:banks[0]?.id||"",dueDay:"1",reminderDays:"2",note:"",startDate:today()});
+  const blankForm=()=>({editId:null,itemType:"",company:"",domain:"",color:"",count:"",amount:"",total:"",paidInit:"0",downPayment:"",deductDp:false,deductPaid:false,bankId:banks[0]?.id||"",dueDay:"1",reminderDays:"2",note:"",startDate:today()});
   const pickProvider=(prov)=>{setForm({...blankForm(),company:prov.name,domain:prov.domain,color:prov.color});setWizStep(0);setView({mode:"form"});};
   const pickCustom=()=>{setForm(blankForm());setWizStep(0);setView({mode:"form"});};
-  const openEdit=(inst)=>{setForm({editId:inst.id,itemType:inst.itemType||"",company:inst.company||inst.name||"",domain:inst.domain||"",color:inst.color||"",count:String(inst.totalInstallments||""),amount:String(inst.installmentAmount||""),total:String(inst.totalAmount||""),paidInit:String(paidOf(inst)),downPayment:inst.downPayment?String(inst.downPayment):"",deductDp:false,bankId:inst.bankId,dueDay:String(inst.dueDay||1),reminderDays:String(inst.reminderDays??2),note:inst.note||"",startDate:inst.startDate||today()});setView({mode:"form"});};
+  const openEdit=(inst)=>{setForm({editId:inst.id,itemType:inst.itemType||"",company:inst.company||inst.name||"",domain:inst.domain||"",color:inst.color||"",count:String(inst.totalInstallments||""),amount:String(inst.installmentAmount||""),total:String(inst.totalAmount||""),paidInit:String(paidOf(inst)),downPayment:inst.downPayment?String(inst.downPayment):"",deductDp:false,deductPaid:false,bankId:inst.bankId,dueDay:String(inst.dueDay||1),reminderDays:String(inst.reminderDays??2),note:inst.note||"",startDate:inst.startDate||today()});setView({mode:"form"});};
   const openDetail=(inst)=>{setDetailMonth(curMonth);setView({mode:"detail",instId:inst.id});};
 
-  const setF=(k,v)=>setForm(p=>{const n={...p,[k]:v};if((k==="count"||k==="amount")){const c=parseFloat(n.count),a=parseFloat(n.amount);if(c>0&&a>0)n.total=String(Math.round(c*a*100)/100);}return n;});
+  const setF=(k,v)=>setForm(p=>{
+    const n={...p,[k]:v};const r2=x=>String(Math.round(x*100)/100);
+    const c=parseFloat(n.count),a=parseFloat(n.amount),t=parseFloat(n.total);
+    if(k==="amount"){if(c>0&&a>0)n.total=r2(c*a);}
+    else if(k==="total"){if(c>0&&t>0)n.amount=r2(t/c);}
+    else if(k==="count"&&c>0){if(a>0)n.total=r2(c*a);else if(t>0)n.amount=r2(t/c);}
+    return n;
+  });
 
   const handleSave=async()=>{
+    if(savingRef.current)return;
     const f=form;const count=parseInt(f.count),amount=parseFloat(f.amount);
     let total=parseFloat(f.total);if(isNaN(total)||total<=0)total=count*amount;
     const title=(f.itemType||f.company).trim();
@@ -2502,22 +2544,29 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,delTxn,setA
     const dp=Math.max(0,parseFloat(f.downPayment)||0);
     const dd=Math.min(28,Math.max(1,parseInt(f.dueDay)||1)),rd=Math.min(7,Math.max(0,parseInt(f.reminderDays)||2));
     const base={itemType:f.itemType.trim(),company:f.company.trim(),domain:f.domain,color:f.color,totalInstallments:count,installmentAmount:amount,totalAmount:total,downPayment:dp,bankId:f.bankId,dueDay:dd,reminderDays:rd,note:f.note.trim(),startDate:f.startDate};
-    if(f.editId){
-      await onSave(installments.map(i=>{if(i.id!==f.editId)return i;const pays=ensurePayments(i);return{...i,...base,name:base.company,payments:pays,paidInstallments:pays.length,status:pays.length>=count?"completed":"active"};}));
-      setView({mode:"detail",instId:f.editId});
-    }else{
-      const initN=Math.min(count,Math.max(0,paidNum));
-      const payments=[];for(let k=0;k<initN;k++)payments.push({month:monthOffset(-(initN-k)),date:null,txnId:null,num:k+1});
-      let dpTxnId=null;
-      if(dp>0&&f.deductDp){
+    savingRef.current=true;
+    try{
+      if(f.editId){
+        await onSave(installments.map(i=>{if(i.id!==f.editId)return i;const pays=ensurePayments(i);return{...i,...base,name:base.company,payments:pays,paidInstallments:pays.length,status:pays.length>=count?"completed":"active"};}));
+        setView({mode:"detail",instId:f.editId});
+      }else{
+        const initN=Math.min(count,Math.max(0,paidNum));
         const bank=banks.find(b=>b.id===f.bankId);
-        const tid=await onAddTxn({type:"expense",amount:dp,date:f.startDate||today(),bankId:f.bankId,bankName:bank?.name,catId:"installment",catName:"Installments",catIcon:"installment",catColor:f.color||C.accent,note:`Down payment: ${title}`});
-        if(tid!==false)dpTxnId=tid;
+        const wantDp=dp>0&&f.deductDp,wantPaid=initN>0&&f.deductPaid;
+        const paidMonths=[];for(let k=0;k<initN;k++)paidMonths.push(monthOffset(-(initN-k)));
+        const mkTxn=(amt,date,note)=>({type:"expense",amount:amt,date,bankId:f.bankId,bankName:bank?.name,catId:"installment",catName:"Installments",catIcon:"installment",catColor:f.color||C.accent,note});
+        const batch=[];
+        if(wantDp)batch.push(mkTxn(dp,f.startDate||today(),`Deposit: ${title}`));
+        if(wantPaid)paidMonths.forEach((m,k)=>batch.push(mkTxn(amount,`${m}-01`,`Installment ${k+1}/${count}: ${title}`)));
+        let ids=[];
+        if(batch.length){const r=await onAddTxns(batch);if(r===false){savingRef.current=false;return;}ids=r;}
+        let cur=0;const dpTxnId=wantDp?ids[cur++]:null;
+        const payments=[];for(let k=0;k<initN;k++){const m=paidMonths[k];const txnId=wantPaid?ids[cur++]:null;payments.push({month:m,date:wantPaid?`${m}-01`:null,txnId,num:k+1});}
+        await onSave([...installments,{id:Date.now().toString(),...base,name:base.company,payments,paidInstallments:payments.length,downPaymentTxnId:dpTxnId,status:payments.length>=count?"completed":"active"}]);
+        setView({mode:"list"});
       }
-      await onSave([...installments,{id:Date.now().toString(),...base,name:base.company,payments,paidInstallments:payments.length,downPaymentTxnId:dpTxnId,status:payments.length>=count?"completed":"active"}]);
-      setView({mode:"list"});
-    }
-    HAPTICS.success();
+      HAPTICS.success();
+    }finally{setTimeout(()=>{savingRef.current=false;},400);}
   };
 
   const handlePay=async(inst,mStr)=>{
@@ -2601,7 +2650,7 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,delTxn,setA
     const companyField=<div style={{marginBottom:20}}><label style={lbl}>Company / Place</label><input value={f.company} onChange={e=>setF("company",e.target.value)} placeholder="e.g. ValU, B.TECH, dealership..." style={{...is,borderRadius:14}}/></div>;
     const countAmountFields=(
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:8}}>
-        <div><label style={lbl}>No. of Installments</label><input type="number" min="1" inputMode="numeric" value={f.count} onChange={e=>setF("count",e.target.value)} placeholder="12" style={{...is,borderRadius:14}}/></div>
+        <div><label style={lbl}>No. of Installments</label><input type="number" min="1" inputMode="numeric" value={f.count} onChange={e=>setF("count",e.target.value)} placeholder="0" style={{...is,borderRadius:14}}/></div>
         <div><label style={lbl}>Installment Amount</label><input type="number" step="any" inputMode="decimal" value={f.amount} onChange={e=>setF("amount",e.target.value)} placeholder="0" style={{...is,borderRadius:14}}/></div>
       </div>
     );
@@ -2614,7 +2663,7 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,delTxn,setA
     );
     const downPaymentField=(
       <div style={{marginBottom:20}}>
-        <label style={lbl}>Down Payment (optional)</label>
+        <label style={lbl}>Deposit (optional)</label>
         <input type="number" step="any" min="0" inputMode="decimal" value={f.downPayment} onChange={e=>setF("downPayment",e.target.value)} placeholder="0" style={{...is,borderRadius:14}}/>
         {!f.editId&&parseFloat(f.downPayment)>0&&(
           <div onClick={()=>setF("deductDp",!f.deductDp)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:C.bg,border:`1px solid ${C.border}`,borderRadius:12,cursor:"pointer",marginTop:10}}>
@@ -2625,7 +2674,18 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,delTxn,setA
         {f.editId&&<div style={{color:C.faint,fontSize:11,marginTop:6}}>Recorded as info. Editing the amount won't change past transactions.</div>}
       </div>
     );
-    const paidInitField=!f.editId&&<div style={{marginBottom:20}}><label style={lbl}>Already Paid (installments)</label><input type="number" min="0" inputMode="numeric" value={f.paidInit} onChange={e=>setF("paidInit",e.target.value)} style={{...is,borderRadius:14}}/>{(parseInt(f.paidInit)||0)>count?<div style={{color:C.red,fontSize:11,marginTop:6,fontWeight:700}}>That's more than this plan's {count} total installment{count===1?"":"s"}. Enter {count} or less.</div>:<div style={{color:C.faint,fontSize:11,marginTop:6}}>Installments paid before adding here (no transaction created).</div>}</div>;
+    const paidCount=parseInt(f.paidInit)||0;
+    const paidInitField=!f.editId&&<div style={{marginBottom:20}}>
+      <label style={lbl}>Already Paid (installments)</label>
+      <input type="number" min="0" inputMode="numeric" value={f.paidInit} onChange={e=>setF("paidInit",e.target.value)} style={{...is,borderRadius:14}}/>
+      {paidCount>count?<div style={{color:C.red,fontSize:11,marginTop:6,fontWeight:700}}>That's more than this plan's {count} total installment{count===1?"":"s"}. Enter {count} or less.</div>:<div style={{color:C.faint,fontSize:11,marginTop:6}}>Installments you paid before adding this plan.</div>}
+      {paidCount>0&&paidCount<=count&&(
+        <div onClick={()=>setF("deductPaid",!f.deductPaid)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:C.bg,border:`1px solid ${C.border}`,borderRadius:12,cursor:"pointer",marginTop:10}}>
+          <div style={{flex:1}}><div style={{color:C.text,fontSize:14,fontWeight:700}}>Deduct from account now</div><div style={{color:C.muted,fontSize:11,marginTop:2}}>{f.deductPaid?`Records ${paidCount} expense${paidCount===1?"":"s"} and lowers your balance`:"Info only — no transactions, balance unchanged"}</div></div>
+          <div style={{width:46,height:27,borderRadius:99,background:f.deductPaid?C.accent:C.border,position:"relative",transition:"background .2s",flexShrink:0}}><div style={{position:"absolute",top:3,left:f.deductPaid?22:3,width:21,height:21,borderRadius:99,background:"#fff",transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/></div>
+        </div>
+      )}
+    </div>;
     const bankPicker=(
       <div style={{marginBottom:20}}>
         <label style={lbl}>Pay from Account</label>
@@ -2664,7 +2724,7 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,delTxn,setA
     const summaryCard=(
       <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:"16px",marginTop:8}}>
         <div style={{color:C.muted,fontSize:11,fontWeight:800,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Review</div>
-        {[["Item",f.itemType||f.company||"—"],["Plan",count>0&&amount>0?`${count} × ${fmt(amount)}`:"—"],["Total",fmt(computedTotal||0)],...(parseFloat(f.downPayment)>0?[["Down payment",fmt(parseFloat(f.downPayment))+(f.deductDp?"":" · info")]]:[]),["From",banks.find(b=>b.id===f.bankId)?.name||"—"],["Due day",`Day ${Math.min(28,Math.max(1,parseInt(f.dueDay)||1))}`]].map(([k,v],i,arr)=>(
+        {[["Item",f.itemType||f.company||"—"],["Plan",count>0&&amount>0?`${count} × ${fmt(amount)}`:"—"],["Total",fmt(computedTotal||0)],...(parseFloat(f.downPayment)>0?[["Deposit",fmt(parseFloat(f.downPayment))+(f.deductDp?"":" · info")]]:[]),["From",banks.find(b=>b.id===f.bankId)?.name||"—"],["Due day",`Day ${Math.min(28,Math.max(1,parseInt(f.dueDay)||1))}`]].map(([k,v],i,arr)=>(
           <div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:i===arr.length-1?"none":`1px solid ${C.border}`}}>
             <span style={{color:C.muted,fontSize:13,fontWeight:600}}>{k}</span>
             <span style={{color:C.text,fontSize:14,fontWeight:700,maxWidth:"60%",textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v}</span>
@@ -2735,7 +2795,7 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,delTxn,setA
         <Card style={{padding:"4px 16px",marginBottom:16}}>
           {inst.itemType&&<div style={rowStyle}><span style={{color:C.muted,fontSize:13,fontWeight:600}}>Item</span><span style={{color:C.text,fontSize:14,fontWeight:700}}>{inst.itemType}</span></div>}
           {inst.company&&<div style={rowStyle}><span style={{color:C.muted,fontSize:13,fontWeight:600}}>Company</span><span style={{color:C.text,fontSize:14,fontWeight:700}}>{inst.company}</span></div>}
-          {inst.downPayment>0&&<div style={rowStyle}><span style={{color:C.muted,fontSize:13,fontWeight:600}}>Down payment</span><span style={{color:C.text,fontSize:14,fontWeight:700}}>{fmt(inst.downPayment)}{inst.downPaymentTxnId?"":<span style={{color:C.faint,fontWeight:600}}> · info</span>}</span></div>}
+          {inst.downPayment>0&&<div style={rowStyle}><span style={{color:C.muted,fontSize:13,fontWeight:600}}>Deposit</span><span style={{color:C.text,fontSize:14,fontWeight:700}}>{fmt(inst.downPayment)}{inst.downPaymentTxnId?"":<span style={{color:C.faint,fontWeight:600}}> · info</span>}</span></div>}
           <div style={rowStyle}><span style={{color:C.muted,fontSize:13,fontWeight:600}}>Pay from</span><span style={{color:C.text,fontSize:14,fontWeight:700}}>{bank?.name||"—"}</span></div>
           <div style={rowStyle}><span style={{color:C.muted,fontSize:13,fontWeight:600}}>Due day</span><span style={{color:C.text,fontSize:14,fontWeight:700}}>Day {inst.dueDay||1} of month</span></div>
           <div style={{...rowStyle,borderBottom:inst.note?`1px solid ${C.border}`:"none"}}><span style={{color:C.muted,fontSize:13,fontWeight:600}}>Reminder</span><span style={{color:C.text,fontSize:14,fontWeight:700}}>{(inst.reminderDays??2)===0?"Off":`${inst.reminderDays??2} day(s) before`}</span></div>
