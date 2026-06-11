@@ -2040,8 +2040,10 @@ function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[],onOpenBudge
       </div>
       <div style={{marginBottom:14}}>
         <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Categories</div>
-        <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:160,overflow:"auto",background:C.bg,padding:10,borderRadius:10,border:`1px solid ${C.border}`}}>
+        <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:200,overflow:"auto",background:C.bg,padding:10,borderRadius:10,border:`1px solid ${C.border}`}}>
           {expCats.map(c=>{const checked=selectedCats.includes(c.id);return <label key={c.id} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"5px 0",userSelect:"none"}}><div onClick={()=>setSelectedCats(checked?selectedCats.filter(x=>x!==c.id):[...selectedCats,c.id])} style={{width:18,height:18,borderRadius:4,border:`2px solid ${checked?C.accent:C.faint}`,background:checked?C.accentDim:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{checked&&<Ico name="check" size={13} color={C.accent} stroke={3}/>}</div><CatIcon cat={c} size={22}/><span style={{color:C.text,fontSize:14}}>{c.name}</span></label>;})}
+          <div style={{display:"flex",alignItems:"center",gap:8,margin:"6px 0 2px"}}><div style={{flex:1,height:1,background:C.border}}/><span style={{color:C.muted,fontSize:10,fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}>Bills</span><div style={{flex:1,height:1,background:C.border}}/></div>
+          {BILL_TYPES.map(t=>{const id="bill_"+t.id;const checked=selectedCats.includes(id);return <label key={id} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"5px 0",userSelect:"none"}}><div onClick={()=>setSelectedCats(checked?selectedCats.filter(x=>x!==id):[...selectedCats,id])} style={{width:18,height:18,borderRadius:4,border:`2px solid ${checked?C.accent:C.faint}`,background:checked?C.accentDim:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{checked&&<Ico name="check" size={13} color={C.accent} stroke={3}/>}</div><CatIcon glyph={t.glyph} color={t.color} name={t.name} size={22}/><span style={{color:C.text,fontSize:14}}>{t.name}</span></label>;})}
         </div>
       </div>
       <Btn full onClick={handleAdd}>Save Budget</Btn>
@@ -2315,6 +2317,18 @@ function SubscriptionsTab({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,s
         <div style={{marginBottom:20}}>
           <label style={lblStyle}>Name</label>
           <input value={f.name} onChange={e=>setF("name",e.target.value)} placeholder="e.g. Netflix, Vodafone..." style={{...is,borderRadius:14}}/>
+        </div>
+        <div style={{marginBottom:20}}>
+          <label style={lblStyle}>Category</label>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+            {BILL_TYPES.map(t=>{const on=f.typeId===t.id;return (
+              <button key={t.id} type="button" onClick={()=>setF("typeId",t.id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,padding:"12px 4px",borderRadius:12,border:`1.5px solid ${on?C.accent:C.border}`,background:on?C.accentDim:C.card,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>
+                <CatIcon glyph={t.glyph} color={t.color} name={t.name} size={28}/>
+                <span style={{color:on?C.accent:C.text,fontSize:10.5,fontWeight:700,textAlign:"center",lineHeight:1.2}}>{t.name}</span>
+              </button>
+            );})}
+          </div>
+          <div style={{color:C.faint,fontSize:11,marginTop:8}}>Groups this bill in your spending and lets you budget for it.</div>
         </div>
         <div style={{marginBottom:20}}>
           <label style={lblStyle}>Amount ({currency}) · per month</label>
