@@ -1123,7 +1123,7 @@ function BottomNav({tab,navigateTo,goHome,expCats,banks,savings,onAdd,currency,s
 
 function TxnRow({txn,hideTotal,onClick,isTrulyLinked}){
   const isExp=txn.type==="expense"||txn.type==="goal_withdraw";
-  const isInc=txn.type==="income"||txn.type==="goal_return";
+  const isInc=txn.type==="income";
   const isTrans=txn.type==="transfer";
   const isSav=txn.type==="saving";
   const bg=isExp?C.redDim:isInc?C.accentDim:isTrans?C.blueDim:C.yellowDim;
@@ -1157,7 +1157,7 @@ function TxnRow({txn,hideTotal,onClick,isTrulyLinked}){
 
 function TxnViewModal({txn,onClose}){
   const isExp=txn.type==="expense"||txn.type==="goal_withdraw";
-  const isInc=txn.type==="income"||txn.type==="goal_return";
+  const isInc=txn.type==="income";
   const isTrans=txn.type==="transfer";
   const isSav=txn.type==="saving";
   const roStyle={width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13,display:"flex",alignItems:"center",minHeight:36,boxSizing:"border-box"};
@@ -1263,7 +1263,7 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
 
   const totalBalance=useMemo(()=>banks.reduce((s,b)=>s+bankBalance(b.id),0),[banks,bankBalance]);
   const totalSafe=useMemo(()=>banks.reduce((s,b)=>s+safeToSpend(b.id),0),[banks,safeToSpend]);
-  const totalIncome=useMemo(()=>txns.filter(t=>t.type==="income"||t.type==="goal_return").reduce((a,t)=>a+t.amount,0),[txns]);
+  const totalIncome=useMemo(()=>txns.filter(t=>t.type==="income").reduce((a,t)=>a+t.amount,0),[txns]);
   const totalExp=useMemo(()=>txns.filter(t=>t.type==="expense"||t.type==="goal_withdraw").reduce((a,t)=>a+t.amount,0),[txns]);
   const curMonth=currentMonth();
   const selMonth=filterMonth;
@@ -1274,7 +1274,7 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
   const getPrev=(m)=>{const[y,mo]=m.split("-");const d=new Date(+y,+mo-2,1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;};
   const prevMonth=getPrev(selMonth);
   const prevT=txnsAll.filter(t=>t.date.startsWith(prevMonth));
-  const prevInc=prevT.filter(t=>t.type==="income"||t.type==="goal_return").reduce((a,t)=>a+t.amount,0);
+  const prevInc=prevT.filter(t=>t.type==="income").reduce((a,t)=>a+t.amount,0);
   const prevExp=prevT.filter(t=>t.type==="expense"||t.type==="goal_withdraw").reduce((a,t)=>a+t.amount,0);
   const prevNet=prevInc-prevExp;
   const incomeDiff=prevInc>0?Math.round(((totalIncome-prevInc)/prevInc)*100):null;
@@ -1287,7 +1287,7 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
   const dueLabel=(dueDay)=>{const d=dueIn(dueDay);if(d===null)return dueDay?`Day ${dueDay}`:"";if(d<0)return `Overdue ${Math.abs(d)}d`;if(d===0)return "Due today";if(d===1)return "Tomorrow";return `In ${d} days`;};
   const dueColor=(dueDay)=>{const d=dueIn(dueDay);if(d===null)return C.muted;if(d<0)return C.red;if(d<=1)return C.orange;if(d<=3)return C.yellow;return C.accent;};
 
-  const recents=txns.filter(t=>{if(recentFilter==="expenses")return t.type==="expense"||t.type==="goal_withdraw";if(recentFilter==="income")return t.type==="income"||t.type==="goal_return";return true;}).slice(0,5);
+  const recents=txns.filter(t=>{if(recentFilter==="expenses")return t.type==="expense"||t.type==="goal_withdraw";if(recentFilter==="income")return t.type==="income";return true;}).slice(0,5);
   const spendingGroups=groups.filter(g=>txns.filter(tx=>(tx.type==="expense"||tx.type==="goal_withdraw")&&g.cats.includes(tx.catId)).reduce((a,tx)=>a+tx.amount,0)>0);
 
   // Bills (selected month, lifecycle-aware: only bills active that month, plus any that were paid then)
@@ -1324,7 +1324,7 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
   const splitCounts={};
   txnsAll.forEach(t=>{if(t.splitGroupId)splitCounts[t.splitGroupId]=(splitCounts[t.splitGroupId]||0)+1;});
   const expTxns=txns.filter(t=>t.type==="expense"||t.type==="goal_withdraw");
-  const incTxns=txns.filter(t=>t.type==="income"||t.type==="goal_return");
+  const incTxns=txns.filter(t=>t.type==="income");
   const getTopCats=(txnList,totalAmt)=>{
     const totals={};
     txnList.forEach(t=>{const key=t.catId||t.type;const name=t.catName||(t.type==="goal_withdraw"?"Goal Spending":t.type==="goal_return"?"Returned to Bank":t.type);const icon=t.catIcon||(t.type==="goal_withdraw"?"goal":t.type==="goal_return"?"bank":"others");if(!totals[key])totals[key]={name,icon,glyph:t.catGlyph,emoji:t.catEmoji,color:t.catColor,amount:0};totals[key].amount+=t.amount;});
@@ -1585,7 +1585,7 @@ function DeepLedgerView({title,headerType,headerData,txns,onDelete,onUpdate,bank
   const[filter,setFilter]=useState("all");const[confirmId,setConfirmId]=useState(null);const[editTxn,setEditTxn]=useState(null);const[viewTxn,setViewTxn]=useState(null);
   const[localAlert,setLocalAlert]=useState(null);
   useEffect(()=>{requestAnimationFrame(()=>window.scrollTo(0,0));},[title]);
-  const list=txns.filter(t=>{if(filter==="in")return t.type==="income"||t.type==="goal_return";if(filter==="out")return t.type==="expense"||t.type==="saving"||t.type==="goal_withdraw";return true;});
+  const list=txns.filter(t=>{if(filter==="in")return t.type==="income";if(filter==="out")return t.type==="expense"||t.type==="saving"||t.type==="goal_withdraw";return true;});
   const handleEditClick=(t)=>{
     if(t.splitGroupId){setLocalAlert({title:"Linked Transaction",message:"Cannot edit a split transaction. Please delete and recreate it.",color:C.yellow});return;}
     if(t.type==="goal_withdraw"||t.type==="goal_return"){setLocalAlert({title:"Action Not Allowed",message:"Goal spending and returns cannot be edited directly. Please delete and recreate.",color:C.orange});return;}
@@ -1799,7 +1799,7 @@ function History({txns,onDelete,onUpdate,banks,expCats,incCats,currency,availMon
   const[search,setSearch]=useState("");const[filterType,setFilterType]=useState("all");const[filterMonth,setFilterMonth]=useState("all");const[confirmTxn,setConfirmTxn]=useState(null);const[editTxn,setEditTxn]=useState(null);const[viewTxn,setViewTxn]=useState(null);
   const splitCounts=useMemo(()=>{const counts={};txns.forEach(t=>{if(t.splitGroupId)counts[t.splitGroupId]=(counts[t.splitGroupId]||0)+1;});return counts;},[txns]);
   const filtered=useMemo(()=>txns.filter(t=>{
-    if(filterType!=="all"){if(filterType==="expense"&&t.type!=="expense"&&t.type!=="goal_withdraw")return false;else if(filterType==="income"&&t.type!=="income"&&t.type!=="goal_return")return false;else if(filterType!=="expense"&&filterType!=="income"&&t.type!==filterType)return false;}
+    if(filterType!=="all"){if(filterType==="expense"&&t.type!=="expense"&&t.type!=="goal_withdraw")return false;else if(filterType==="income"&&t.type!=="income")return false;else if(filterType!=="expense"&&filterType!=="income"&&t.type!==filterType)return false;}
     if(filterMonth!=="all"&&!t.date.startsWith(filterMonth))return false;
     if(search){const q=search.toLowerCase();return t.catName?.toLowerCase().includes(q)||t.note?.toLowerCase().includes(q)||t.bankName?.toLowerCase().includes(q)||t.goalName?.toLowerCase().includes(q);}
     return true;
