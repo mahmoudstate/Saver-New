@@ -1286,14 +1286,16 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
   const recents=txns.filter(t=>{if(recentFilter==="expenses")return t.type==="expense"||t.type==="goal_withdraw";if(recentFilter==="income")return t.type==="income"||t.type==="goal_return";return true;}).slice(0,5);
   const spendingGroups=groups.filter(g=>txns.filter(tx=>(tx.type==="expense"||tx.type==="goal_withdraw")&&g.cats.includes(tx.catId)).reduce((a,tx)=>a+tx.amount,0)>0);
 
-  // Bills (selected month)
+  // Bills (selected month, lifecycle-aware: only bills active that month, plus any that were paid then)
+  const billActiveIn=(b,m)=>(!b.startMonth||m>=b.startMonth)&&(!b.stoppedMonth||m<b.stoppedMonth);
   const billPaid=(b)=>b.payments?.some(p=>p.month===selMonth);
-  const billsTotal=bills.reduce((s,b)=>s+b.amount,0);
-  const billsUnpaid=bills.filter(b=>!billPaid(b));
-  const billsPaidCount=bills.length-billsUnpaid.length;
+  const monthBills=bills.filter(b=>billActiveIn(b,selMonth)||billPaid(b));
+  const billsTotal=monthBills.reduce((s,b)=>s+b.amount,0);
+  const billsUnpaid=monthBills.filter(b=>!billPaid(b));
+  const billsPaidCount=monthBills.length-billsUnpaid.length;
   const billsRemaining=billsUnpaid.reduce((s,b)=>s+b.amount,0);
   const billsPaidAmt=billsTotal-billsRemaining;
-  const billsAllPaid=bills.length>0&&billsUnpaid.length===0;
+  const billsAllPaid=monthBills.length>0&&billsUnpaid.length===0;
   const nextBill=isCurrentMonth?[...billsUnpaid].sort((a,b)=>(a.dueDay||99)-(b.dueDay||99))[0]:null;
   const overdueBillCount=isCurrentMonth?billsUnpaid.filter(b=>b.dueDay&&dueIn(b.dueDay)<0).length:0;
 
@@ -1389,17 +1391,17 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
           </div>;})()}
         </div>
       );
-      if(section.id==="bills"&&bills.length>0)return(
+      if(section.id==="bills"&&monthBills.length>0)return(
         <div key="bills">
           <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Monthly Bills</div>
           <Card onClick={()=>openMonthly("subscriptions")} className="ic" style={{padding:"16px",marginBottom:20,cursor:"pointer",transition:"transform 0.1s ease"}}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
               <div style={{width:36,height:36,borderRadius:11,background:(billsAllPaid?C.accent:C.blue)+"22",display:"flex",alignItems:"center",justifyContent:"center"}}><Ico name="zap" size={20} color={billsAllPaid?C.accent:C.blue} stroke={2}/></div>
-              <div style={{flex:1}}><div style={{color:C.text,fontWeight:800,fontSize:15}}>Monthly Bills</div><div style={{color:C.muted,fontSize:11,marginTop:1}}>{billsPaidCount}/{bills.length} paid{overdueBillCount>0?` · ${overdueBillCount} overdue`:""}</div></div>
+              <div style={{flex:1}}><div style={{color:C.text,fontWeight:800,fontSize:15}}>Monthly Bills</div><div style={{color:C.muted,fontSize:11,marginTop:1}}>{billsPaidCount}/{monthBills.length} paid{overdueBillCount>0?` · ${overdueBillCount} overdue`:""}</div></div>
               <Ico name="chevR" size={18} color={C.faint}/>
             </div>
             <div style={{marginBottom:12}}><div style={{color:billsAllPaid?C.accent:C.text,fontSize:26,fontWeight:800,letterSpacing:-0.5}}>{hideTotal?"••••":billsAllPaid?"All cleared":fmt(billsRemaining)}</div><div style={{color:C.muted,fontSize:11,marginTop:2,display:"flex",alignItems:"center",gap:4}}>{billsAllPaid?<><Ico name="check" size={12} color={C.accent} stroke={3}/>everything paid this month</>:`remaining of ${hideTotal?"••••":fmt(billsTotal)}`}</div></div>
-            <div style={{display:"flex",gap:3,height:8,marginBottom:nextBill?14:0}}>{bills.map(b=>{const paid=billPaid(b),od=isCurrentMonth&&!paid&&b.dueDay&&dueIn(b.dueDay)<0;return <div key={b.id} style={{flex:1,borderRadius:3,background:paid?C.accent:od?C.red:C.faint,transition:"background .35s ease"}}/>;})}</div>
+            <div style={{display:"flex",gap:3,height:8,marginBottom:nextBill?14:0}}>{monthBills.map(b=>{const paid=billPaid(b),od=isCurrentMonth&&!paid&&b.dueDay&&dueIn(b.dueDay)<0;return <div key={b.id} style={{flex:1,borderRadius:3,background:paid?C.accent:od?C.red:C.faint,transition:"background .35s ease"}}/>;})}</div>
             {nextBill&&<div style={{display:"flex",alignItems:"center",gap:8,paddingTop:14,borderTop:`1px solid ${C.border}`}}><Ico name={dueIn(nextBill.dueDay)<=0?"bell":"clock"} size={15} color={dueColor(nextBill.dueDay)} stroke={2.2}/><span style={{color:C.text,fontSize:13,fontWeight:600,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Next: {nextBill.name}</span><span style={{color:dueColor(nextBill.dueDay),fontSize:11,fontWeight:800}}>{dueLabel(nextBill.dueDay)}</span><span style={{color:C.text,fontSize:13,fontWeight:800}}>{hideTotal?"••••":fmt(nextBill.amount)}</span></div>}
           </Card>
         </div>
