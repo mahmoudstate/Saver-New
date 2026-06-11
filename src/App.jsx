@@ -880,13 +880,14 @@ function SaverApp(){
     const removedIds=t.splitGroupId?txns.filter(x=>x.splitGroupId===t.splitGroupId).map(x=>x.id):[id];
     const next=t.splitGroupId?txns.filter(x=>x.splitGroupId!==t.splitGroupId):txns.filter(x=>x.id!==id);
     setTxns(next);await persist(KEYS.txns,next);
-    await reconcileInstallments(removedIds);
+    await reconcileLinked(removedIds);
     return next;
   };
 
-  // Keep installment plans in sync when their linked transactions are deleted from history.
-  const reconcileInstallments=async(removedIds)=>{
-    const removed=new Set(removedIds);let changed=false;
+  // Keep installment plans AND bills in sync when their linked transactions are deleted from history.
+  const reconcileLinked=async(removedIds)=>{
+    const removed=new Set(removedIds);
+    let changed=false;
     const upd=installments.map(inst=>{
       let n=inst;
       if(inst.downPaymentTxnId&&removed.has(inst.downPaymentTxnId)){n={...n,downPayment:0,downPaymentTxnId:null};changed=true;}
@@ -897,6 +898,12 @@ function SaverApp(){
       return n;
     });
     if(changed){setInstallments(upd);await persist(KEYS.installments,upd);}
+    let bChanged=false;
+    const updB=bills.map(b=>{
+      if(b.payments&&b.payments.some(p=>p.txnId&&removed.has(p.txnId))){bChanged=true;return{...b,payments:b.payments.filter(p=>!(p.txnId&&removed.has(p.txnId)))};}
+      return b;
+    });
+    if(bChanged){setBills(updB);await persist(KEYS.bills,updB);}
   };
 
   // Batch-add several transactions at once (used when back-filling a down payment / already-paid installments).
@@ -2282,6 +2289,13 @@ function SubscriptionsTab({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,s
           <ServiceLogo domain={f.domain} name={f.name||"?"} color={accent} size={72} style={{borderRadius:20}}/>
         </div>
         <div style={{marginBottom:20}}>
+          <label style={lblStyle}>Icon Color</label>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+            {CAT_PALETTE.map(col=>{const on=(f.color||C.accent).toLowerCase()===col.toLowerCase();return <button key={col} type="button" onClick={()=>setF("color",col)} style={{width:30,height:30,borderRadius:99,background:col,border:on?`3px solid ${C.text}`:"3px solid transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>{on&&<Ico name="check" size={14} color={_lum(col)>0.7?"#111":"#fff"} stroke={3}/>}</button>;})}
+            <label style={{width:30,height:30,borderRadius:99,border:`2px dashed ${C.faint}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden"}}><Ico name="palette" size={15} color={C.faint}/><input type="color" value={f.color||C.accent} onChange={e=>setF("color",e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/></label>
+          </div>
+        </div>
+        <div style={{marginBottom:20}}>
           <label style={lblStyle}>Name</label>
           <input value={f.name} onChange={e=>setF("name",e.target.value)} placeholder="e.g. Netflix, Vodafone..." style={{...is,borderRadius:14}}/>
         </div>
@@ -2391,9 +2405,9 @@ function SubscriptionsTab({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,s
     {bills.length===0&&<><EmptyState glyph="zap" message="No subscriptions yet. Add Netflix, Vodafone, Spotify and more."/><Btn full onClick={openPicker} style={{marginTop:4}}>+ Add Subscription</Btn></>}
 
     {bills.length>0&&<>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+      <Btn full onClick={openPicker} color={C.accent} style={{marginBottom:16,borderRadius:14,padding:"15px"}}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8}}><Ico name="plus" size={18} color="#111" stroke={2.5}/>Add subscription</span></Btn>
+      <div style={{marginBottom:18}}>
         <MonthSelect value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} availMonths={availMonths}/>
-        <Btn small onClick={openPicker}>+ Add</Btn>
       </div>
 
       {/* ── History (All Time): Year → Month → bills ── */}
@@ -2914,10 +2928,8 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,d
       const list=listFilter==="completed"?urgency(completed):listFilter==="all"?urgency(installments):listFilter==="active"?urgency(active):urgency(dueNow);
       const emptyMsg=listFilter==="due"?"Nothing due right now — you're all caught up this month.":listFilter==="completed"?"No fully-paid plans yet.":"No plans here.";
       return <>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-          <div style={{color:C.text,fontSize:18,fontWeight:800}}>Your plans</div>
-          <Btn small onClick={openPicker}>+ Add</Btn>
-        </div>
+        <Btn full onClick={openPicker} color={C.accent} style={{marginBottom:16,borderRadius:14,padding:"15px"}}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8}}><Ico name="plus" size={18} color="#111" stroke={2.5}/>Add installment</span></Btn>
+        <div style={{color:C.text,fontSize:18,fontWeight:800,marginBottom:14}}>Your plans</div>
         <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4,marginBottom:16,WebkitOverflowScrolling:"touch"}}>
           {segs.map(s=>{const on=listFilter===s.id;return (
             <button key={s.id} onClick={()=>setListFilter(s.id)} style={{flexShrink:0,padding:"9px 13px",borderRadius:99,border:`1.5px solid ${on?C.accent:C.border}`,background:on?C.accentDim:"transparent",color:on?C.accent:C.muted,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",display:"inline-flex",alignItems:"center",gap:6}}>
