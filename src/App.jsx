@@ -751,6 +751,7 @@ function SaverApp(){
   const[showWhatsNew,setShowWhatsNew]=useState(false);
   const[appTour,setAppTour]=useState(false);
   const[monthlyTab,setMonthlyTab]=useState("subscriptions");
+  const[monthlyMonth,setMonthlyMonth]=useState(null);
   const[coachTour,setCoachTour]=useState(false);
   const[pendingCurrency,setPendingCurrency]=useState(null);
 
@@ -805,8 +806,8 @@ function SaverApp(){
     else{setScrollState({y:0,restore:false});window.scrollTo(0,0);}
     setTab(newTab);
   },[]);
-  // Open the Bills page on a specific tab, remembering the home scroll position
-  const openMonthly=useCallback((which)=>{setMonthlyTab(which);setScrollState({y:window.scrollY,restore:true});setTab("monthly");},[]);
+  // Open the Bills page on a specific tab, remembering the home scroll position. Optionally target a month (past month -> its history).
+  const openMonthly=useCallback((which,month)=>{setMonthlyTab(which);setMonthlyMonth(month||null);setScrollState({y:window.scrollY,restore:true});setTab("monthly");},[]);
   // Home button: if already home, jump to top; otherwise return to where we left off
   const goHome=useCallback(()=>{if(tab==="dashboard"){window.scrollTo(0,0);setScrollState({y:0,restore:false});}else setTab("dashboard");},[tab]);
   // Live coach-marks tour on the real dashboard (Skippable)
@@ -1000,7 +1001,7 @@ function SaverApp(){
           {tab==="budgets"&&<BudgetsPage budgets={budgets} expCats={expCats} onSave={saveBudgets} onBack={()=>navigateTo("settings")} currency={currency} txns={txns} onOpenBudget={(b,m)=>{if(m&&m!=="all")setFilterMonth(m);else setFilterMonth(currentMonth());setScrollState({y:window.scrollY,restore:true});setLedgerBudget(b);}}/>}
           {tab==="quickactions"&&<QuickActionsSetup quickActions={quickActions} expCats={expCats} banks={banks} onSave={saveQuickActions} onBack={()=>navigateTo("settings")}/>}
           {tab==="manual"&&<UserManual onBack={()=>navigateTo("settings")} navigateTo={navigateTo} onCoach={startCoach}/>}
-          {tab==="monthly"&&<MonthlyBillsPage bills={bills} installments={installments} initialTab={monthlyTab} onSaveBills={saveBills} onSaveInstallments={saveInstallments} banks={banks} expCats={expCats} onAddTxn={addTxn} onAddTxns={addTxns} delTxn={delTxn} currency={currency} setAppAlert={setAppAlert}/>}
+          {tab==="monthly"&&<MonthlyBillsPage bills={bills} installments={installments} initialTab={monthlyTab} initialMonth={monthlyMonth} onSaveBills={saveBills} onSaveInstallments={saveInstallments} banks={banks} expCats={expCats} onAddTxn={addTxn} onAddTxns={addTxns} delTxn={delTxn} currency={currency} setAppAlert={setAppAlert}/>}
           {tab==="settings"&&<Settings banks={banks} expCats={expCats} incCats={incCats} groups={groups} onBanks={saveBanks} onExpCats={saveExpCats} onIncCats={saveIncCats} onGroups={saveGroups} currency={currency} onCurrency={saveCurrencyHandler} username={username} onUsername={saveUsernameHandler} theme={theme} onTheme={saveThemeHandler} {...sharedProps} onOpenSavings={()=>navigateTo("savings")} onOpenBudgets={()=>navigateTo("budgets")} onOpenQuickActions={()=>navigateTo("quickactions")} onOpenManual={()=>navigateTo("manual")} setLastBackup={setLastBackup} txns={txns} bills={bills} installments={installments} savings={savings} budgets={budgets} onRestore={handleRestorePayload} setAppAlert={setAppAlert} navigateTo={navigateTo}/>}
           {tab==="privacy"&&<Privacy onBack={()=>navigateTo("dashboard")}/>}
           {tab!=="privacy"&&<BottomNav tab={tab} navigateTo={navigateTo} goHome={goHome} expCats={expCats} banks={banks} savings={activeSavings} onAdd={addTxn} currency={currency} {...sharedProps} setAppAlert={setAppAlert} quickActions={quickActions} txns={txns}/>}
@@ -1299,18 +1300,21 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
   const nextBill=isCurrentMonth?[...billsUnpaid].sort((a,b)=>(a.dueDay||99)-(b.dueDay||99))[0]:null;
   const overdueBillCount=isCurrentMonth?billsUnpaid.filter(b=>b.dueDay&&dueIn(b.dueDay)<0).length:0;
 
-  // Installments (selected month)
+  // Installments (selected month: a plan counts for a month once it has started by then; progress % is lifetime)
   const instPaidOf=(i)=>i.payments?i.payments.length:(i.paidInstallments||0);
   const instDone=(i)=>instPaidOf(i)>=i.totalInstallments;
   const instPaidInMonth=(i,m)=>!!i.payments?.some(p=>p.month===m);
-  const activeInst=installments.filter(i=>!instDone(i));
-  const instMonthly=activeInst.reduce((a,i)=>a+i.installmentAmount,0);
+  const instStartedBy=(i,m)=>!i.startDate||i.startDate.slice(0,7)<=m||instPaidInMonth(i,m);
+  const monthInst=installments.filter(i=>instStartedBy(i,selMonth)&&(!instDone(i)||instPaidInMonth(i,selMonth)));
+  const activeInst=installments.filter(i=>!instDone(i)); // lifetime active (for overall progress)
   const instTotalRemaining=activeInst.reduce((a,i)=>a+Math.max(0,i.totalAmount-instPaidOf(i)*i.installmentAmount),0);
   const instTotalAll=installments.reduce((a,i)=>a+i.totalAmount,0);
   const instPaidAll=installments.reduce((a,i)=>a+instPaidOf(i)*i.installmentAmount,0);
-  const instDueThisMonth=activeInst.filter(i=>!instPaidInMonth(i,selMonth));
-  const instPaidCountM=activeInst.length-instDueThisMonth.length;
-  const instAllPaidM=activeInst.length>0&&instDueThisMonth.length===0;
+  const instDueThisMonth=monthInst.filter(i=>!instPaidInMonth(i,selMonth)&&!instDone(i));
+  const instDueAmt=instDueThisMonth.reduce((a,i)=>a+i.installmentAmount,0);
+  const instMonthly=monthInst.filter(i=>!instDone(i)).reduce((a,i)=>a+i.installmentAmount,0);
+  const instPaidCountM=monthInst.filter(i=>instPaidInMonth(i,selMonth)).length;
+  const instAllPaidM=monthInst.length>0&&instDueThisMonth.length===0;
   const nextInst=isCurrentMonth?[...instDueThisMonth].sort((a,b)=>(a.dueDay||99)-(b.dueDay||99))[0]:null;
   const instOverallPct=instTotalAll>0?Math.round((instPaidAll/instTotalAll)*100):0;
   const overdueInstCount=isCurrentMonth?instDueThisMonth.filter(i=>i.dueDay&&dueIn(i.dueDay)<0).length:0;
@@ -1394,7 +1398,7 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
       if(section.id==="bills"&&monthBills.length>0)return(
         <div key="bills">
           <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Monthly Bills</div>
-          <Card onClick={()=>openMonthly("subscriptions")} className="ic" style={{padding:"16px",marginBottom:20,cursor:"pointer",transition:"transform 0.1s ease"}}>
+          <Card onClick={()=>openMonthly("subscriptions",selMonth)} className="ic" style={{padding:"16px",marginBottom:20,cursor:"pointer",transition:"transform 0.1s ease"}}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
               <div style={{width:36,height:36,borderRadius:11,background:(billsAllPaid?C.accent:C.blue)+"22",display:"flex",alignItems:"center",justifyContent:"center"}}><Ico name="zap" size={20} color={billsAllPaid?C.accent:C.blue} stroke={2}/></div>
               <div style={{flex:1}}><div style={{color:C.text,fontWeight:800,fontSize:15}}>Monthly Bills</div><div style={{color:C.muted,fontSize:11,marginTop:1}}>{billsPaidCount}/{monthBills.length} paid{overdueBillCount>0?` · ${overdueBillCount} overdue`:""}</div></div>
@@ -1406,28 +1410,27 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
           </Card>
         </div>
       );
-      if(section.id==="installments"&&installments.length>0)return(
-        <div key="installments">
+      if(section.id==="installments"&&monthInst.length>0)return(()=>{
+        const headCol=overdueInstCount>0?C.red:instAllPaidM?C.accent:C.purple;
+        return <div key="installments">
           <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Installments</div>
-          <Card onClick={()=>openMonthly("installments")} className="ic" style={{padding:"16px",marginBottom:20,cursor:"pointer",transition:"transform 0.1s ease"}}>
+          <Card onClick={()=>openMonthly("installments",selMonth)} className="ic" style={{padding:"16px",marginBottom:20,cursor:"pointer",transition:"transform 0.1s ease"}}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-              <div style={{width:36,height:36,borderRadius:11,background:(activeInst.length===0?C.accent:C.purple)+"22",display:"flex",alignItems:"center",justifyContent:"center"}}><Ico name="card" size={20} color={activeInst.length===0?C.accent:C.purple} stroke={2}/></div>
-              <div style={{flex:1}}><div style={{color:C.text,fontWeight:800,fontSize:15}}>Installments</div><div style={{color:C.muted,fontSize:11,marginTop:1}}>{activeInst.length===0?"all plans completed":`${instPaidCountM}/${activeInst.length} paid${overdueInstCount>0?` · ${overdueInstCount} overdue`:""}`}</div></div>
+              <div style={{width:36,height:36,borderRadius:11,background:headCol+"22",display:"flex",alignItems:"center",justifyContent:"center"}}><Ico name="card" size={20} color={headCol} stroke={2}/></div>
+              <div style={{flex:1}}><div style={{color:C.text,fontWeight:800,fontSize:15}}>Installments</div><div style={{color:C.muted,fontSize:11,marginTop:1}}>{instPaidCountM}/{monthInst.length} paid{overdueInstCount>0?` · ${overdueInstCount} overdue`:""}</div></div>
               <Ico name="chevR" size={18} color={C.faint}/>
             </div>
-            {activeInst.length===0?(
-              <div style={{display:"flex",alignItems:"center",gap:6,color:C.accent,fontWeight:700,fontSize:15}}><Ico name="checkCircle" size={18} color={C.accent} stroke={2}/>All installments cleared</div>
-            ):(<>
+            <>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:12}}>
-                <div><div style={{color:C.text,fontSize:26,fontWeight:800,letterSpacing:-0.5}}>{hideTotal?"••••":fmt(instTotalRemaining)}</div><div style={{color:C.muted,fontSize:11,marginTop:2}}>left to clear · {hideTotal?"••••":fmt(instMonthly)}/mo</div></div>
+                <div><div style={{color:instAllPaidM?C.accent:headCol,fontSize:26,fontWeight:800,letterSpacing:-0.5}}>{hideTotal?"••••":instAllPaidM?"All cleared":fmt(instDueAmt)}</div><div style={{color:C.muted,fontSize:11,marginTop:2,display:"flex",alignItems:"center",gap:4}}>{instAllPaidM?<><Ico name="check" size={12} color={C.accent} stroke={3}/>{isCurrentMonth?"all paid this month":"all paid that month"}</>:`due ${isCurrentMonth?"this":"that"} month · ${hideTotal?"••••":fmt(instMonthly)}/mo`}</div></div>
                 <div style={{textAlign:"right"}}><div style={{color:C.purple,fontSize:18,fontWeight:800}}>{instOverallPct}%</div><div style={{color:C.faint,fontSize:10,fontWeight:700}}>paid off</div></div>
               </div>
-              <div style={{display:"flex",gap:3,height:8,marginBottom:nextInst?14:0}}>{activeInst.map(i=>{const paid=instPaidInMonth(i,selMonth),od=isCurrentMonth&&!paid&&i.dueDay&&dueIn(i.dueDay)<0;return <div key={i.id} style={{flex:1,borderRadius:3,background:paid?C.accent:od?C.red:C.faint,transition:"background .35s ease"}}/>;})}</div>
+              <div style={{display:"flex",gap:3,height:8,marginBottom:nextInst?14:0}}>{monthInst.map(i=>{const paid=instPaidInMonth(i,selMonth),od=isCurrentMonth&&!paid&&i.dueDay&&dueIn(i.dueDay)<0;return <div key={i.id} style={{flex:1,borderRadius:3,background:paid?C.accent:od?C.red:C.faint,transition:"background .35s ease"}}/>;})}</div>
               {nextInst&&<div style={{display:"flex",alignItems:"center",gap:8,paddingTop:14,borderTop:`1px solid ${C.border}`}}><Ico name={dueIn(nextInst.dueDay)<=0?"bell":"clock"} size={15} color={dueColor(nextInst.dueDay)} stroke={2.2}/><span style={{color:C.text,fontSize:13,fontWeight:600,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Next: {nextInst.company||nextInst.name||"Installment"}</span><span style={{color:dueColor(nextInst.dueDay),fontSize:11,fontWeight:800}}>{dueLabel(nextInst.dueDay)}</span><span style={{color:C.text,fontSize:13,fontWeight:800}}>{hideTotal?"••••":fmt(nextInst.installmentAmount)}</span></div>}
-            </>)}
+            </>
           </Card>
-        </div>
-      );
+        </div>;
+      })();
       if(section.id==="budgets"&&budgets.length>0)return(()=>{
         const spentOf=(bd)=>txnsAll.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&bd.cats.includes(t.catId)&&t.date.startsWith(selMonth)).reduce((s,t)=>s+t.amount,0);
         const limited=budgets.filter(b=>b.amount>0);
@@ -2160,7 +2163,7 @@ function Privacy({onBack}){
 }
 
 // ── MonthlyBillsPage (Subscriptions + Installments) ───────────────────────────
-function MonthlyBillsPage({bills,installments,initialTab,onSaveBills,onSaveInstallments,banks,expCats,onAddTxn,onAddTxns,delTxn,currency,setAppAlert}){
+function MonthlyBillsPage({bills,installments,initialTab,initialMonth,onSaveBills,onSaveInstallments,banks,expCats,onAddTxn,onAddTxns,delTxn,currency,setAppAlert}){
   useEffect(()=>{window.scrollTo(0,0);},[]);
   const[activeTab,setActiveTab]=useState(initialTab||"subscriptions");
   return <div style={{padding:"24px 16px 0",minHeight:"100vh",background:C.bg,boxSizing:"border-box"}}>
@@ -2168,12 +2171,12 @@ function MonthlyBillsPage({bills,installments,initialTab,onSaveBills,onSaveInsta
     <div style={{display:"flex",gap:8,marginBottom:20}}>
       {[{id:"subscriptions",icon:"zap",label:"Subscriptions"},{id:"installments",icon:"card",label:"Installments"}].map(t=><button key={t.id} onClick={()=>setActiveTab(t.id)} style={{flex:1,padding:"11px 0",borderRadius:12,border:`1.5px solid ${activeTab===t.id?C.accent:C.border}`,background:activeTab===t.id?C.accentDim:"transparent",color:activeTab===t.id?C.accent:C.muted,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:7}}><Ico name={t.icon} size={15} color={activeTab===t.id?C.accent:C.muted}/>{t.label}</button>)}
     </div>
-    {activeTab==="subscriptions"&&<SubscriptionsTab bills={bills} onSave={onSaveBills} banks={banks} expCats={expCats} onAddTxn={onAddTxn} delTxn={delTxn} currency={currency} setAppAlert={setAppAlert}/>}
-    {activeTab==="installments"&&<InstallmentsTab installments={installments} onSave={onSaveInstallments} banks={banks} expCats={expCats} onAddTxn={onAddTxn} onAddTxns={onAddTxns} delTxn={delTxn} setAppAlert={setAppAlert}/>}
+    {activeTab==="subscriptions"&&<SubscriptionsTab bills={bills} onSave={onSaveBills} banks={banks} expCats={expCats} onAddTxn={onAddTxn} delTxn={delTxn} currency={currency} setAppAlert={setAppAlert} initialMonth={initialMonth}/>}
+    {activeTab==="installments"&&<InstallmentsTab installments={installments} onSave={onSaveInstallments} banks={banks} expCats={expCats} onAddTxn={onAddTxn} onAddTxns={onAddTxns} delTxn={delTxn} setAppAlert={setAppAlert} initialMonth={initialMonth}/>}
   </div>;
 }
 
-function SubscriptionsTab({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,setAppAlert}){
+function SubscriptionsTab({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,setAppAlert,initialMonth}){
   const getLocalMonth=()=>{const d=new Date();const offset=d.getTimezoneOffset()*60000;return new Date(d.getTime()-offset).toISOString().slice(0,7);};
   const curMonth=getLocalMonth();
   const[view,setView]=useState({mode:"list"}); // list | picker | form | detail
@@ -2182,7 +2185,7 @@ function SubscriptionsTab({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,s
   const[detailMonth,setDetailMonth]=useState(curMonth);
   const[filterMonth,setFilterMonth]=useState(curMonth);
   const[lens,setLens]=useState("timeline"); // timeline | categories
-  const[showHistory,setShowHistory]=useState(false);
+  const[showHistory,setShowHistory]=useState(!!initialMonth&&initialMonth!==curMonth); // opened from a past month on the dashboard
   const[confirmDelete,setConfirmDelete]=useState(null);
   const[confirmUndo,setConfirmUndo]=useState(null); // {bill,month}
   const[confirmStop,setConfirmStop]=useState(null); // bill id
@@ -2548,7 +2551,7 @@ function SubscriptionsTab({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,s
   </div>;
 }
 
-function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,delTxn,setAppAlert}){
+function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,delTxn,setAppAlert,initialMonth}){
   const getLocalMonth=()=>{const d=new Date();const offset=d.getTimezoneOffset()*60000;return new Date(d.getTime()-offset).toISOString().slice(0,7);};
   const curMonth=getLocalMonth();
   const monthOffset=(n)=>{const d=new Date();const m=new Date(d.getFullYear(),d.getMonth()+n,1);return `${m.getFullYear()}-${String(m.getMonth()+1).padStart(2,"0")}`;};
@@ -2559,7 +2562,7 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,d
   const[detailMonth,setDetailMonth]=useState(curMonth);
   const[filterMonth,setFilterMonth]=useState(curMonth);
   const[listFilter,setListFilter]=useState("due"); // due | active | completed | all
-  const[showHistory,setShowHistory]=useState(false); // monthly payment-history screen
+  const[showHistory,setShowHistory]=useState(!!initialMonth&&initialMonth!==curMonth); // opened from a past month on the dashboard
   const[confirmDel,setConfirmDel]=useState(null);
   const[confirmUndo,setConfirmUndo]=useState(null); // {inst,month}
   const payingRef=useRef({});
