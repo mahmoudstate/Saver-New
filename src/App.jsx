@@ -2479,6 +2479,8 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,d
   const[form,setForm]=useState(null);
   const[detailMonth,setDetailMonth]=useState(curMonth);
   const[filterMonth,setFilterMonth]=useState(curMonth);
+  const[listFilter,setListFilter]=useState("due"); // due | active | completed | all
+  const[showHistory,setShowHistory]=useState(false); // monthly payment-history screen
   const[confirmDel,setConfirmDel]=useState(null);
   const[confirmUndo,setConfirmUndo]=useState(null); // {inst,month}
   const payingRef=useRef({});
@@ -2820,7 +2822,7 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,d
             <button onClick={()=>setConfirmUndo({inst,month:detailMonth})} style={{flexShrink:0,background:C.yellowDim,border:`1.5px solid ${C.yellow}`,color:C.yellow,borderRadius:14,height:50,padding:"0 20px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><Ico name="rotate" size={15} color={C.yellow}/>Undo</span></button>
           </div>
         ):(
-          <button onClick={()=>handlePay(inst,detailMonth)} style={{width:"100%",background:accent,border:"none",color:"#111",borderRadius:14,height:52,fontWeight:800,fontSize:16,cursor:"pointer",marginBottom:24,fontFamily:"'DM Sans', sans-serif"}}><span style={{display:"inline-flex",alignItems:"center",gap:7}}><Ico name="check" size={16} color="#111" stroke={3}/>Pay Installment #{paid+1} ({MONTHS[+detailMonth.split("-")[1]-1]})</span></button>
+          <button onClick={()=>handlePay(inst,detailMonth)} style={{width:"100%",background:accent,border:"none",color:"#111",borderRadius:14,height:52,fontWeight:800,fontSize:16,cursor:"pointer",marginBottom:24,fontFamily:"'DM Sans', sans-serif"}}><span style={{display:"inline-flex",alignItems:"center",gap:7}}><Ico name="check" size={16} color="#111" stroke={3}/>Pay {paid+1} of {inst.totalInstallments} · {MONTHS[+detailMonth.split("-")[1]-1]}</span></button>
         )}
 
         <div style={{color:C.muted,fontSize:11,fontWeight:800,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Schedule</div>
@@ -2861,87 +2863,106 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,d
 
     {installments.length===0&&<><EmptyState glyph="card" message="No installment plans yet. Add your BNPL, loan, or any plan."/><Btn full onClick={openPicker} style={{marginTop:4}}>+ Add Installment</Btn></>}
 
-    {installments.length>0&&<>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
-        <MonthSelect value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} availMonths={availMonths}/>
-        <Btn small onClick={openPicker}>+ Add</Btn>
-      </div>
-
-      {isReportMode?(()=>{
-        const yearsMap={};availMonths.filter(m=>m!=="all").forEach(m=>{const y=m.split("-")[0];(yearsMap[y]=yearsMap[y]||[]).push(m);});
+    {installments.length>0&&(()=>{
+      // ── Monthly payment-history screen (separated from day-to-day management) ──
+      if(showHistory){
+        const payMonths=[...new Set(installments.flatMap(i=>(i.payments||[]).map(p=>p.month)))].sort().reverse();
+        const yearsMap={};payMonths.forEach(m=>{const y=m.split("-")[0];(yearsMap[y]=yearsMap[y]||[]).push(m);});
         const years=Object.keys(yearsMap).sort().reverse();
-        return <div style={{display:"flex",flexDirection:"column",gap:24,paddingBottom:40}}>
-          {years.map(year=>(
-            <div key={year}>
-              <div style={{color:C.text,fontSize:26,fontWeight:800,marginBottom:14,borderBottom:`1px solid ${C.border}`,paddingBottom:8}}>{year}</div>
-              {yearsMap[year].map(mStr=>{
-                const paidThis=installments.filter(i=>paidInMonth(i,mStr));
-                if(!paidThis.length)return null;
-                const monthTotal=paidThis.reduce((a,i)=>a+i.installmentAmount,0);
-                return <div key={mStr} style={{marginBottom:20}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                    <span style={{color:C.muted,fontSize:14,fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}>{MONTHS[+mStr.split("-")[1]-1]}</span>
-                    <Pill color={C.accent}>{fmt(monthTotal)}</Pill>
-                  </div>
-                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                    {paidThis.map(inst=>{const p=inst.payments.find(x=>x.month===mStr);return (
-                      <div key={inst.id} onClick={()=>openDetail(inst)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:C.accentDim+"33",border:`1px solid ${C.accent}55`,borderRadius:12,cursor:"pointer"}}>
-                        <ServiceLogo domain={inst.domain} name={inst.company||inst.itemType} color={inst.color||C.accent} size={38} style={{borderRadius:11}}/>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{color:C.text,fontWeight:700,fontSize:15,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{inst.itemType||inst.company}</div>
-                          <div style={{color:C.muted,fontSize:11,marginTop:2}}>Installment #{p?.num||"?"} / {inst.totalInstallments}</div>
+        return <>
+          <button onClick={()=>setShowHistory(false)} style={{display:"inline-flex",alignItems:"center",gap:6,background:"transparent",border:"none",color:C.accent,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",padding:"4px 0",marginBottom:12}}><Ico name="chevR" size={15} color={C.accent} style={{transform:"rotate(180deg)"}}/>Back to plans</button>
+          <div style={{color:C.text,fontSize:20,fontWeight:800,marginBottom:18}}>Payment history</div>
+          {years.length===0?<EmptyState glyph="receipt" message="No payments recorded yet. Pay an installment and it'll show up here."/>:
+          <div style={{display:"flex",flexDirection:"column",gap:24,paddingBottom:40}}>
+            {years.map(year=>(
+              <div key={year}>
+                <div style={{color:C.text,fontSize:26,fontWeight:800,marginBottom:14,borderBottom:`1px solid ${C.border}`,paddingBottom:8}}>{year}</div>
+                {yearsMap[year].map(mStr=>{
+                  const paidThis=installments.filter(i=>paidInMonth(i,mStr));
+                  if(!paidThis.length)return null;
+                  const monthTotal=paidThis.reduce((a,i)=>a+i.installmentAmount,0);
+                  return <div key={mStr} style={{marginBottom:20}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                      <span style={{color:C.muted,fontSize:14,fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}>{MONTHS[+mStr.split("-")[1]-1]}</span>
+                      <Pill color={C.accent}>{fmt(monthTotal)}</Pill>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                      {paidThis.map(inst=>{const p=inst.payments.find(x=>x.month===mStr);return (
+                        <div key={inst.id} onClick={()=>openDetail(inst)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:C.accentDim+"33",border:`1px solid ${C.accent}55`,borderRadius:12,cursor:"pointer"}}>
+                          <ServiceLogo domain={inst.domain} name={inst.company||inst.itemType} color={inst.color||C.accent} size={38} style={{borderRadius:11}}/>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{color:C.text,fontWeight:700,fontSize:15,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{inst.itemType||inst.company}</div>
+                            <div style={{color:C.muted,fontSize:11,marginTop:2}}>Payment {p?.num||"?"} of {inst.totalInstallments}</div>
+                          </div>
+                          <div style={{color:C.accent,fontSize:14,fontWeight:800,display:"flex",alignItems:"center",gap:4}}><Ico name="check" size={13} color={C.accent} stroke={3}/>{fmt(inst.installmentAmount)}</div>
                         </div>
-                        <div style={{color:C.accent,fontSize:14,fontWeight:800,display:"flex",alignItems:"center",gap:4}}><Ico name="check" size={13} color={C.accent} stroke={3}/>{fmt(inst.installmentAmount)}</div>
-                      </div>
-                    );})}
-                  </div>
-                </div>;
-              })}
-            </div>
-          ))}
-        </div>;
-      })():(
-        <>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:14}}>
-            <div style={{color:C.text,fontSize:18,fontWeight:800}}>{filterMonth===curMonth?"Your installments":`${MONTHS[+filterMonth.split("-")[1]-1]} ${filterMonth.split("-")[0]}`}</div>
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:12,paddingBottom:40}}>
-            {sortForMonth(filterMonth).map(inst=>{
-              const done=isCompleted(inst);const paidM=paidInMonth(inst,filterMonth);const paid=paidOf(inst);
-              const pct=Math.round((paid/inst.totalInstallments)*100);const di=dueInfo(inst);
-              const remaining=inst.totalAmount-paid*inst.installmentAmount;
-              return <SwipeRow key={inst.id} onEdit={()=>openEdit(inst)} onDelete={()=>setConfirmDel(inst.id)}>
-                <div style={{padding:"14px",borderLeft:`4px solid ${inst.color||C.accent}`}}>
-                  <div onClick={()=>openDetail(inst)} style={{display:"flex",alignItems:"center",gap:12,cursor:"pointer"}}>
-                    <ServiceLogo domain={inst.domain} name={inst.company||inst.itemType} color={inst.color||C.accent} size={46} style={{borderRadius:14}}/>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{color:C.text,fontWeight:800,fontSize:16,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{inst.itemType||inst.company}</div>
-                      <div style={{color:C.muted,fontSize:12,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{inst.company&&inst.itemType?inst.company+" · ":""}{fmt(inst.installmentAmount)}/mo</div>
+                      );})}
                     </div>
-                    <div style={{textAlign:"right",flexShrink:0}}>
-                      <div style={{color:C.text,fontSize:15,fontWeight:800}}>{fmt(remaining)}</div>
-                      <div style={{color:C.muted,fontSize:10,fontWeight:600,marginTop:2}}>left to pay</div>
-                    </div>
+                  </div>;
+                })}
+              </div>
+            ))}
+          </div>}
+        </>;
+      }
+
+      // ── Status-filtered plan list ──
+      const dueNow=active.filter(i=>!paidInMonth(i,curMonth));
+      const completed=installments.filter(i=>isCompleted(i));
+      const segs=[{id:"due",label:"Due now",count:dueNow.length},{id:"active",label:"Active",count:active.length},{id:"completed",label:"Completed",count:completed.length},{id:"all",label:"All",count:installments.length}];
+      const urgency=arr=>[...arr].sort((a,b)=>{const ca=isCompleted(a)?1:0,cb=isCompleted(b)?1:0;if(ca!==cb)return ca-cb;const pa=paidInMonth(a,curMonth)?1:0,pb=paidInMonth(b,curMonth)?1:0;if(pa!==pb)return pa-pb;return (a.dueDay||99)-(b.dueDay||99);});
+      const list=listFilter==="completed"?urgency(completed):listFilter==="all"?urgency(installments):listFilter==="active"?urgency(active):urgency(dueNow);
+      const emptyMsg=listFilter==="due"?"Nothing due right now — you're all caught up this month.":listFilter==="completed"?"No fully-paid plans yet.":"No plans here.";
+      return <>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <div style={{color:C.text,fontSize:18,fontWeight:800}}>Your plans</div>
+          <Btn small onClick={openPicker}>+ Add</Btn>
+        </div>
+        <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4,marginBottom:16,WebkitOverflowScrolling:"touch"}}>
+          {segs.map(s=>{const on=listFilter===s.id;return (
+            <button key={s.id} onClick={()=>setListFilter(s.id)} style={{flexShrink:0,padding:"9px 13px",borderRadius:99,border:`1.5px solid ${on?C.accent:C.border}`,background:on?C.accentDim:"transparent",color:on?C.accent:C.muted,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",display:"inline-flex",alignItems:"center",gap:6}}>
+              {s.label}<span style={{background:on?C.accent:C.border,color:on?"#111":C.muted,borderRadius:99,fontSize:11,fontWeight:800,minWidth:18,height:18,padding:"0 5px",display:"inline-flex",alignItems:"center",justifyContent:"center"}}>{s.count}</span>
+            </button>
+          );})}
+        </div>
+        {list.length===0?<div style={{padding:"8px 0 28px"}}><EmptyState glyph="card" message={emptyMsg}/></div>:
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {list.map(inst=>{
+            const done=isCompleted(inst);const paidM=paidInMonth(inst,curMonth);const paid=paidOf(inst);
+            const pct=Math.round((paid/inst.totalInstallments)*100);const di=dueInfo(inst);
+            const remaining=inst.totalAmount-paid*inst.installmentAmount;
+            return <SwipeRow key={inst.id} onEdit={()=>openEdit(inst)} onDelete={()=>setConfirmDel(inst.id)}>
+              <div style={{padding:"14px",borderLeft:`4px solid ${inst.color||C.accent}`}}>
+                <div onClick={()=>openDetail(inst)} style={{display:"flex",alignItems:"center",gap:12,cursor:"pointer"}}>
+                  <ServiceLogo domain={inst.domain} name={inst.company||inst.itemType} color={inst.color||C.accent} size={46} style={{borderRadius:14}}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{color:C.text,fontWeight:800,fontSize:16,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{inst.itemType||inst.company}</div>
+                    <div style={{color:C.muted,fontSize:12,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{inst.company&&inst.itemType?inst.company+" · ":""}{fmt(inst.installmentAmount)}/mo</div>
                   </div>
-                  <div style={{marginTop:12}}>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                      <span style={{color:C.muted,fontSize:11,fontWeight:700}}>{paid} of {inst.totalInstallments} paid</span>
-                      <span style={{color:done?C.accent:di.color,fontSize:11,fontWeight:700}}>{done?`${pct}%`:(filterMonth===curMonth&&!paidM?di.text:`${pct}%`)}</span>
-                    </div>
-                    <ProgressBar value={paid} max={inst.totalInstallments} color={pct>=90?C.accent:(inst.color||C.blue)}/>
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    <div style={{color:C.text,fontSize:15,fontWeight:800}}>{fmt(remaining)}</div>
+                    <div style={{color:C.muted,fontSize:10,fontWeight:600,marginTop:2}}>left to pay</div>
                   </div>
-                  {done
-                    ?<div style={{marginTop:12,height:42,borderRadius:11,background:C.accentDim,color:C.accent,display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontWeight:800,fontSize:14}}><Ico name="checkCircle" size={16} color={C.accent}/>Completed</div>
-                    :paidM
-                      ?<div style={{marginTop:12,height:42,borderRadius:11,background:C.accentDim,color:C.accent,display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontWeight:800,fontSize:14}}><Ico name="check" size={14} color={C.accent} stroke={3}/>Paid · {MONTHS[+filterMonth.split("-")[1]-1]}</div>
-                      :<button onClick={e=>{e.stopPropagation();handlePay(inst,filterMonth);}} style={{marginTop:12,width:"100%",height:44,borderRadius:11,background:inst.color||C.accent,border:"none",color:"#111",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>Pay installment #{paid+1} · {fmt(inst.installmentAmount)}</button>}
                 </div>
-              </SwipeRow>;
-            })}
-          </div>
-        </>
-      )}
-    </>}
+                <div style={{marginTop:12}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                    <span style={{color:C.muted,fontSize:11,fontWeight:700}}>{paid} of {inst.totalInstallments} paid</span>
+                    <span style={{color:done?C.accent:di.color,fontSize:11,fontWeight:700}}>{done?`${pct}%`:(!paidM?di.text:`${pct}%`)}</span>
+                  </div>
+                  <ProgressBar value={paid} max={inst.totalInstallments} color={pct>=90?C.accent:(inst.color||C.blue)}/>
+                </div>
+                {done
+                  ?<div style={{marginTop:12,height:42,borderRadius:11,background:C.accentDim,color:C.accent,display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontWeight:800,fontSize:14}}><Ico name="checkCircle" size={16} color={C.accent}/>Completed</div>
+                  :paidM
+                    ?<div style={{marginTop:12,height:42,borderRadius:11,background:C.accentDim,color:C.accent,display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontWeight:800,fontSize:14}}><Ico name="check" size={14} color={C.accent} stroke={3}/>Paid · {MONTHS[+curMonth.split("-")[1]-1]}</div>
+                    :<button onClick={e=>{e.stopPropagation();handlePay(inst,curMonth);}} style={{marginTop:12,width:"100%",height:44,borderRadius:11,background:inst.color||C.accent,border:"none",color:"#111",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>Pay {paid+1} of {inst.totalInstallments} · {fmt(inst.installmentAmount)}</button>}
+              </div>
+            </SwipeRow>;
+          })}
+        </div>}
+        <button onClick={()=>setShowHistory(true)} style={{marginTop:16,marginBottom:40,width:"100%",padding:"13px",borderRadius:12,border:`1px solid ${C.border}`,background:"transparent",color:C.muted,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8}}><Ico name="receipt" size={15} color={C.muted}/>View monthly payment history</button>
+      </>;
+    })()}
 
     {confirmDel&&<ConfirmModal title="Delete Installment?" message="This removes the plan. Past payment transactions stay in your history." onClose={()=>setConfirmDel(null)} onConfirm={async()=>{await onSave(installments.filter(i=>i.id!==confirmDel));setConfirmDel(null);}}/>}
     {confirmUndo&&<ConfirmModal title="Undo Payment?" message={`This removes the installment recorded for ${MONTHS[+confirmUndo.month.split("-")[1]-1]} and its transaction.`} confirmColor={C.yellow} onClose={()=>setConfirmUndo(null)} onConfirm={handleUndoConfirm}/>}
