@@ -1435,27 +1435,39 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
       })();
       if(section.id==="budgets"&&budgets.length>0)return(()=>{
         const spentOf=(bd)=>txnsAll.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&bd.cats.includes(t.catId)&&t.date.startsWith(selMonth)).reduce((s,t)=>s+t.amount,0);
-        const limited=budgets.filter(b=>b.amount>0);
+        // Only the budgets actually active in the selected month — same rule as the Budgets page
+        const active=budgets.filter(b=>b.repeat===false?b.startMonth===selMonth:(!b.startMonth||b.startMonth<=selMonth));
+        const limited=active.filter(b=>b.amount>0);
         const budTotal=limited.reduce((a,b)=>a+b.amount,0);
         const budSpent=limited.reduce((a,b)=>a+spentOf(b),0);
         const budPct=budTotal>0?Math.min(100,Math.round((budSpent/budTotal)*100)):0;
         const budCol=budPct>=90?C.red:budPct>=70?C.yellow:C.accent;
         const hasLimited=limited.length>0;
+        // Surface what needs attention first: over-limit -> near-limit -> on-track -> no-limit
+        const rankB=(b)=>{const sp=spentOf(b);if(b.amount>0&&sp>b.amount)return 0;if(b.amount>0&&sp/b.amount>=0.9)return 1;if(b.amount>0)return 2;return 3;};
+        const sorted=[...active].sort((a,b)=>rankB(a)-rankB(b));
+        const selLabel=`${MONTHS[+selMonth.split("-")[1]-1]} ${selMonth.split("-")[0]}`;
         return <div key="budgets">
           <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Monthly Budgets</div>
           <Card style={{padding:"16px",marginBottom:20}}>
+            {active.length===0?(
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                <div style={{width:38,height:38,borderRadius:12,background:C.blue+"22",display:"flex",alignItems:"center",justifyContent:"center"}}><Ico name="layers" size={20} color={C.blue} stroke={2}/></div>
+                <div style={{flex:1}}><div style={{color:C.text,fontWeight:800,fontSize:15}}>Budgets</div><div style={{color:C.muted,fontSize:11,marginTop:1}}>No budgets active in {selLabel}</div></div>
+              </div>
+            ):<>
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:hasLimited?12:0}}>
               <div style={{width:38,height:38,borderRadius:12,background:(hasLimited?budCol:C.blue)+"22",display:"flex",alignItems:"center",justifyContent:"center"}}><Ico name="layers" size={20} color={hasLimited?budCol:C.blue} stroke={2}/></div>
-              <div style={{flex:1}}>{hasLimited?<><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Total Budget</div><div style={{color:C.text,fontSize:18,fontWeight:800,marginTop:2}}>{hideTotal?"••••":fmt(budSpent)} <span style={{color:C.muted,fontSize:12,fontWeight:600}}>of {hideTotal?"••••":fmt(budTotal)}</span></div></>:<><div style={{color:C.text,fontWeight:800,fontSize:15}}>Budgets</div><div style={{color:C.muted,fontSize:11,marginTop:1}}>Tracking {budgets.length} {budgets.length===1?"budget":"budgets"}</div></>}</div>
+              <div style={{flex:1}}>{hasLimited?<><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Total Budget</div><div style={{color:C.text,fontSize:18,fontWeight:800,marginTop:2}}>{hideTotal?"••••":fmt(budSpent)} <span style={{color:C.muted,fontSize:12,fontWeight:600}}>of {hideTotal?"••••":fmt(budTotal)}</span></div></>:<><div style={{color:C.text,fontWeight:800,fontSize:15}}>Budgets</div><div style={{color:C.muted,fontSize:11,marginTop:1}}>Tracking {active.length} {active.length===1?"budget":"budgets"}</div></>}</div>
               {hasLimited&&<Pill color={budCol}>{budPct}%</Pill>}
             </div>
             {hasLimited&&<ProgressBar value={budSpent} max={budTotal} color={budCol}/>}
             <div style={{height:1,background:C.border,margin:"16px 0 14px"}}/>
-            <SortableList items={budgets} onReorder={onBudgets} gap={10} renderItem={(bdg)=>{
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>{sorted.map((bdg)=>{
               const spent=spentOf(bdg),hasLimit=bdg.amount>0;
               const rem=Math.max(0,bdg.amount-spent),pct=hasLimit?Math.min(100,Math.round((spent/bdg.amount)*100)):0,barColor=pct>=90?C.red:pct>=70?C.yellow:C.accent;
               const fc=expCats.find(c=>bdg.cats.includes(c.id));
-              return <div onClick={()=>onOpenBudget(bdg)} className="ic" style={{padding:"13px 14px",background:C.bg,border:`1px solid ${C.border}`,borderRadius:14,cursor:"pointer",transition:"transform 0.1s ease"}}>
+              return <div key={bdg.id} onClick={()=>onOpenBudget(bdg)} className="ic" style={{padding:"13px 14px",background:C.bg,border:`1px solid ${C.border}`,borderLeft:`4px solid ${hasLimit?barColor:C.blue}`,borderRadius:14,cursor:"pointer",transition:"transform 0.1s ease"}}>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:hasLimit?10:0}}>
                   <CatIcon glyph={bdg.glyph} color={bdg.color||(fc?undefined:(hasLimit?barColor:C.blue))} cat={bdg.glyph?undefined:fc} name={bdg.name} size={30}/>
                   <span style={{color:C.text,fontSize:14,fontWeight:700,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{bdg.name}</span>
@@ -1470,7 +1482,8 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
                   {isCurrentMonth&&rem>0&&!hideTotal&&<div style={{color:C.faint,fontSize:10,fontWeight:600,marginTop:4}}>≈ {fmt(rem/daysLeft)}/day for {daysLeft} day{daysLeft!==1?"s":""} left</div>}
                 </>:<div style={{color:C.faint,fontSize:11,marginTop:2}}>Spent this month · no limit set</div>}
               </div>;
-            }}/>
+            })}</div>
+            </>}
           </Card>
         </div>;
       })();
