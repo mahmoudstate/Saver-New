@@ -747,6 +747,7 @@ function SaverApp(){
   const[ledgerGroup,setLedgerGroup]=useState(null);
   const[ledgerSaving,setLedgerSaving]=useState(null);
   const[ledgerBudget,setLedgerBudget]=useState(null);
+  const[budgetMonth,setBudgetMonth]=useState(currentMonth()); // budgets-page month filter, survives opening a budget ledger
   const[goalToast,setGoalToast]=useState(null);
   const[showWhatsNew,setShowWhatsNew]=useState(false);
   const[appTour,setAppTour]=useState(false);
@@ -804,6 +805,7 @@ function SaverApp(){
   const navigateTo=useCallback((newTab,saveScroll=false)=>{
     if(saveScroll)setScrollState({y:window.scrollY,restore:true});
     else{setScrollState({y:0,restore:false});window.scrollTo(0,0);}
+    if(newTab==="budgets")setBudgetMonth(currentMonth()); // fresh entry into Budgets starts at the current month
     setTab(newTab);
   },[]);
   // Open the Bills page on a specific tab, remembering the home scroll position. Optionally target a month (past month -> its history).
@@ -998,7 +1000,7 @@ function SaverApp(){
           {tab==="add"&&<AddTransaction banks={banks} expCats={expCats} incCats={incCats} savings={activeSavings} currency={currency} onAdd={addTxn} onDone={()=>navigateTo("dashboard")} {...sharedProps} setAppAlert={setAppAlert} onGoalToast={setGoalToast} txns={txns}/>}
           {tab==="savings"&&<SavingsPage savings={savings} onSave={saveSavings} txns={txns} banks={banks} onBack={()=>navigateTo("settings")} addTxn={addTxn} delTxn={delTxn} onGoalToast={setGoalToast} {...sharedProps} setAppAlert={setAppAlert} onOpenSaving={(s)=>{setScrollState({y:window.scrollY,restore:true});setLedgerSaving(s);}}/>}
           {tab==="history"&&<History txns={txns} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} currency={currency} availMonths={availMonths} savings={savings} setAppAlert={setAppAlert}/>}
-          {tab==="budgets"&&<BudgetsPage budgets={budgets} expCats={expCats} onSave={saveBudgets} onBack={()=>navigateTo("settings")} currency={currency} txns={txns} onOpenBudget={(b,m)=>{if(m&&m!=="all")setFilterMonth(m);else setFilterMonth(currentMonth());setScrollState({y:window.scrollY,restore:true});setLedgerBudget(b);}}/>}
+          {tab==="budgets"&&<BudgetsPage budgets={budgets} expCats={expCats} onSave={saveBudgets} onBack={()=>navigateTo("settings")} currency={currency} txns={txns} filterMonth={budgetMonth} setFilterMonth={setBudgetMonth} onOpenBudget={(b,m)=>{if(m&&m!=="all")setFilterMonth(m);else setFilterMonth(currentMonth());setScrollState({y:window.scrollY,restore:true});setLedgerBudget(b);}}/>}
           {tab==="quickactions"&&<QuickActionsSetup quickActions={quickActions} expCats={expCats} banks={banks} onSave={saveQuickActions} onBack={()=>navigateTo("settings")}/>}
           {tab==="manual"&&<UserManual onBack={()=>navigateTo("settings")} navigateTo={navigateTo} onCoach={startCoach}/>}
           {tab==="monthly"&&<MonthlyBillsPage bills={bills} installments={installments} initialTab={monthlyTab} initialMonth={monthlyMonth} onSaveBills={saveBills} onSaveInstallments={saveInstallments} banks={banks} expCats={expCats} onAddTxn={addTxn} onAddTxns={addTxns} delTxn={delTxn} currency={currency} setAppAlert={setAppAlert}/>}
@@ -1895,11 +1897,13 @@ function Sparkbars({data,color,height=40}){
   </div>;
 }
 
-function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[],onOpenBudget}){
+function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[],onOpenBudget,filterMonth:filterMonthProp,setFilterMonth:setFilterMonthProp}){
   useEffect(()=>{window.scrollTo(0,0);},[]);
   const getLocalMonth=()=>{const d=new Date();const offset=d.getTimezoneOffset()*60000;return new Date(d.getTime()-offset).toISOString().slice(0,7);};
   const curMonth=getLocalMonth();
-  const[filterMonth,setFilterMonth]=useState(curMonth);
+  const[filterMonthLocal,setFilterMonthLocal]=useState(curMonth);
+  const filterMonth=filterMonthProp??filterMonthLocal;
+  const setFilterMonth=setFilterMonthProp||setFilterMonthLocal;
   const availMonths=[...new Set([curMonth,...txns.map(t=>t.date.slice(0,7))])].sort().reverse();
   const[showAdd,setShowAdd]=useState(false);const[editId,setEditId]=useState(null);const[name,setName]=useState("");const[amount,setAmount]=useState("");const[selectedCats,setSelectedCats]=useState([]);const[confirmId,setConfirmId]=useState(null);const[startMonth,setStartMonth]=useState(curMonth);const[glyph,setGlyph]=useState("layers");const[color,setColor]=useState(CAT_PALETTE[0]);const[repeat,setRepeat]=useState(true);
   const resetForm=()=>{setName("");setAmount("");setSelectedCats([]);setStartMonth(curMonth);setGlyph("layers");setColor(CAT_PALETTE[0]);setRepeat(true);};
