@@ -2483,10 +2483,10 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,delTxn,setA
 
   // ── Navigation ──
   const openPicker=()=>{setProviderSearch("");setView({mode:"picker"});};
-  const blankForm=()=>({editId:null,itemType:"",company:"",domain:"",color:"",count:"",amount:"",total:"",paidInit:"0",bankId:banks[0]?.id||"",dueDay:"1",reminderDays:"2",note:"",startDate:today()});
+  const blankForm=()=>({editId:null,itemType:"",company:"",domain:"",color:"",count:"",amount:"",total:"",paidInit:"0",downPayment:"",deductDp:false,bankId:banks[0]?.id||"",dueDay:"1",reminderDays:"2",note:"",startDate:today()});
   const pickProvider=(prov)=>{setForm({...blankForm(),company:prov.name,domain:prov.domain,color:prov.color});setView({mode:"form"});};
   const pickCustom=()=>{setForm(blankForm());setView({mode:"form"});};
-  const openEdit=(inst)=>{setForm({editId:inst.id,itemType:inst.itemType||"",company:inst.company||inst.name||"",domain:inst.domain||"",color:inst.color||"",count:String(inst.totalInstallments||""),amount:String(inst.installmentAmount||""),total:String(inst.totalAmount||""),paidInit:String(paidOf(inst)),bankId:inst.bankId,dueDay:String(inst.dueDay||1),reminderDays:String(inst.reminderDays??2),note:inst.note||"",startDate:inst.startDate||today()});setView({mode:"form"});};
+  const openEdit=(inst)=>{setForm({editId:inst.id,itemType:inst.itemType||"",company:inst.company||inst.name||"",domain:inst.domain||"",color:inst.color||"",count:String(inst.totalInstallments||""),amount:String(inst.installmentAmount||""),total:String(inst.totalAmount||""),paidInit:String(paidOf(inst)),downPayment:inst.downPayment?String(inst.downPayment):"",deductDp:false,bankId:inst.bankId,dueDay:String(inst.dueDay||1),reminderDays:String(inst.reminderDays??2),note:inst.note||"",startDate:inst.startDate||today()});setView({mode:"form"});};
   const openDetail=(inst)=>{setDetailMonth(curMonth);setView({mode:"detail",instId:inst.id});};
 
   const setF=(k,v)=>setForm(p=>{const n={...p,[k]:v};if((k==="count"||k==="amount")){const c=parseFloat(n.count),a=parseFloat(n.amount);if(c>0&&a>0)n.total=String(Math.round(c*a*100)/100);}return n;});
@@ -2496,15 +2496,24 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,delTxn,setA
     let total=parseFloat(f.total);if(isNaN(total)||total<=0)total=count*amount;
     const title=(f.itemType||f.company).trim();
     if(!title||isNaN(count)||count<=0||isNaN(amount)||amount<=0)return;
+    const paidNum=parseInt(f.paidInit)||0;
+    if(!f.editId&&paidNum>count){setAppAlert({title:"Too many installments",message:`You entered ${paidNum} already-paid installments, but this plan only has ${count}. Please enter ${count} or less.`,color:C.yellow});return;}
+    const dp=Math.max(0,parseFloat(f.downPayment)||0);
     const dd=Math.min(28,Math.max(1,parseInt(f.dueDay)||1)),rd=Math.min(7,Math.max(0,parseInt(f.reminderDays)||2));
-    const base={itemType:f.itemType.trim(),company:f.company.trim(),domain:f.domain,color:f.color,totalInstallments:count,installmentAmount:amount,totalAmount:total,bankId:f.bankId,dueDay:dd,reminderDays:rd,note:f.note.trim(),startDate:f.startDate};
+    const base={itemType:f.itemType.trim(),company:f.company.trim(),domain:f.domain,color:f.color,totalInstallments:count,installmentAmount:amount,totalAmount:total,downPayment:dp,bankId:f.bankId,dueDay:dd,reminderDays:rd,note:f.note.trim(),startDate:f.startDate};
     if(f.editId){
       await onSave(installments.map(i=>{if(i.id!==f.editId)return i;const pays=ensurePayments(i);return{...i,...base,name:base.company,payments:pays,paidInstallments:pays.length,status:pays.length>=count?"completed":"active"};}));
       setView({mode:"detail",instId:f.editId});
     }else{
-      const initN=Math.min(count,Math.max(0,parseInt(f.paidInit)||0));
+      const initN=Math.min(count,Math.max(0,paidNum));
       const payments=[];for(let k=0;k<initN;k++)payments.push({month:monthOffset(-(initN-k)),date:null,txnId:null,num:k+1});
-      await onSave([...installments,{id:Date.now().toString(),...base,name:base.company,payments,paidInstallments:payments.length,status:payments.length>=count?"completed":"active"}]);
+      let dpTxnId=null;
+      if(dp>0&&f.deductDp){
+        const bank=banks.find(b=>b.id===f.bankId);
+        const tid=await onAddTxn({type:"expense",amount:dp,date:f.startDate||today(),bankId:f.bankId,bankName:bank?.name,catId:"installment",catName:"Installments",catIcon:"installment",catColor:f.color||C.accent,note:`Down payment: ${title}`});
+        if(tid!==false)dpTxnId=tid;
+      }
+      await onSave([...installments,{id:Date.now().toString(),...base,name:base.company,payments,paidInstallments:payments.length,downPaymentTxnId:dpTxnId,status:payments.length>=count?"completed":"active"}]);
       setView({mode:"list"});
     }
     HAPTICS.success();
@@ -2573,12 +2582,19 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,delTxn,setA
     const f=form;const accent=f.color||C.accent;
     const count=parseInt(f.count)||0,amount=parseFloat(f.amount)||0;
     const computedTotal=parseFloat(f.total)||(count*amount);
-    const valid=(f.itemType||f.company).trim()&&count>0&&amount>0;
+    const valid=(f.itemType||f.company).trim()&&count>0&&amount>0&&(f.editId||(parseInt(f.paidInit)||0)<=count);
     const lbl={color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8,display:"block"};
     return <FullPage title={f.editId?"Edit Installment":"New Installment"} onBack={()=>setView(f.editId?{mode:"detail",instId:f.editId}:{mode:"picker"})}>
       <div style={{padding:"4px 16px 48px"}}>
         <div style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:24}}>
           <ServiceLogo domain={f.domain} name={f.company||f.itemType||"?"} color={accent} size={72} style={{borderRadius:20}}/>
+        </div>
+        <div style={{marginBottom:20}}>
+          <label style={lbl}>Icon Color</label>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+            {CAT_PALETTE.map(col=>{const on=(f.color||C.accent).toLowerCase()===col.toLowerCase();return <button key={col} type="button" onClick={()=>setF("color",col)} style={{width:30,height:30,borderRadius:99,background:col,border:on?`3px solid ${C.text}`:"3px solid transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>{on&&<Ico name="check" size={14} color={_lum(col)>0.7?"#111":"#fff"} stroke={3}/>}</button>;})}
+            <label style={{width:30,height:30,borderRadius:99,border:`2px dashed ${C.faint}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden"}}><Ico name="palette" size={15} color={C.faint}/><input type="color" value={f.color||C.accent} onChange={e=>setF("color",e.target.value)} style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/></label>
+          </div>
         </div>
         <div style={{marginBottom:20}}><label style={lbl}>What is it?</label><input value={f.itemType} onChange={e=>setF("itemType",e.target.value)} placeholder="e.g. iPhone 15, Car, Sofa..." style={{...is,borderRadius:14}}/></div>
         <div style={{marginBottom:20}}><label style={lbl}>Company / Place</label><input value={f.company} onChange={e=>setF("company",e.target.value)} placeholder="e.g. ValU, B.TECH, dealership..." style={{...is,borderRadius:14}}/></div>
@@ -2591,7 +2607,18 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,delTxn,setA
           <input type="number" step="any" inputMode="decimal" value={f.total} onChange={e=>setF("total",e.target.value)} placeholder={String(computedTotal||0)} style={{...is,borderRadius:14,fontWeight:800}}/>
           {count>0&&amount>0&&<div style={{color:C.muted,fontSize:11,marginTop:6}}>{count} × {fmt(amount)} = {fmt(count*amount)}</div>}
         </div>
-        {!f.editId&&<div style={{marginBottom:20}}><label style={lbl}>Already Paid (installments)</label><input type="number" min="0" inputMode="numeric" value={f.paidInit} onChange={e=>setF("paidInit",e.target.value)} style={{...is,borderRadius:14}}/><div style={{color:C.faint,fontSize:11,marginTop:6}}>Installments paid before adding here (no transaction created).</div></div>}
+        <div style={{marginBottom:20}}>
+          <label style={lbl}>Down Payment (optional)</label>
+          <input type="number" step="any" min="0" inputMode="decimal" value={f.downPayment} onChange={e=>setF("downPayment",e.target.value)} placeholder="0" style={{...is,borderRadius:14}}/>
+          {!f.editId&&parseFloat(f.downPayment)>0&&(
+            <div onClick={()=>setF("deductDp",!f.deductDp)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:C.bg,border:`1px solid ${C.border}`,borderRadius:12,cursor:"pointer",marginTop:10}}>
+              <div style={{flex:1}}><div style={{color:C.text,fontSize:14,fontWeight:700}}>Deduct from account now</div><div style={{color:C.muted,fontSize:11,marginTop:2}}>{f.deductDp?"Records an expense and lowers your account balance":"Info only — no transaction, balance unchanged"}</div></div>
+              <div style={{width:46,height:27,borderRadius:99,background:f.deductDp?C.accent:C.border,position:"relative",transition:"background .2s",flexShrink:0}}><div style={{position:"absolute",top:3,left:f.deductDp?22:3,width:21,height:21,borderRadius:99,background:"#fff",transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/></div>
+            </div>
+          )}
+          {f.editId&&<div style={{color:C.faint,fontSize:11,marginTop:6}}>Recorded as info. Editing the amount won't change past transactions.</div>}
+        </div>
+        {!f.editId&&<div style={{marginBottom:20}}><label style={lbl}>Already Paid (installments)</label><input type="number" min="0" inputMode="numeric" value={f.paidInit} onChange={e=>setF("paidInit",e.target.value)} style={{...is,borderRadius:14}}/>{(parseInt(f.paidInit)||0)>count?<div style={{color:C.red,fontSize:11,marginTop:6,fontWeight:700}}>That's more than this plan's {count} total installment{count===1?"":"s"}. Enter {count} or less.</div>:<div style={{color:C.faint,fontSize:11,marginTop:6}}>Installments paid before adding here (no transaction created).</div>}</div>}
         <div style={{marginBottom:20}}><label style={lbl}>Pay from Account</label><select value={f.bankId} onChange={e=>setF("bankId",e.target.value)} style={{...is,borderRadius:14}}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
           <div><label style={lbl}>Due Day</label><input type="number" min="1" max="28" inputMode="numeric" value={f.dueDay} onChange={e=>setF("dueDay",e.target.value)} style={{...is,borderRadius:14}}/></div>
@@ -2642,6 +2669,7 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,delTxn,setA
         <Card style={{padding:"4px 16px",marginBottom:16}}>
           {inst.itemType&&<div style={rowStyle}><span style={{color:C.muted,fontSize:13,fontWeight:600}}>Item</span><span style={{color:C.text,fontSize:14,fontWeight:700}}>{inst.itemType}</span></div>}
           {inst.company&&<div style={rowStyle}><span style={{color:C.muted,fontSize:13,fontWeight:600}}>Company</span><span style={{color:C.text,fontSize:14,fontWeight:700}}>{inst.company}</span></div>}
+          {inst.downPayment>0&&<div style={rowStyle}><span style={{color:C.muted,fontSize:13,fontWeight:600}}>Down payment</span><span style={{color:C.text,fontSize:14,fontWeight:700}}>{fmt(inst.downPayment)}{inst.downPaymentTxnId?"":<span style={{color:C.faint,fontWeight:600}}> · info</span>}</span></div>}
           <div style={rowStyle}><span style={{color:C.muted,fontSize:13,fontWeight:600}}>Pay from</span><span style={{color:C.text,fontSize:14,fontWeight:700}}>{bank?.name||"—"}</span></div>
           <div style={rowStyle}><span style={{color:C.muted,fontSize:13,fontWeight:600}}>Due day</span><span style={{color:C.text,fontSize:14,fontWeight:700}}>Day {inst.dueDay||1} of month</span></div>
           <div style={{...rowStyle,borderBottom:inst.note?`1px solid ${C.border}`:"none"}}><span style={{color:C.muted,fontSize:13,fontWeight:600}}>Reminder</span><span style={{color:C.text,fontSize:14,fontWeight:700}}>{(inst.reminderDays??2)===0?"Off":`${inst.reminderDays??2} day(s) before`}</span></div>
