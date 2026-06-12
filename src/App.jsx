@@ -2441,7 +2441,7 @@ function SubscriptionsTab({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,s
             <button onClick={()=>setConfirmUndo({bill,month:detailMonth})} style={{flexShrink:0,background:C.yellowDim,border:`1.5px solid ${C.yellow}`,color:C.yellow,borderRadius:14,height:50,padding:"0 20px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>⟲ Undo</button>
           </div>
         ):(
-          <button onClick={()=>handlePay(bill,detailMonth)} style={{width:"100%",background:accent,border:"none",color:"#111",borderRadius:14,height:52,fontWeight:800,fontSize:16,cursor:"pointer",marginBottom:24,fontFamily:"'DM Sans', sans-serif"}}><span style={{display:"inline-flex",alignItems:"center",gap:7}}><Ico name="check" size={16} color="#111" stroke={3}/>Record Payment for {MONTHS[+detailMonth.split("-")[1]-1]}</span></button>
+          <button onClick={()=>handlePay(bill,detailMonth)} style={{width:"100%",background:C.accent,border:"none",color:"#111",borderRadius:14,height:52,fontWeight:800,fontSize:16,cursor:"pointer",marginBottom:24,fontFamily:"'DM Sans', sans-serif"}}><span style={{display:"inline-flex",alignItems:"center",gap:7}}><Ico name="check" size={16} color="#111" stroke={3}/>Record Payment for {MONTHS[+detailMonth.split("-")[1]-1]}</span></button>
         )}
 
         {(bill.payments||[]).length>0&&<>
@@ -2502,7 +2502,7 @@ function SubscriptionsTab({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,s
             </div>
             {paid
               ?<div style={{marginTop:12,display:"flex",alignItems:"center",justifyContent:"center",gap:8,height:40,borderRadius:11,background:C.accentDim,color:C.accent,fontWeight:800,fontSize:14}}><Ico name="check" size={14} color={C.accent} stroke={3}/>Paid · {MONTHS[+curMonth.split("-")[1]-1]}</div>
-              :<button onClick={e=>{e.stopPropagation();handlePay(bill,curMonth);}} style={{marginTop:12,width:"100%",height:44,borderRadius:11,background:bill.color||C.accent,border:"none",color:"#111",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>Pay {fmt(bill.amount)}</button>}
+              :<button onClick={e=>{e.stopPropagation();handlePay(bill,curMonth);}} style={{marginTop:12,width:"100%",height:44,borderRadius:11,background:C.accent,border:"none",color:"#111",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>Pay {fmt(bill.amount)}</button>}
           </div>
         </SwipeRow>
       );};
@@ -2888,16 +2888,16 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,d
     const goNext=()=>{if(cur.ok){HAPTICS.light();setWizStep(wizStep+1);}};
     return <FullPage title="New Installment" onBack={goBack}>
       <div style={{padding:"4px 16px 40px"}}>
-        <div style={{display:"flex",gap:6,marginBottom:10}}>{stepDefs.map((_,idx)=><div key={idx} style={{flex:1,height:4,borderRadius:4,background:idx<=wizStep?accent:C.border,transition:"background .3s"}}/>)}</div>
+        <div style={{display:"flex",gap:6,marginBottom:10}}>{stepDefs.map((_,idx)=><div key={idx} style={{flex:1,height:4,borderRadius:4,background:idx<=wizStep?C.accent:C.border,transition:"background .3s"}}/>)}</div>
         <div style={{color:C.muted,fontSize:11,fontWeight:800,letterSpacing:1,textTransform:"uppercase",marginBottom:2}}>Step {wizStep+1} of {stepDefs.length}</div>
         <div style={{color:C.text,fontSize:22,fontWeight:800,letterSpacing:-0.5}}>{cur.title}</div>
         <div style={{color:C.muted,fontSize:13,fontWeight:600,marginTop:2,marginBottom:24}}>{cur.sub}</div>
         <div key={wizStep} style={{animation:"fpIn 0.25s cubic-bezier(0.2,0.8,0.2,1)"}}>{cur.body}</div>
         <div style={{display:"flex",gap:12,marginTop:28}}>
-          {wizStep>0&&<Btn outline onClick={goBack} color={accent} style={{borderRadius:14,padding:"15px 22px",flexShrink:0}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><Ico name="chevR" size={15} color={accent} style={{transform:"rotate(180deg)"}}/>Back</span></Btn>}
+          {wizStep>0&&<Btn outline onClick={goBack} style={{borderRadius:14,padding:"15px 22px",flexShrink:0}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><Ico name="chevR" size={15} color={C.accent} style={{transform:"rotate(180deg)"}}/>Back</span></Btn>}
           {isLast
             ? <Btn onClick={handleSave} style={{flex:1,opacity:valid?1:0.5,pointerEvents:valid?"auto":"none",borderRadius:14,padding:"15px"}}><span style={{display:"inline-flex",alignItems:"center",gap:7}}><Ico name="plus" size={16} color="#111" stroke={2.5}/>Add Installment</span></Btn>
-            : <Btn onClick={goNext} color={accent} style={{flex:1,opacity:cur.ok?1:0.5,pointerEvents:cur.ok?"auto":"none",borderRadius:14,padding:"15px"}}><span style={{display:"inline-flex",alignItems:"center",gap:7}}>Next<Ico name="chevR" size={16} color="#111" stroke={2.5}/></span></Btn>}
+            : <Btn onClick={goNext} style={{flex:1,opacity:cur.ok?1:0.5,pointerEvents:cur.ok?"auto":"none",borderRadius:14,padding:"15px"}}><span style={{display:"inline-flex",alignItems:"center",gap:7}}>Next<Ico name="chevR" size={16} color="#111" stroke={2.5}/></span></Btn>}
         </div>
       </div>
     </FullPage>;
@@ -2927,8 +2927,8 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,d
           {inst.company&&inst.itemType&&<div style={{color:C.muted,fontSize:13,fontWeight:600,marginTop:2}}>{inst.company}</div>}
           <div style={{color:C.text,fontSize:30,fontWeight:800,letterSpacing:-1,marginTop:10}}>{fmt(inst.installmentAmount)}<span style={{fontSize:14,color:C.muted,fontWeight:600}}> /mo</span></div>
           <div style={{marginTop:16}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:C.muted,fontSize:12,fontWeight:700}}>{paid} of {inst.totalInstallments} paid</span><span style={{color:accent,fontSize:12,fontWeight:800}}>{pct}%</span></div>
-            <ProgressBar value={paid} max={inst.totalInstallments} color={pct>=90?C.accent:accent}/>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:C.muted,fontSize:12,fontWeight:700}}>{paid} of {inst.totalInstallments} paid</span><span style={{color:C.accent,fontSize:12,fontWeight:800}}>{pct}%</span></div>
+            <ProgressBar value={paid} max={inst.totalInstallments} color={C.accent}/>
           </div>
         </div>
 
@@ -2960,7 +2960,7 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,d
             <button onClick={()=>setConfirmUndo({inst,month:detailMonth})} style={{flexShrink:0,background:C.yellowDim,border:`1.5px solid ${C.yellow}`,color:C.yellow,borderRadius:14,height:50,padding:"0 20px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><Ico name="rotate" size={15} color={C.yellow}/>Undo</span></button>
           </div>
         ):(
-          <button onClick={()=>handlePay(inst,detailMonth)} style={{width:"100%",background:accent,border:"none",color:"#111",borderRadius:14,height:52,fontWeight:800,fontSize:16,cursor:"pointer",marginBottom:24,fontFamily:"'DM Sans', sans-serif"}}><span style={{display:"inline-flex",alignItems:"center",gap:7}}><Ico name="check" size={16} color="#111" stroke={3}/>Pay {paid+1} of {inst.totalInstallments} · {MONTHS[+detailMonth.split("-")[1]-1]}</span></button>
+          <button onClick={()=>handlePay(inst,detailMonth)} style={{width:"100%",background:C.accent,border:"none",color:"#111",borderRadius:14,height:52,fontWeight:800,fontSize:16,cursor:"pointer",marginBottom:24,fontFamily:"'DM Sans', sans-serif"}}><span style={{display:"inline-flex",alignItems:"center",gap:7}}><Ico name="check" size={16} color="#111" stroke={3}/>Pay {paid+1} of {inst.totalInstallments} · {MONTHS[+detailMonth.split("-")[1]-1]}</span></button>
         )}
 
         <div style={{color:C.muted,fontSize:11,fontWeight:800,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Schedule</div>
@@ -3078,13 +3078,13 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,d
                     <span style={{color:C.muted,fontSize:11,fontWeight:700}}>{paid} of {inst.totalInstallments} paid</span>
                     <span style={{color:done?C.accent:di.color,fontSize:11,fontWeight:700}}>{done?`${pct}%`:(!paidM?di.text:`${pct}%`)}</span>
                   </div>
-                  <ProgressBar value={paid} max={inst.totalInstallments} color={pct>=90?C.accent:(inst.color||C.blue)}/>
+                  <ProgressBar value={paid} max={inst.totalInstallments} color={C.accent}/>
                 </div>
                 {done
                   ?<div style={{marginTop:12,height:42,borderRadius:11,background:C.accentDim,color:C.accent,display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontWeight:800,fontSize:14}}><Ico name="checkCircle" size={16} color={C.accent}/>Completed</div>
                   :paidM
                     ?<div style={{marginTop:12,height:42,borderRadius:11,background:C.accentDim,color:C.accent,display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontWeight:800,fontSize:14}}><Ico name="check" size={14} color={C.accent} stroke={3}/>Paid · {MONTHS[+curMonth.split("-")[1]-1]}</div>
-                    :<button onClick={e=>{e.stopPropagation();handlePay(inst,curMonth);}} style={{marginTop:12,width:"100%",height:44,borderRadius:11,background:inst.color||C.accent,border:"none",color:"#111",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>Pay {paid+1} of {inst.totalInstallments} · {fmt(inst.installmentAmount)}</button>}
+                    :<button onClick={e=>{e.stopPropagation();handlePay(inst,curMonth);}} style={{marginTop:12,width:"100%",height:44,borderRadius:11,background:C.accent,border:"none",color:"#111",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}>Pay {paid+1} of {inst.totalInstallments} · {fmt(inst.installmentAmount)}</button>}
               </div>
             </SwipeRow>;
           })}
