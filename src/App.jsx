@@ -745,7 +745,6 @@ function SaverApp(){
   useEffect(()=>{load("et_backup_snooze",0).then(setBackupSnooze);},[]);
   const[appAlert,setAppAlert]=useState(null);
   const[hideTotal,setHideTotal]=useState(true);
-  const[addType,setAddType]=useState("expense"); // preset type when opening the Add screen via a quick-add shortcut
   const[ledgerBank,setLedgerBank]=useState(null);
   const[ledgerGroup,setLedgerGroup]=useState(null);
   const[ledgerSaving,setLedgerSaving]=useState(null);
@@ -810,7 +809,6 @@ function SaverApp(){
     if(saveScroll)setScrollState({y:window.scrollY,restore:true});
     else{setScrollState({y:0,restore:false});window.scrollTo(0,0);}
     if(newTab==="budgets")setBudgetMonth(currentMonth()); // fresh entry into Budgets starts at the current month
-    if(newTab==="add")setAddType("expense"); // normal Add opens on Expense; quick-add shortcuts set their own type
     setTab(newTab);
   },[]);
   // Open the Bills page on a specific tab, remembering the home scroll position. Optionally target a month (past month -> its history).
@@ -1001,8 +999,8 @@ function SaverApp(){
 
       {!ledgerBank&&!ledgerGroup&&!ledgerSaving&&!ledgerBudget?(
         <>
-          {tab==="dashboard"&&<Dashboard txns={filteredTxns} txnsAll={txns} bills={bills} installments={installments} budgets={budgets} banks={banks} groups={groups} expCats={expCats} savings={activeSavings} filterMonth={filterMonth} setFilterMonth={setFilterMonth} availMonths={availMonths} username={username} {...sharedProps} onDeleteTxn={delTxn} onUpdateTxn={updateTxn} onOpenBank={(b)=>{setScrollState({y:window.scrollY,restore:true});setLedgerBank(b);}} onOpenGroup={(g)=>{setScrollState({y:window.scrollY,restore:true});setLedgerGroup(g);}} onOpenSaving={(s)=>{setScrollState({y:window.scrollY,restore:true});setLedgerSaving(s);}} onOpenBudget={(bdg)=>{setLedgerBudgetMonth(filterMonth);setScrollState({y:window.scrollY,restore:true});setLedgerBudget(bdg);}} onQuickAdd={(t)=>{setAddType(t);setScrollState({y:0,restore:false});window.scrollTo(0,0);setTab("add");}} hideTotal={hideTotal} setHideTotal={setHideTotal} navigateTo={navigateTo} openMonthly={openMonthly} scrollState={scrollState} setScrollState={setScrollState} onBanks={saveBanks} onBudgets={saveBudgets} onSavings={saveSavings} onGroups={saveGroups}/>}
-          {tab==="add"&&<AddTransaction banks={banks} expCats={expCats} incCats={incCats} savings={activeSavings} currency={currency} onAdd={addTxn} onDone={()=>navigateTo("dashboard")} {...sharedProps} setAppAlert={setAppAlert} onGoalToast={setGoalToast} txns={txns} initialType={addType}/>}
+          {tab==="dashboard"&&<Dashboard txns={filteredTxns} txnsAll={txns} bills={bills} installments={installments} budgets={budgets} banks={banks} groups={groups} expCats={expCats} savings={activeSavings} filterMonth={filterMonth} setFilterMonth={setFilterMonth} availMonths={availMonths} username={username} {...sharedProps} onDeleteTxn={delTxn} onUpdateTxn={updateTxn} onOpenBank={(b)=>{setScrollState({y:window.scrollY,restore:true});setLedgerBank(b);}} onOpenGroup={(g)=>{setScrollState({y:window.scrollY,restore:true});setLedgerGroup(g);}} onOpenSaving={(s)=>{setScrollState({y:window.scrollY,restore:true});setLedgerSaving(s);}} onOpenBudget={(bdg)=>{setLedgerBudgetMonth(filterMonth);setScrollState({y:window.scrollY,restore:true});setLedgerBudget(bdg);}} hideTotal={hideTotal} setHideTotal={setHideTotal} navigateTo={navigateTo} openMonthly={openMonthly} scrollState={scrollState} setScrollState={setScrollState} onBanks={saveBanks} onBudgets={saveBudgets} onSavings={saveSavings} onGroups={saveGroups}/>}
+          {tab==="add"&&<AddTransaction banks={banks} expCats={expCats} incCats={incCats} savings={activeSavings} currency={currency} onAdd={addTxn} onDone={()=>navigateTo("dashboard")} {...sharedProps} setAppAlert={setAppAlert} onGoalToast={setGoalToast} txns={txns}/>}
           {tab==="savings"&&<SavingsPage savings={savings} onSave={saveSavings} txns={txns} banks={banks} onBack={()=>navigateTo("settings")} addTxn={addTxn} delTxn={delTxn} onGoalToast={setGoalToast} {...sharedProps} setAppAlert={setAppAlert} onOpenSaving={(s)=>{setScrollState({y:window.scrollY,restore:true});setLedgerSaving(s);}}/>}
           {tab==="history"&&<History txns={txns} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} currency={currency} availMonths={availMonths} savings={savings} setAppAlert={setAppAlert}/>}
           {tab==="budgets"&&<BudgetsPage budgets={budgets} expCats={expCats} onSave={saveBudgets} onBack={()=>navigateTo("settings")} currency={currency} txns={txns} filterMonth={budgetMonth} setFilterMonth={setBudgetMonth} onOpenBudget={(b,m)=>{setLedgerBudgetMonth(m&&m!=="all"?m:currentMonth());setScrollState({y:window.scrollY,restore:true});setLedgerBudget(b);}}/>}
@@ -1224,7 +1222,7 @@ function EditTxnModal({txn,banks,expCats,incCats,currency,onSave,onClose}){
   </Modal>;
 }
 
-function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expCats,savings,filterMonth,setFilterMonth,availMonths,username,bankBalance,safeToSpend,frozenForBank,goalSaved,onDeleteTxn,onUpdateTxn,onOpenBank,onOpenGroup,onOpenSaving,onOpenBudget,onQuickAdd,hideTotal,setHideTotal,navigateTo,openMonthly,scrollState,setScrollState,onBanks,onBudgets,onSavings,onGroups}){
+function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expCats,savings,filterMonth,setFilterMonth,availMonths,username,bankBalance,safeToSpend,frozenForBank,goalSaved,onDeleteTxn,onUpdateTxn,onOpenBank,onOpenGroup,onOpenSaving,onOpenBudget,hideTotal,setHideTotal,navigateTo,openMonthly,scrollState,setScrollState,onBanks,onBudgets,onSavings,onGroups}){
   useEffect(()=>{if(scrollState.restore){setTimeout(()=>window.scrollTo(0,scrollState.y),50);setScrollState(s=>({...s,restore:false}));}else window.scrollTo(0,0);},[]);
   const[viewTxn,setViewTxn]=useState(null);
   const[showCustomize,setShowCustomize]=useState(false);
@@ -1248,9 +1246,6 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
   const dismissOb=async()=>{setObDismissed(true);HAPTICS.light?.();await save("et_onboard_done",true);};
 
   const defaultOrder=[
-    {id:"attention",label:"Needs Attention"},
-    {id:"allowance",label:"Daily Allowance"},
-    {id:"quickadd",label:"Quick Add"},
     {id:"accounts",label:"Accounts & Balance"},
     {id:"overview",label:"Income & Expenses"},
     {id:"bills",label:"Monthly Bills"},
@@ -1341,12 +1336,6 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
   const biggestExp=expTxns.length?expTxns.reduce((max,t)=>t.amount>max.amount?t:max,expTxns[0]):null;
   const biggestInc=incTxns.length?incTxns.reduce((max,t)=>t.amount>max.amount?t:max,incTxns[0]):null;
 
-  // Budgets over their limit in the selected month (for the attention strip)
-  const budgetSpentM=(b)=>txnsAll.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&b.cats.includes(t.catId)&&t.date.startsWith(selMonth)).reduce((s,t)=>s+t.amount,0);
-  const overBudgetCount=budgets.filter(b=>b.amount>0&&(b.repeat===false?b.startMonth===selMonth:(!b.startMonth||b.startMonth<=selMonth))&&budgetSpentM(b)>b.amount).length;
-  // Daily safe-to-spend for the rest of the current month
-  const dailyAllow=isCurrentMonth&&daysLeft>0?totalSafe/daysLeft:null;
-
   return <div style={{padding:"24px 16px 0"}}>
     {username&&<div style={{marginBottom:18}}><div style={{color:C.muted,fontSize:13,fontWeight:500}}>{(()=>{const h=new Date().getHours();const gc=h<12?"#fbbf24":h<18?"#fb923c":"#818cf8";return <span style={{display:"inline-flex",alignItems:"center",gap:6}}><Ico name={h<18?"sun":"moon"} size={15} color={gc} stroke={2.2}/><span style={{color:gc,fontWeight:700}}>{h<12?"Good morning":h<18?"Good afternoon":"Good evening"}</span>,</span>; })()}</div><div style={{color:C.text,fontSize:24,fontWeight:800,letterSpacing:-0.5}}>{username}</div><div style={{color:C.faint,fontSize:12,fontWeight:600,marginTop:3}}>{new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})}</div></div>}
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><div style={{color:C.text,fontSize:20,fontWeight:800}}>Overview</div><span data-coach="month" style={{display:"inline-flex"}}><MonthSelect value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} availMonths={availMonths} allowAll={false}/></span></div>
@@ -1373,40 +1362,6 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
 
     {dashOrder.map(section=>{
       if(section.hidden)return null;
-      if(section.id==="attention")return(()=>{
-        const items=[];
-        if(totalSafe<0)items.push({icon:"alert",color:C.red,text:`Safe to spend is negative${hideTotal?"":` (${fmt(totalSafe)})`}`,onClick:null});
-        if(overdueBillCount>0)items.push({icon:"bell",color:C.red,text:`${overdueBillCount} bill${overdueBillCount>1?"s":""} overdue`,onClick:()=>openMonthly("subscriptions",selMonth)});
-        if(overdueInstCount>0)items.push({icon:"bell",color:C.red,text:`${overdueInstCount} installment${overdueInstCount>1?"s":""} overdue`,onClick:()=>openMonthly("installments",selMonth)});
-        if(overBudgetCount>0)items.push({icon:"alert",color:C.orange,text:`${overBudgetCount} budget${overBudgetCount>1?"s":""} over the limit`,onClick:()=>navigateTo("budgets")});
-        if(!items.length)return null;
-        return <div key="attention" style={{marginBottom:20}}>
-          <div style={{color:C.red,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Needs attention</div>
-          <div style={{background:C.card,border:`1px solid ${C.red}33`,borderRadius:16,overflow:"hidden"}}>
-            {items.map((it,i)=><div key={i} onClick={it.onClick||undefined} className={it.onClick?"ic":""} style={{display:"flex",alignItems:"center",gap:11,padding:"12px 14px",cursor:it.onClick?"pointer":"default",borderTop:i>0?`1px solid ${C.border}`:"none"}}>
-              <div style={{width:30,height:30,borderRadius:9,background:it.color+"22",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Ico name={it.icon} size={16} color={it.color} stroke={2.2}/></div>
-              <span style={{flex:1,color:C.text,fontSize:13,fontWeight:600}}>{it.text}</span>
-              {it.onClick&&<Ico name="chevR" size={15} color={C.faint}/>}
-            </div>)}
-          </div>
-        </div>;
-      })();
-      if(section.id==="allowance")return (dailyAllow!==null&&banks.length>0)?(
-        <div key="allowance" style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:"14px 16px",marginBottom:20,display:"flex",alignItems:"center",gap:14}}>
-          <div style={{width:44,height:44,borderRadius:13,background:(dailyAllow<0?C.red:C.accent)+"22",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Ico name="wallet" size={22} color={dailyAllow<0?C.red:C.accent} stroke={2}/></div>
-          <div style={{flex:1}}>
-            <div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:3}}>Safe to spend per day</div>
-            <div style={{color:dailyAllow<0?C.red:C.text,fontSize:22,fontWeight:800,letterSpacing:-0.5}}>{hideTotal?"••••":fmt(Math.max(0,dailyAllow))}<span style={{color:C.muted,fontSize:12,fontWeight:600}}> /day</span></div>
-          </div>
-          <div style={{textAlign:"right"}}><div style={{color:C.text,fontSize:16,fontWeight:800}}>{daysLeft}</div><div style={{color:C.faint,fontSize:10,fontWeight:700}}>day{daysLeft!==1?"s":""} left</div></div>
-        </div>
-      ):null;
-      if(section.id==="quickadd")return(
-        <div key="quickadd" style={{display:"flex",gap:10,marginBottom:20}}>
-          <button onClick={()=>onQuickAdd&&onQuickAdd("expense")} className="ic" style={{flex:1,background:C.redDim,border:`1px solid ${C.red}44`,color:C.red,borderRadius:14,padding:"13px 0",fontWeight:700,fontSize:13.5,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:7}}><Ico name="trendDown" size={16} color={C.red} stroke={2.4}/>Add expense</button>
-          <button onClick={()=>onQuickAdd&&onQuickAdd("income")} className="ic" style={{flex:1,background:C.accentDim,border:`1px solid ${C.accent}44`,color:C.accent,borderRadius:14,padding:"13px 0",fontWeight:700,fontSize:13.5,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:7}}><Ico name="trendUp" size={16} color={C.accent} stroke={2.4}/>Add income</button>
-        </div>
-      );
       if(section.id==="accounts")return(
         <div key="accounts">
           <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Accounts</div>
@@ -1743,8 +1698,8 @@ function PickerField({options,value,onChange,placeholder,title,fieldStyle}){
   </>;
 }
 
-function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,safeToSpend,goalSaved,setAppAlert,onGoalToast,txns,initialType}){
-  const[type,setType]=useState(initialType==="income"?"income":"expense");
+function AddTransaction({banks,expCats,incCats,savings,currency,onAdd,onDone,safeToSpend,goalSaved,setAppAlert,onGoalToast,txns}){
+  const[type,setType]=useState("expense");
   const[amount,setAmount]=useState("");
   const[sourceId,setSourceId]=useState(banks[0]?.id||"");
   const[toBankId,setToBankId]=useState(banks.length>1?banks[1]?.id:banks[0]?.id||"");
