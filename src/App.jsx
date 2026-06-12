@@ -1248,8 +1248,11 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
   const dismissOb=async()=>{setObDismissed(true);HAPTICS.light?.();await save("et_onboard_done",true);};
 
   const defaultOrder=[
+    {id:"attention",label:"Needs Attention"},
+    {id:"allowance",label:"Daily Allowance"},
+    {id:"quickadd",label:"Quick Add"},
     {id:"accounts",label:"Accounts & Balance"},
-    {id:"overview",label:"Income & Net"},
+    {id:"overview",label:"Income & Expenses"},
     {id:"bills",label:"Monthly Bills"},
     {id:"installments",label:"Installments"},
     {id:"budgets",label:"Monthly Budgets"},
@@ -1257,10 +1260,17 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
   ];
   const[dashOrder,setDashOrder]=useState(defaultOrder);
   useEffect(()=>{load("et_dash_order",defaultOrder).then(saved=>{
-    // Merge: keep saved order, append any new sections, refresh labels, drop removed ones
+    // Merge saved order with defaults: refresh labels, drop removed sections, and splice any
+    // new sections in at their default position (not the end) so they show where intended.
     const known=Object.fromEntries(defaultOrder.map(s=>[s.id,s.label]));
+    const dIdx=Object.fromEntries(defaultOrder.map((s,i)=>[s.id,i]));
     const merged=saved.filter(s=>known[s.id]).map(s=>({id:s.id,label:known[s.id],hidden:!!s.hidden}));
-    defaultOrder.forEach(s=>{if(!merged.some(m=>m.id===s.id))merged.push(s);});
+    defaultOrder.forEach(s=>{
+      if(merged.some(m=>m.id===s.id))return;
+      let insertAt=merged.findIndex(m=>dIdx[m.id]>dIdx[s.id]);
+      if(insertAt<0)insertAt=merged.length;
+      merged.splice(insertAt,0,{id:s.id,label:s.label});
+    });
     setDashOrder(merged);
   });},[]);
 
@@ -1361,44 +1371,42 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
       {obAll&&<div style={{marginTop:12}}><Btn full small onClick={dismissOb} color={C.accent}>Got it</Btn></div>}
     </div>}
 
-    {/* Needs-attention strip — only the things that genuinely need action */}
-    {(()=>{
-      const items=[];
-      if(totalSafe<0)items.push({icon:"alert",color:C.red,text:`Safe to spend is negative${hideTotal?"":` (${fmt(totalSafe)})`}`,onClick:null});
-      if(overdueBillCount>0)items.push({icon:"bell",color:C.red,text:`${overdueBillCount} bill${overdueBillCount>1?"s":""} overdue`,onClick:()=>openMonthly("subscriptions",selMonth)});
-      if(overdueInstCount>0)items.push({icon:"bell",color:C.red,text:`${overdueInstCount} installment${overdueInstCount>1?"s":""} overdue`,onClick:()=>openMonthly("installments",selMonth)});
-      if(overBudgetCount>0)items.push({icon:"alert",color:C.orange,text:`${overBudgetCount} budget${overBudgetCount>1?"s":""} over the limit`,onClick:()=>navigateTo("budgets")});
-      if(!items.length)return null;
-      return <div style={{marginBottom:20}}>
-        <div style={{color:C.red,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Needs attention</div>
-        <div style={{background:C.card,border:`1px solid ${C.red}33`,borderRadius:16,overflow:"hidden"}}>
-          {items.map((it,i)=><div key={i} onClick={it.onClick||undefined} className={it.onClick?"ic":""} style={{display:"flex",alignItems:"center",gap:11,padding:"12px 14px",cursor:it.onClick?"pointer":"default",borderTop:i>0?`1px solid ${C.border}`:"none"}}>
-            <div style={{width:30,height:30,borderRadius:9,background:it.color+"22",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Ico name={it.icon} size={16} color={it.color} stroke={2.2}/></div>
-            <span style={{flex:1,color:C.text,fontSize:13,fontWeight:600}}>{it.text}</span>
-            {it.onClick&&<Ico name="chevR" size={15} color={C.faint}/>}
-          </div>)}
-        </div>
-      </div>;
-    })()}
-
-    {/* Daily safe-to-spend for the rest of the month */}
-    {dailyAllow!==null&&banks.length>0&&<div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:"14px 16px",marginBottom:20,display:"flex",alignItems:"center",gap:14}}>
-      <div style={{width:44,height:44,borderRadius:13,background:(dailyAllow<0?C.red:C.accent)+"22",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Ico name="wallet" size={22} color={dailyAllow<0?C.red:C.accent} stroke={2}/></div>
-      <div style={{flex:1}}>
-        <div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:3}}>Safe to spend per day</div>
-        <div style={{color:dailyAllow<0?C.red:C.text,fontSize:22,fontWeight:800,letterSpacing:-0.5}}>{hideTotal?"••••":fmt(Math.max(0,dailyAllow))}<span style={{color:C.muted,fontSize:12,fontWeight:600}}> /day</span></div>
-      </div>
-      <div style={{textAlign:"right"}}><div style={{color:C.text,fontSize:16,fontWeight:800}}>{daysLeft}</div><div style={{color:C.faint,fontSize:10,fontWeight:700}}>day{daysLeft!==1?"s":""} left</div></div>
-    </div>}
-
-    {/* Quick-add shortcuts */}
-    <div style={{display:"flex",gap:10,marginBottom:20}}>
-      <button onClick={()=>onQuickAdd&&onQuickAdd("expense")} className="ic" style={{flex:1,background:C.redDim,border:`1px solid ${C.red}44`,color:C.red,borderRadius:14,padding:"13px 0",fontWeight:700,fontSize:13.5,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:7}}><Ico name="trendDown" size={16} color={C.red} stroke={2.4}/>Add expense</button>
-      <button onClick={()=>onQuickAdd&&onQuickAdd("income")} className="ic" style={{flex:1,background:C.accentDim,border:`1px solid ${C.accent}44`,color:C.accent,borderRadius:14,padding:"13px 0",fontWeight:700,fontSize:13.5,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:7}}><Ico name="trendUp" size={16} color={C.accent} stroke={2.4}/>Add income</button>
-    </div>
-
     {dashOrder.map(section=>{
       if(section.hidden)return null;
+      if(section.id==="attention")return(()=>{
+        const items=[];
+        if(totalSafe<0)items.push({icon:"alert",color:C.red,text:`Safe to spend is negative${hideTotal?"":` (${fmt(totalSafe)})`}`,onClick:null});
+        if(overdueBillCount>0)items.push({icon:"bell",color:C.red,text:`${overdueBillCount} bill${overdueBillCount>1?"s":""} overdue`,onClick:()=>openMonthly("subscriptions",selMonth)});
+        if(overdueInstCount>0)items.push({icon:"bell",color:C.red,text:`${overdueInstCount} installment${overdueInstCount>1?"s":""} overdue`,onClick:()=>openMonthly("installments",selMonth)});
+        if(overBudgetCount>0)items.push({icon:"alert",color:C.orange,text:`${overBudgetCount} budget${overBudgetCount>1?"s":""} over the limit`,onClick:()=>navigateTo("budgets")});
+        if(!items.length)return null;
+        return <div key="attention" style={{marginBottom:20}}>
+          <div style={{color:C.red,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8}}>Needs attention</div>
+          <div style={{background:C.card,border:`1px solid ${C.red}33`,borderRadius:16,overflow:"hidden"}}>
+            {items.map((it,i)=><div key={i} onClick={it.onClick||undefined} className={it.onClick?"ic":""} style={{display:"flex",alignItems:"center",gap:11,padding:"12px 14px",cursor:it.onClick?"pointer":"default",borderTop:i>0?`1px solid ${C.border}`:"none"}}>
+              <div style={{width:30,height:30,borderRadius:9,background:it.color+"22",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Ico name={it.icon} size={16} color={it.color} stroke={2.2}/></div>
+              <span style={{flex:1,color:C.text,fontSize:13,fontWeight:600}}>{it.text}</span>
+              {it.onClick&&<Ico name="chevR" size={15} color={C.faint}/>}
+            </div>)}
+          </div>
+        </div>;
+      })();
+      if(section.id==="allowance")return (dailyAllow!==null&&banks.length>0)?(
+        <div key="allowance" style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:"14px 16px",marginBottom:20,display:"flex",alignItems:"center",gap:14}}>
+          <div style={{width:44,height:44,borderRadius:13,background:(dailyAllow<0?C.red:C.accent)+"22",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Ico name="wallet" size={22} color={dailyAllow<0?C.red:C.accent} stroke={2}/></div>
+          <div style={{flex:1}}>
+            <div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:3}}>Safe to spend per day</div>
+            <div style={{color:dailyAllow<0?C.red:C.text,fontSize:22,fontWeight:800,letterSpacing:-0.5}}>{hideTotal?"••••":fmt(Math.max(0,dailyAllow))}<span style={{color:C.muted,fontSize:12,fontWeight:600}}> /day</span></div>
+          </div>
+          <div style={{textAlign:"right"}}><div style={{color:C.text,fontSize:16,fontWeight:800}}>{daysLeft}</div><div style={{color:C.faint,fontSize:10,fontWeight:700}}>day{daysLeft!==1?"s":""} left</div></div>
+        </div>
+      ):null;
+      if(section.id==="quickadd")return(
+        <div key="quickadd" style={{display:"flex",gap:10,marginBottom:20}}>
+          <button onClick={()=>onQuickAdd&&onQuickAdd("expense")} className="ic" style={{flex:1,background:C.redDim,border:`1px solid ${C.red}44`,color:C.red,borderRadius:14,padding:"13px 0",fontWeight:700,fontSize:13.5,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:7}}><Ico name="trendDown" size={16} color={C.red} stroke={2.4}/>Add expense</button>
+          <button onClick={()=>onQuickAdd&&onQuickAdd("income")} className="ic" style={{flex:1,background:C.accentDim,border:`1px solid ${C.accent}44`,color:C.accent,borderRadius:14,padding:"13px 0",fontWeight:700,fontSize:13.5,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:7}}><Ico name="trendUp" size={16} color={C.accent} stroke={2.4}/>Add income</button>
+        </div>
+      );
       if(section.id==="accounts")return(
         <div key="accounts">
           <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Accounts</div>
@@ -1483,42 +1491,43 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
         const selLabel=`${MONTHS[+selMonth.split("-")[1]-1]} ${selMonth.split("-")[0]}`;
         return <div key="budgets">
           <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Monthly Budgets</div>
-          <Card style={{padding:"16px",marginBottom:20}}>
-            {active.length===0?(
-              <div style={{display:"flex",alignItems:"center",gap:12}}>
-                <div style={{width:38,height:38,borderRadius:12,background:C.blue+"22",display:"flex",alignItems:"center",justifyContent:"center"}}><Ico name="layers" size={20} color={C.blue} stroke={2}/></div>
-                <div style={{flex:1}}><div style={{color:C.text,fontWeight:800,fontSize:15}}>Budgets</div><div style={{color:C.muted,fontSize:11,marginTop:1}}>No budgets active in {selLabel}</div></div>
-              </div>
-            ):<>
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:hasLimited?12:0}}>
-              <div style={{width:38,height:38,borderRadius:12,background:(hasLimited?budCol:C.blue)+"22",display:"flex",alignItems:"center",justifyContent:"center"}}><Ico name="layers" size={20} color={hasLimited?budCol:C.blue} stroke={2}/></div>
-              <div style={{flex:1}}>{hasLimited?<><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Total Budget</div><div style={{color:C.text,fontSize:18,fontWeight:800,marginTop:2}}>{hideTotal?"••••":fmt(budSpent)} <span style={{color:C.muted,fontSize:12,fontWeight:600}}>of {hideTotal?"••••":fmt(budTotal)}</span></div></>:<><div style={{color:C.text,fontWeight:800,fontSize:15}}>Budgets</div><div style={{color:C.muted,fontSize:11,marginTop:1}}>Tracking {active.length} {active.length===1?"budget":"budgets"}</div></>}</div>
-              {hasLimited&&<Pill color={budCol}>{budPct}%</Pill>}
-            </div>
-            {hasLimited&&<ProgressBar value={budSpent} max={budTotal} color={budCol}/>}
-            <div style={{height:1,background:C.border,margin:"16px 0 14px"}}/>
-            <SortableList items={active} onReorder={reorderActive} gap={10} renderItem={(bdg)=>{
-              const spent=spentOf(bdg),hasLimit=bdg.amount>0,over=hasLimit&&spent>bdg.amount;
-              const rem=Math.max(0,bdg.amount-spent),pct=hasLimit?Math.min(100,Math.round((spent/bdg.amount)*100)):0,barColor=pct>=90?C.red:pct>=70?C.yellow:C.accent;
-              const fc=expCats.find(c=>bdg.cats.includes(c.id));
-              return <div onClick={()=>onOpenBudget(bdg)} className="ic" style={{padding:"13px 14px",background:C.bg,border:`1px solid ${C.border}`,borderLeft:`4px solid ${hasLimit?barColor:C.blue}`,borderRadius:14,cursor:"pointer",transition:"transform 0.1s ease"}}>
-                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:hasLimit?10:0}}>
-                  <CatIcon glyph={bdg.glyph} color={bdg.color||(fc?undefined:(hasLimit?barColor:C.blue))} cat={bdg.glyph?undefined:fc} name={bdg.name} size={30}/>
-                  <span style={{color:C.text,fontSize:14,fontWeight:700,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{bdg.name}</span>
-                  {hasLimit?<Pill color={barColor}>{over?"Over":pct+"%"}</Pill>:<span style={{color:C.text,fontSize:14,fontWeight:800}}>{hideTotal?"••••":fmt(spent)}</span>}
+          {active.length===0?(
+            <Card style={{padding:"16px",marginBottom:20,display:"flex",alignItems:"center",gap:12}}>
+              <div style={{width:38,height:38,borderRadius:12,background:C.blue+"22",display:"flex",alignItems:"center",justifyContent:"center"}}><Ico name="layers" size={20} color={C.blue} stroke={2}/></div>
+              <div style={{flex:1}}><div style={{color:C.text,fontWeight:800,fontSize:15}}>Budgets</div><div style={{color:C.muted,fontSize:11,marginTop:1}}>No budgets active in {selLabel}</div></div>
+            </Card>
+          ):(
+            <div style={{marginBottom:20}}>
+              <Card style={{padding:"14px 16px",marginBottom:10}}>
+                <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:hasLimited?12:0}}>
+                  <div style={{width:38,height:38,borderRadius:12,background:(hasLimited?budCol:C.blue)+"22",display:"flex",alignItems:"center",justifyContent:"center"}}><Ico name="layers" size={20} color={hasLimited?budCol:C.blue} stroke={2}/></div>
+                  <div style={{flex:1}}>{hasLimited?<><div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Total Budget · {selLabel}</div><div style={{color:C.text,fontSize:18,fontWeight:800,marginTop:2}}>{hideTotal?"••••":fmt(budSpent)} <span style={{color:C.muted,fontSize:12,fontWeight:600}}>of {hideTotal?"••••":fmt(budTotal)}</span></div></>:<><div style={{color:C.text,fontWeight:800,fontSize:15}}>Budgets</div><div style={{color:C.muted,fontSize:11,marginTop:1}}>Tracking {active.length} {active.length===1?"budget":"budgets"}</div></>}</div>
+                  {hasLimited&&<Pill color={budCol}>{budPct}%</Pill>}
                 </div>
-                {hasLimit?<>
-                  <ProgressBar value={spent} max={bdg.amount} color={barColor}/>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginTop:10}}>
-                    <span style={{color:C.muted,fontSize:11}}>Spent {hideTotal?"••••":fmt(spent)} of {hideTotal?"••••":fmt(bdg.amount)}</span>
-                    <span style={{color:over?C.red:C.accent,fontSize:13,fontWeight:800}}>{hideTotal?"••••":(over?`${fmt(spent-bdg.amount)} over`:`${fmt(rem)} left`)}</span>
+                {hasLimited&&<ProgressBar value={budSpent} max={budTotal} color={budCol}/>}
+              </Card>
+              <SortableList items={active} onReorder={reorderActive} renderItem={(bdg)=>{
+                const spent=spentOf(bdg),hasLimit=bdg.amount>0,over=hasLimit&&spent>bdg.amount;
+                const rem=Math.max(0,bdg.amount-spent),pct=hasLimit?Math.min(100,Math.round((spent/bdg.amount)*100)):0,barColor=pct>=90?C.red:pct>=70?C.yellow:C.accent;
+                const fc=expCats.find(c=>bdg.cats.includes(c.id));
+                return <Card onClick={()=>onOpenBudget(bdg)} className="ic" style={{padding:"14px 14px 12px",cursor:"pointer",transition:"transform 0.1s ease",borderLeft:`4px solid ${hasLimit?barColor:C.blue}`}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:hasLimit?10:0}}>
+                    <CatIcon glyph={bdg.glyph} color={bdg.color||(fc?undefined:(hasLimit?barColor:C.blue))} cat={bdg.glyph?undefined:fc} name={bdg.name} size={30}/>
+                    <span style={{color:C.text,fontSize:14,fontWeight:700,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{bdg.name}</span>
+                    {hasLimit?<Pill color={barColor}>{over?"Over":pct+"%"}</Pill>:<span style={{color:C.text,fontSize:14,fontWeight:800}}>{hideTotal?"••••":fmt(spent)}</span>}
                   </div>
-                  {isCurrentMonth&&!over&&rem>0&&!hideTotal&&<div style={{color:C.faint,fontSize:10,fontWeight:600,marginTop:4}}>≈ {fmt(rem/daysLeft)}/day for {daysLeft} day{daysLeft!==1?"s":""} left</div>}
-                </>:<div style={{color:C.faint,fontSize:11,marginTop:2}}>Spent this month · no limit set</div>}
-              </div>;
-            }}/>
-            </>}
-          </Card>
+                  {hasLimit?<>
+                    <ProgressBar value={spent} max={bdg.amount} color={barColor}/>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginTop:10}}>
+                      <span style={{color:C.muted,fontSize:11}}>Spent {hideTotal?"••••":fmt(spent)} of {hideTotal?"••••":fmt(bdg.amount)}</span>
+                      <span style={{color:over?C.red:C.accent,fontSize:13,fontWeight:800}}>{hideTotal?"••••":(over?`${fmt(spent-bdg.amount)} over`:`${fmt(rem)} left`)}</span>
+                    </div>
+                    {isCurrentMonth&&!over&&rem>0&&!hideTotal&&<div style={{color:C.faint,fontSize:10,fontWeight:600,marginTop:4}}>≈ {fmt(rem/daysLeft)}/day for {daysLeft} day{daysLeft!==1?"s":""} left</div>}
+                  </>:<div style={{color:C.faint,fontSize:11,marginTop:2}}>Spent this month · no limit set</div>}
+                </Card>;
+              }}/>
+            </div>
+          )}
         </div>;
       })();
       if(section.id==="savings"&&savings.length>0)return(
@@ -1581,20 +1590,22 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
       </Modal>
     )}
 
-    {showCustomize&&<Modal title="Customize Dashboard" onClose={()=>setShowCustomize(false)} center={false}>
-      <p style={{color:C.muted,fontSize:13,marginBottom:16}}>Drag to reorder the sections on your home screen, and tap the eye to show or hide any section.</p>
-      <div style={{marginBottom:20}}>
-        <SortableList items={dashOrder} onReorder={setDashOrder} renderItem={(item)=>{
-          const hidden=!!item.hidden;
-          return <div style={{padding:"14px 16px",background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,marginBottom:8,display:"flex",alignItems:"center",gap:14,cursor:"grab",opacity:hidden?0.5:1}}>
-            <span style={{color:C.faint,fontSize:20}}>≡</span>
-            <span style={{color:C.text,fontWeight:700,fontSize:15,flex:1}}>{item.label}</span>
-            <button onClick={e=>{e.stopPropagation();setDashOrder(dashOrder.map(s=>s.id===item.id?{...s,hidden:!s.hidden}:s));HAPTICS.light?.();}} style={{background:hidden?"transparent":C.accentDim,border:`1px solid ${hidden?C.border:C.accent}`,borderRadius:9,width:38,height:34,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}} aria-label={hidden?"Show section":"Hide section"}><Ico name={hidden?"eyeOff":"eye"} size={17} color={hidden?C.faint:C.accent}/></button>
-          </div>;
-        }}/>
+    {showCustomize&&<FullPage title="Customize Home" onBack={()=>setShowCustomize(false)}>
+      <div style={{padding:"4px 16px 48px"}}>
+        <p style={{color:C.muted,fontSize:13,marginBottom:16,lineHeight:1.5}}>Drag to reorder the sections on your home screen, and tap the eye to show or hide any section.</p>
+        <div style={{marginBottom:20}}>
+          <SortableList items={dashOrder} onReorder={setDashOrder} renderItem={(item)=>{
+            const hidden=!!item.hidden;
+            return <div style={{padding:"14px 16px",background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,marginBottom:8,display:"flex",alignItems:"center",gap:14,cursor:"grab",opacity:hidden?0.5:1}}>
+              <span style={{color:C.faint,fontSize:20}}>≡</span>
+              <span style={{color:C.text,fontWeight:700,fontSize:15,flex:1}}>{item.label}</span>
+              <button onClick={e=>{e.stopPropagation();setDashOrder(dashOrder.map(s=>s.id===item.id?{...s,hidden:!s.hidden}:s));HAPTICS.light?.();}} style={{background:hidden?"transparent":C.accentDim,border:`1px solid ${hidden?C.border:C.accent}`,borderRadius:9,width:38,height:34,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}} aria-label={hidden?"Show section":"Hide section"}><Ico name={hidden?"eyeOff":"eye"} size={17} color={hidden?C.faint:C.accent}/></button>
+            </div>;
+          }}/>
+        </div>
+        <Btn full onClick={async()=>{await save("et_dash_order",dashOrder);setShowCustomize(false);HAPTICS.success();}}>Save Layout</Btn>
       </div>
-      <Btn full onClick={async()=>{await save("et_dash_order",dashOrder);setShowCustomize(false);HAPTICS.success();}}>Save Layout</Btn>
-    </Modal>}
+    </FullPage>}
   </div>;
 }
 
