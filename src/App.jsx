@@ -401,6 +401,8 @@ const MARKS={
   book:'<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',
   chat:'<path d="M7.9 20A9 8 0 1 0 4 16.1L2 22Z"/>',
   plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',
+  eye:'<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff:'<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/>',
   swap:'<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',
   sparkles:CAT_GLYPHS["sparkles"]||'<path d="m12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2Z"/>',
   hand:'<path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>',
@@ -1222,7 +1224,6 @@ function EditTxnModal({txn,banks,expCats,incCats,currency,onSave,onClose}){
 
 function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expCats,savings,filterMonth,setFilterMonth,availMonths,username,bankBalance,safeToSpend,frozenForBank,goalSaved,onDeleteTxn,onUpdateTxn,onOpenBank,onOpenGroup,onOpenSaving,onOpenBudget,hideTotal,setHideTotal,navigateTo,openMonthly,scrollState,setScrollState,onBanks,onBudgets,onSavings,onGroups}){
   useEffect(()=>{if(scrollState.restore){setTimeout(()=>window.scrollTo(0,scrollState.y),50);setScrollState(s=>({...s,restore:false}));}else window.scrollTo(0,0);},[]);
-  const[recentFilter,setRecentFilter]=useState("all");
   const[viewTxn,setViewTxn]=useState(null);
   const[showCustomize,setShowCustomize]=useState(false);
   const[insightsType,setInsightsType]=useState(null);
@@ -1256,7 +1257,7 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
   useEffect(()=>{load("et_dash_order",defaultOrder).then(saved=>{
     // Merge: keep saved order, append any new sections, refresh labels, drop removed ones
     const known=Object.fromEntries(defaultOrder.map(s=>[s.id,s.label]));
-    const merged=saved.filter(s=>known[s.id]).map(s=>({id:s.id,label:known[s.id]}));
+    const merged=saved.filter(s=>known[s.id]).map(s=>({id:s.id,label:known[s.id],hidden:!!s.hidden}));
     defaultOrder.forEach(s=>{if(!merged.some(m=>m.id===s.id))merged.push(s);});
     setDashOrder(merged);
   });},[]);
@@ -1287,7 +1288,6 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
   const dueLabel=(dueDay)=>{const d=dueIn(dueDay);if(d===null)return dueDay?`Day ${dueDay}`:"";if(d<0)return `Overdue ${Math.abs(d)}d`;if(d===0)return "Due today";if(d===1)return "Tomorrow";return `In ${d} days`;};
   const dueColor=(dueDay)=>{const d=dueIn(dueDay);if(d===null)return C.muted;if(d<0)return C.red;if(d<=1)return C.orange;if(d<=3)return C.yellow;return C.accent;};
 
-  const recents=txns.filter(t=>{if(recentFilter==="expenses")return t.type==="expense"||t.type==="goal_withdraw";if(recentFilter==="income")return t.type==="income";return true;}).slice(0,5);
   const spendingGroups=groups.filter(g=>txns.filter(tx=>(tx.type==="expense"||tx.type==="goal_withdraw")&&g.cats.includes(tx.catId)).reduce((a,tx)=>a+tx.amount,0)>0);
 
   // Bills (selected month, lifecycle-aware: only bills active that month, plus any that were paid then)
@@ -1321,8 +1321,6 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
   const nextInst=isCurrentMonth?[...instDueThisMonth].sort((a,b)=>(a.dueDay||99)-(b.dueDay||99))[0]:null;
   const instOverallPct=instTotalAll>0?Math.round((instPaidAll/instTotalAll)*100):0;
   const overdueInstCount=isCurrentMonth?instDueThisMonth.filter(i=>i.dueDay&&dueIn(i.dueDay)<0).length:0;
-  const splitCounts={};
-  txnsAll.forEach(t=>{if(t.splitGroupId)splitCounts[t.splitGroupId]=(splitCounts[t.splitGroupId]||0)+1;});
   const expTxns=txns.filter(t=>t.type==="expense"||t.type==="goal_withdraw");
   const incTxns=txns.filter(t=>t.type==="income");
   const getTopCats=(txnList,totalAmt)=>{
@@ -1360,6 +1358,7 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
     </div>}
 
     {dashOrder.map(section=>{
+      if(section.hidden)return null;
       if(section.id==="accounts")return(
         <div key="accounts">
           <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Accounts</div>
@@ -1509,17 +1508,7 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
       return null;
     })}
 
-    <div style={{marginBottom:10,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-      <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Recent Transactions</div>
-      <div style={{display:"flex",gap:4}}>{["all","expenses","income"].map(f=><button key={f} onClick={()=>setRecentFilter(f)} style={{background:"none",border:"none",padding:"2px 6px",color:recentFilter===f?C.accent:C.muted,fontSize:10,fontWeight:700,cursor:"pointer",textTransform:"uppercase",fontFamily:"'DM Sans', sans-serif"}}>{f}</button>)}</div>
-    </div>
-    {recents.length>0?(
-      <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
-        {recents.map(t=>{const isTrulyLinked=t.splitGroupId&&splitCounts[t.splitGroupId]>1;return <div key={t.id} style={{borderRadius:12,overflow:"hidden"}}><TxnRow txn={t} hideTotal={hideTotal} onClick={()=>setViewTxn(t)} isTrulyLinked={isTrulyLinked}/></div>;})}
-      </div>
-    ):<div style={{padding:"20px 0",textAlign:"center",color:C.faint,fontSize:12,marginBottom:20}}>No transactions match.</div>}
-
-    <div style={{textAlign:"center",marginBottom:20}}>
+    <div style={{textAlign:"center",marginBottom:20,marginTop:4}}>
       <button data-coach="customize" onClick={()=>setShowCustomize(true)} style={{background:"transparent",border:`1px solid ${C.border}`,color:C.text,padding:"10px 20px",borderRadius:99,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",display:"inline-flex",alignItems:"center",gap:7}}><Ico name="layers" size={15} color={C.text}/>Customize Layout</button>
     </div>
 
@@ -1558,14 +1547,16 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
     )}
 
     {showCustomize&&<Modal title="Customize Dashboard" onClose={()=>setShowCustomize(false)} center={false}>
-      <p style={{color:C.muted,fontSize:13,marginBottom:16}}>Drag and drop to reorder the sections on your home screen.</p>
+      <p style={{color:C.muted,fontSize:13,marginBottom:16}}>Drag to reorder the sections on your home screen, and tap the eye to show or hide any section.</p>
       <div style={{marginBottom:20}}>
-        <SortableList items={dashOrder} onReorder={setDashOrder} renderItem={(item)=>(
-          <div style={{padding:"14px 16px",background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,marginBottom:8,display:"flex",alignItems:"center",gap:14,cursor:"grab"}}>
+        <SortableList items={dashOrder} onReorder={setDashOrder} renderItem={(item)=>{
+          const hidden=!!item.hidden;
+          return <div style={{padding:"14px 16px",background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,marginBottom:8,display:"flex",alignItems:"center",gap:14,cursor:"grab",opacity:hidden?0.5:1}}>
             <span style={{color:C.faint,fontSize:20}}>≡</span>
-            <span style={{color:C.text,fontWeight:700,fontSize:15}}>{item.label}</span>
-          </div>
-        )}/>
+            <span style={{color:C.text,fontWeight:700,fontSize:15,flex:1}}>{item.label}</span>
+            <button onClick={e=>{e.stopPropagation();setDashOrder(dashOrder.map(s=>s.id===item.id?{...s,hidden:!s.hidden}:s));HAPTICS.light?.();}} style={{background:hidden?"transparent":C.accentDim,border:`1px solid ${hidden?C.border:C.accent}`,borderRadius:9,width:38,height:34,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}} aria-label={hidden?"Show section":"Hide section"}><Ico name={hidden?"eyeOff":"eye"} size={17} color={hidden?C.faint:C.accent}/></button>
+          </div>;
+        }}/>
       </div>
       <Btn full onClick={async()=>{await save("et_dash_order",dashOrder);setShowCustomize(false);HAPTICS.success();}}>Save Layout</Btn>
     </Modal>}
@@ -2121,7 +2112,7 @@ function CoachTour({onClose}){
   const steps=[
     {sel:'[data-coach="month"]',title:"Pick a month",text:"Every card on the home screen updates to the month you choose here."},
     {sel:'[data-coach="balance"]',title:"Your balance",text:"See your total, or swipe across to Safe-to-Spend. Tap the icon to hide amounts."},
-    {sel:'[data-coach="customize"]',title:"Make it yours",text:"Reorder the whole dashboard — drag the sections into the order you like."},
+    {sel:'[data-coach="customize"]',title:"Make it yours",text:"Reorder the whole dashboard — drag the sections into the order you like, or tap the eye to hide any you don't use."},
     {sel:'[data-coach="add"]',title:"Add anything",text:"Tap + to log an expense, income, saving or transfer. Long-press it for Quick Actions."},
   ];
   const[i,setI]=useState(0);
@@ -3337,7 +3328,7 @@ function UserManual({onBack,navigateTo,onCoach}){
     {icon:"target",color:C.yellow,q:"How do savings goals work?",a:"Create a goal with a target amount, then add to it using the Saving transaction type. Money inside a goal is 'frozen' — it won't count as Safe-to-Spend until you withdraw it. You can also make a 'spending goal' for money you're setting aside to spend later."},
     {icon:"layers",color:C.accent,q:"What are spending groups?",a:"Groups bundle related categories together (e.g. Daily Life = Food + Coffee + Transport) so you can see total spending per group on the home screen. Tap a group to see all its transactions."},
     {icon:"receipt",color:C.red,q:"How does History work?",a:"It's a full log of every transaction. Search across category names, notes and account names at once, filter by type or month, and swipe any row left to edit or delete it. Deleting a transaction instantly updates all balances."},
-    {icon:"hand",color:C.accent,q:"Can I reorder the home screen?",a:"Yes. Long-press and drag any account, budget or savings card to reorder it. To rearrange whole sections, use 'Customize Dashboard' to drag the sections (Accounts, Bills, Budgets…) into the order you like."},
+    {icon:"hand",color:C.accent,q:"Can I reorder the home screen?",a:"Yes. Long-press and drag any account, budget or savings card to reorder it. To rearrange whole sections, use 'Customize Dashboard' to drag the sections (Accounts, Bills, Budgets…) into the order you like, or tap the eye next to any section to hide or show it."},
     {icon:"sparkles",color:C.accent,q:"Can I customize categories?",a:"Yes — in Settings you can add, rename, recolor and delete both expense and income categories, each with its own hand-drawn icon to match the app's style."},
     {icon:"coins",color:C.yellow,q:"How do I change theme or currency?",a:"In Settings you can switch between Dark and Light mode, and change the display currency. Changing currency only changes the symbol shown — your actual numbers are never converted."},
     {icon:"lock",color:C.yellow,q:"How do I hide my balances?",a:"Tap the icon next to your total balance to toggle privacy mode — all amounts turn into dots so you can open the app safely in public."},
