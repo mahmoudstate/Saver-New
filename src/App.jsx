@@ -1241,7 +1241,7 @@ function EditTxnModal({txn,banks,expCats,incCats,currency,onSave,onClose}){
 }
 
 function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expCats,savings,filterMonth,setFilterMonth,availMonths,username,bankBalance,safeToSpend,frozenForBank,goalSaved,onDeleteTxn,onUpdateTxn,onOpenBank,onOpenGroup,onOpenSaving,onOpenBudget,hideTotal,setHideTotal,navigateTo,openMonthly,scrollState,setScrollState,onBanks,onBudgets,onSavings,onGroups}){
-  useEffect(()=>{if(scrollState.restore){setTimeout(()=>window.scrollTo(0,scrollState.y),50);setScrollState(s=>({...s,restore:false}));}else window.scrollTo(0,0);},[]);
+  useEffect(()=>{if(scrollState.restore){setTimeout(()=>window.scrollTo(0,scrollState.y),50);setScrollState(s=>({...s,restore:false}));}else{window.scrollTo(0,0);setFilterMonth(currentMonth());}},[]);
   const[viewTxn,setViewTxn]=useState(null);
   const[showCustomize,setShowCustomize]=useState(false);
   const[insightsType,setInsightsType]=useState(null);
@@ -1595,7 +1595,7 @@ function DeepLedgerView({title,headerType,headerData,txns,onDelete,onUpdate,bank
   const[filter,setFilter]=useState("all");const[confirmId,setConfirmId]=useState(null);const[editTxn,setEditTxn]=useState(null);const[viewTxn,setViewTxn]=useState(null);
   const[localAlert,setLocalAlert]=useState(null);
   useEffect(()=>{requestAnimationFrame(()=>window.scrollTo(0,0));},[title]);
-  const list=txns.filter(t=>{if(filter==="in")return t.type==="income";if(filter==="out")return t.type==="expense"||t.type==="saving"||t.type==="goal_withdraw";return true;});
+  const list=txns.filter(t=>{if(filter==="in")return t.type==="income";if(filter==="out")return t.type==="expense"||t.type==="saving"||t.type==="goal_withdraw";return true;}).sort((a,b)=>{const d=(b.date||"").localeCompare(a.date||"");return d!==0?d:((Number(b.id)||0)-(Number(a.id)||0));});
   const handleEditClick=(t)=>{
     if(t.splitGroupId){setLocalAlert({title:"Linked Transaction",message:"Cannot edit a split transaction. Please delete and recreate it.",color:C.yellow});return;}
     if(t.type==="goal_withdraw"||t.type==="goal_return"){setLocalAlert({title:"Action Not Allowed",message:"Goal spending and returns cannot be edited directly. Please delete and recreate.",color:C.orange});return;}
@@ -1813,7 +1813,7 @@ function History({txns,onDelete,onUpdate,banks,expCats,incCats,currency,availMon
     if(filterMonth!=="all"&&!t.date.startsWith(filterMonth))return false;
     if(search){const q=search.toLowerCase();return t.catName?.toLowerCase().includes(q)||t.note?.toLowerCase().includes(q)||t.bankName?.toLowerCase().includes(q)||t.goalName?.toLowerCase().includes(q);}
     return true;
-  }),[txns,filterType,filterMonth,search]);
+  }).sort((a,b)=>{const d=(b.date||"").localeCompare(a.date||"");return d!==0?d:((Number(b.id)||0)-(Number(a.id)||0));}),[txns,filterType,filterMonth,search]);
   const handleEditClick=(t)=>{
     const isTrulyLinked=t.splitGroupId&&splitCounts[t.splitGroupId]>1;
     if(isTrulyLinked){setAppAlert({title:"Linked Transaction",message:"Cannot edit a split transaction. Please delete and recreate it.",color:C.yellow});return;}
