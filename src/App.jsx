@@ -1036,7 +1036,7 @@ function SaverApp(){
           {ledgerBank&&<DeepLedgerView title={ledgerBank.name} headerType="bank" headerData={{balance:bankBalance(ledgerBank.id),safe:safeToSpend(ledgerBank.id),frozen:frozenForBank(ledgerBank.id)}} txns={txns.filter(t=>t.bankId===ledgerBank.id||t.fromBankId===ledgerBank.id||t.toBankId===ledgerBank.id)} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerBank(null)}/>}
           {ledgerGroup&&(()=>{const spent=txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerGroup.cats.includes(t.catId)).reduce((a,t)=>a+t.amount,0);return <DeepLedgerView title={ledgerGroup.name} headerType="group" headerData={{spent,color:ledgerGroup.color,glyph:ledgerGroup.glyph,name:ledgerGroup.name}} txns={txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerGroup.cats.includes(t.catId))} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerGroup(null)}/>;})()}
           {ledgerSaving&&(()=>{const saved=goalSaved(ledgerSaving.id);return <SavingDetailView goal={ledgerSaving} saved={saved} txns={txns} onDelete={delTxn} addTxn={addTxn} banks={banks} savings={savings} onSave={saveSavings} onGoalToast={setGoalToast} setAppAlert={setAppAlert} goalSaved={goalSaved} onClose={()=>setLedgerSaving(null)}/>;})()}
-          {ledgerBudget&&(()=>{const inB=t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerBudget.cats.includes(t.catId)&&t.date.startsWith(ledgerBudgetMonth);const spent=txns.filter(inB).reduce((a,t)=>a+t.amount,0);return <DeepLedgerView title={`${ledgerBudget.name} · ${MONTHS[+ledgerBudgetMonth.split("-")[1]-1]} ${ledgerBudgetMonth.split("-")[0]}`} headerType="budget" headerData={{spent,limit:ledgerBudget.amount}} txns={txns.filter(inB)} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerBudget(null)}/>;})()}
+          {ledgerBudget&&(()=>{const isProj=ledgerBudget.kind==="project";const inB=t=>(t.type==="expense"||t.type==="goal_withdraw")&&ledgerBudget.cats.includes(t.catId)&&(isProj?(!ledgerBudget.startMonth||t.date.slice(0,7)>=ledgerBudget.startMonth):t.date.startsWith(ledgerBudgetMonth));const spent=txns.filter(inB).reduce((a,t)=>a+t.amount,0);const title=isProj?`${ledgerBudget.name} · Total`:`${ledgerBudget.name} · ${MONTHS[+ledgerBudgetMonth.split("-")[1]-1]} ${ledgerBudgetMonth.split("-")[0]}`;return <DeepLedgerView title={title} headerType="budget" headerData={{spent,limit:ledgerBudget.amount}} txns={txns.filter(inB)} onDelete={delTxn} onUpdate={updateTxn} banks={banks} expCats={expCats} incCats={incCats} onClose={()=>setLedgerBudget(null)}/>;})()}
         </>
       )}
       {coachTour&&tab==="dashboard"&&!isSubPageActive&&<CoachTour onClose={()=>setCoachTour(false)}/>}
@@ -1451,10 +1451,10 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
           </Card>
         </div>;
       })();
-      if(section.id==="budgets"&&budgets.length>0)return(()=>{
+      if(section.id==="budgets"&&budgets.some(b=>b.kind!=="project"))return(()=>{
         const spentOf=(bd)=>txnsAll.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&bd.cats.includes(t.catId)&&t.date.startsWith(selMonth)).reduce((s,t)=>s+t.amount,0);
         // Only the budgets actually active in the selected month — same rule as the Budgets page
-        const active=budgets.filter(b=>b.repeat===false?b.startMonth===selMonth:(!b.startMonth||b.startMonth<=selMonth));
+        const active=budgets.filter(b=>b.kind!=="project"&&(b.repeat===false?b.startMonth===selMonth:(!b.startMonth||b.startMonth<=selMonth)));
         const limited=active.filter(b=>b.amount>0);
         const budTotal=limited.reduce((a,b)=>a+b.amount,0);
         const budSpent=limited.reduce((a,b)=>a+spentOf(b),0);
@@ -1930,20 +1930,36 @@ function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[],onOpenBudge
   const filterMonth=filterMonthProp??filterMonthLocal;
   const setFilterMonth=setFilterMonthProp||setFilterMonthLocal;
   const availMonths=[...new Set([curMonth,...txns.map(t=>t.date.slice(0,7))])].sort().reverse();
-  const[showAdd,setShowAdd]=useState(false);const[editId,setEditId]=useState(null);const[name,setName]=useState("");const[amount,setAmount]=useState("");const[selectedCats,setSelectedCats]=useState([]);const[confirmId,setConfirmId]=useState(null);const[startMonth,setStartMonth]=useState(curMonth);const[glyph,setGlyph]=useState("layers");const[color,setColor]=useState(CAT_PALETTE[0]);const[repeat,setRepeat]=useState(true);
-  const resetForm=()=>{setName("");setAmount("");setSelectedCats([]);setStartMonth(curMonth);setGlyph("layers");setColor(CAT_PALETTE[0]);setRepeat(true);};
-  const openNew=()=>{setEditId(null);resetForm();setShowAdd(true);};
-  const startEdit=(b)=>{setEditId(b.id);setName(b.name);setAmount(b.amount?String(b.amount):"");setSelectedCats(b.cats||[]);setStartMonth(b.startMonth||curMonth);setGlyph(b.glyph||"layers");setColor(b.color||CAT_PALETTE[0]);setRepeat(b.repeat!==false);setShowAdd(true);};
+  const[showAdd,setShowAdd]=useState(false);const[editId,setEditId]=useState(null);const[name,setName]=useState("");const[amount,setAmount]=useState("");const[selectedCats,setSelectedCats]=useState([]);const[confirmId,setConfirmId]=useState(null);const[startMonth,setStartMonth]=useState(curMonth);const[glyph,setGlyph]=useState("layers");const[color,setColor]=useState(CAT_PALETTE[0]);const[repeat,setRepeat]=useState(true);const[kind,setKind]=useState("monthly");const[showArchived,setShowArchived]=useState(false);const[budgetTab,setBudgetTab]=useState("monthly");
+  const resetForm=()=>{setName("");setAmount("");setSelectedCats([]);setStartMonth(curMonth);setGlyph("layers");setColor(CAT_PALETTE[0]);setRepeat(true);setKind("monthly");};
+  const openNew=()=>{setEditId(null);resetForm();setKind(budgetTab==="projects"?"project":"monthly");setShowAdd(true);};
+  const startEdit=(b)=>{setEditId(b.id);setName(b.name);setAmount(b.amount?String(b.amount):"");setSelectedCats(b.cats||[]);setStartMonth(b.startMonth||curMonth);setGlyph(b.glyph||"layers");setColor(b.color||CAT_PALETTE[0]);setRepeat(b.repeat!==false);setKind(b.kind==="project"?"project":"monthly");setShowAdd(true);};
   const handleAdd=async()=>{
     if(!name||selectedCats.length===0)return;
     const pa=amount?parseFloat(amount):0;const sm=startMonth||curMonth;
-    if(editId)await onSave(budgets.map(b=>b.id===editId?{...b,name,amount:pa,cats:selectedCats,startMonth:sm,glyph,color,repeat}:b));
-    else await onSave([...budgets,{id:Date.now().toString(),name,amount:pa,cats:selectedCats,startMonth:sm,glyph,color,repeat}]);
+    const base={name,amount:pa,cats:selectedCats,startMonth:sm,glyph,color,repeat:kind==="project"?false:repeat,kind};
+    if(editId)await onSave(budgets.map(b=>b.id===editId?{...b,...base}:b));
+    else await onSave([...budgets,{id:Date.now().toString(),...base,...(kind==="project"?{status:"active"}:{})}]);
     setShowAdd(false);setEditId(null);resetForm();
   };
+  const setProjStatus=async(p,status)=>{await onSave(budgets.map(b=>b.id===p.id?{...b,status}:b));HAPTICS.success();};
   const now2=new Date(),daysLeft=Math.max(1,new Date(now2.getFullYear(),now2.getMonth()+1,0).getDate()-now2.getDate()+1);
   const isAll=filterMonth==="all",refMonth=isAll?curMonth:filterMonth,isCurrent=refMonth===curMonth;
-  const displayBudgets=isAll?budgets:budgets.filter(b=>b.repeat===false?b.startMonth===filterMonth:(!b.startMonth||b.startMonth<=filterMonth));
+  // Projects accumulate across all months and ignore the month filter; monthly budgets reset each month.
+  const monthlyBudgets=budgets.filter(b=>b.kind!=="project");
+  const projects=budgets.filter(b=>b.kind==="project");
+  const activeProjects=projects.filter(p=>p.status!=="archived");
+  const archivedProjects=projects.filter(p=>p.status==="archived");
+  const projTxns=(b)=>txns.filter(t=>(t.type==="expense"||t.type==="goal_withdraw")&&b.cats.includes(t.catId)&&(!b.startMonth||t.date.slice(0,7)>=b.startMonth));
+  const projStat=(b)=>{
+    const ts=projTxns(b),spent=ts.reduce((a,t)=>a+t.amount,0),ms=ts.map(t=>t.date.slice(0,7));
+    const span=ms.length?{min:ms.reduce((a,m)=>m<a?m:a),max:ms.reduce((a,m)=>m>a?m:a),count:new Set(ms).size}:null;
+    const hasTarget=b.amount>0,pct=hasTarget?Math.min(100,Math.round(spent/b.amount*100)):0,over=hasTarget&&spent>b.amount;
+    const col=!hasTarget?C.blue:over?C.red:pct>=80?C.yellow:C.accent;
+    return {spent,span,hasTarget,pct,over,col};
+  };
+  const spanLabel=(span)=>{if(!span)return "No spending yet";const a=mLabel(span.min),b=mLabel(span.max);const yr=span.max.split("-")[0];return span.min===span.max?`${a} ${yr}`:`${a}–${b} · ${span.count} month${span.count!==1?"s":""}`;};
+  const displayBudgets=isAll?monthlyBudgets:monthlyBudgets.filter(b=>b.repeat===false?b.startMonth===filterMonth:(!b.startMonth||b.startMonth<=filterMonth));
   const monthBack=(base,n)=>{const[y,m]=base.split("-").map(Number);const d=new Date(y,m-1-n,1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;};
   const trendMonths=[5,4,3,2,1,0].map(n=>monthBack(refMonth,n));
   const mLabel=(m)=>MONTHS[+m.split("-")[1]-1].slice(0,3);
@@ -1982,10 +1998,11 @@ function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[],onOpenBudge
     const lbl={color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:8,display:"block"};
     const hint={color:C.faint,fontSize:11.5,marginTop:6,lineHeight:1.4};
     const valid=name.trim()&&selectedCats.length>0;
-    return <FullPage title={editId?"Edit Budget":"New Budget"} onBack={()=>{setShowAdd(false);setEditId(null);}}>
+    const isProj=kind==="project";
+    return <FullPage title={isProj?(editId?"Edit Project":"New Project"):(editId?"Edit Budget":"New Budget")} onBack={()=>{setShowAdd(false);setEditId(null);}}>
       <div style={{padding:"4px 16px 48px"}}>
         <div style={{display:"flex",justifyContent:"center",marginBottom:22}}><CatIcon glyph={glyph} color={color} name={name} size={84} style={{borderRadius:24}}/></div>
-        <div style={{marginBottom:20}}><label style={lbl}>Budget name</label><input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Dining & Coffee" style={{...is,borderRadius:14}}/><div style={hint}>A group of spending you want to keep an eye on — e.g. eating out, transport, shopping.</div></div>
+        <div style={{marginBottom:20}}><label style={lbl}>{isProj?"Project name":"Budget name"}</label><input value={name} onChange={e=>setName(e.target.value)} placeholder={isProj?"e.g. Visa Papers":"e.g. Dining & Coffee"} style={{...is,borderRadius:14}}/><div style={hint}>{isProj?"A one-off thing whose total cost you want to track across however many months it takes.":"A group of spending you want to keep an eye on — e.g. eating out, transport, shopping."}</div></div>
         <div style={{marginBottom:20}}>
           <label style={lbl}>Icon</label>
           <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:8,maxHeight:150,overflowY:"auto",padding:4,background:C.bg,borderRadius:10,border:`1px solid ${C.border}`}}>
@@ -2000,14 +2017,14 @@ function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[],onOpenBudge
           </div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:6}}>
-          <div><label style={lbl}>Monthly limit</label><input type="number" step="any" inputMode="decimal" placeholder="No limit" value={amount} onChange={e=>setAmount(e.target.value)} style={{...is,borderRadius:14}}/></div>
-          <div><label style={lbl}>{repeat?"Starts from":"Month"}</label><input type="month" value={startMonth} onChange={e=>setStartMonth(e.target.value)} style={{...is,borderRadius:14,colorScheme:C.isDark?"dark":"light"}}/></div>
+          <div><label style={lbl}>{isProj?"Total budget":"Monthly limit"}</label><input type="number" step="any" inputMode="decimal" placeholder={isProj?"Optional":"No limit"} value={amount} onChange={e=>setAmount(e.target.value)} style={{...is,borderRadius:14}}/></div>
+          <div><label style={lbl}>{isProj?"Started":repeat?"Starts from":"Month"}</label><input type="month" value={startMonth} onChange={e=>setStartMonth(e.target.value)} style={{...is,borderRadius:14,colorScheme:C.isDark?"dark":"light"}}/></div>
         </div>
-        <div style={{...hint,marginBottom:20}}>The most you want to spend per month. Leave empty to just track spending with no limit.</div>
-        <div onClick={()=>setRepeat(!repeat)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:C.bg,border:`1px solid ${C.border}`,borderRadius:12,cursor:"pointer",marginBottom:20}}>
+        <div style={{...hint,marginBottom:20}}>{isProj?"The total you expect this to cost overall. Leave empty to just add up the spending with no target. Spending counts from the start month onward.":"The most you want to spend per month. Leave empty to just track spending with no limit."}</div>
+        {!isProj&&<div onClick={()=>setRepeat(!repeat)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:C.bg,border:`1px solid ${C.border}`,borderRadius:12,cursor:"pointer",marginBottom:20}}>
           <div style={{flex:1}}><div style={{color:C.text,fontSize:14,fontWeight:700}}>Repeat every month</div><div style={{color:C.muted,fontSize:11,marginTop:2}}>{repeat?"Active every month from the start month":"Applies to the selected month only"}</div></div>
           <div style={{width:46,height:27,borderRadius:99,background:repeat?C.accent:C.border,position:"relative",transition:"background .2s",flexShrink:0}}><div style={{position:"absolute",top:3,left:repeat?22:3,width:21,height:21,borderRadius:99,background:"#fff",transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/></div>
-        </div>
+        </div>}
         <div style={{marginBottom:24}}>
           <label style={lbl}>Categories</label>
           <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:220,overflow:"auto",background:C.bg,padding:10,borderRadius:10,border:`1px solid ${C.border}`}}>
@@ -2015,23 +2032,28 @@ function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[],onOpenBudge
             <div style={{display:"flex",alignItems:"center",gap:8,margin:"6px 0 2px"}}><div style={{flex:1,height:1,background:C.border}}/><span style={{color:C.muted,fontSize:10,fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}>Bills</span><div style={{flex:1,height:1,background:C.border}}/></div>
             {BILL_TYPES.map(t=>{const id="bill_"+t.id;const checked=selectedCats.includes(id);return <label key={id} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"5px 0",userSelect:"none"}}><div onClick={()=>setSelectedCats(checked?selectedCats.filter(x=>x!==id):[...selectedCats,id])} style={{width:18,height:18,borderRadius:4,border:`2px solid ${checked?C.accent:C.faint}`,background:checked?C.accentDim:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{checked&&<Ico name="check" size={13} color={C.accent} stroke={3}/>}</div><CatIcon glyph={t.glyph} color={t.color} name={t.name} size={22}/><span style={{color:C.text,fontSize:14}}>{t.name}</span></label>;})}
           </div>
-          <div style={hint}>Spending in the categories you tick counts toward this budget.</div>
+          <div style={hint}>Spending in the categories you tick counts toward this {isProj?"project":"budget"}.</div>
         </div>
-        <Btn full onClick={handleAdd} style={{opacity:valid?1:0.5,pointerEvents:valid?"auto":"none",borderRadius:14,padding:"15px"}}>{editId?"Save changes":"Add budget"}</Btn>
+        <Btn full onClick={handleAdd} style={{opacity:valid?1:0.5,pointerEvents:valid?"auto":"none",borderRadius:14,padding:"15px"}}>{editId?"Save changes":(isProj?"Add project":"Add budget")}</Btn>
       </div>
     </FullPage>;
   }
 
   return <div style={{padding:"24px 16px 130px",minHeight:"100vh",background:C.bg,boxSizing:"border-box"}}>
-    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:18}}>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
       <button onClick={onBack} style={{background:"transparent",border:"none",color:C.muted,fontSize:22,cursor:"pointer",padding:"10px 15px 10px 0",display:"flex",alignItems:"center"}}><Ico name="chevR" size={20} color="currentColor" style={{transform:"rotate(180deg)"}}/></button>
-      <div style={{color:C.text,fontSize:22,fontWeight:800}}>Budgets</div>
+      <div style={{color:C.text,fontSize:22,fontWeight:800}}>Budgets &amp; Projects</div>
     </div>
-    <Btn full onClick={openNew} color={C.accent} style={{marginBottom:16,borderRadius:14,padding:"15px"}}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8}}><Ico name="plus" size={18} color="#111" stroke={2.5}/>Add budget</span></Btn>
-    {budgets.length>0&&<div style={{marginBottom:16}}><MonthSelect value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} availMonths={availMonths} allowAll={false}/></div>}
-    {budgets.length===0&&<EmptyState glyph="layers" message="Create a budget to start tracking your spending."/>}
+    <div style={{display:"flex",gap:8,marginBottom:18}}>
+      {[{id:"monthly",icon:"layers",label:"Monthly"},{id:"projects",icon:"target",label:"Projects"}].map(t=><button key={t.id} onClick={()=>setBudgetTab(t.id)} style={{flex:1,padding:"11px 0",borderRadius:12,border:`1.5px solid ${budgetTab===t.id?C.accent:C.border}`,background:budgetTab===t.id?C.accentDim:"transparent",color:budgetTab===t.id?C.accent:C.muted,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:7}}><Ico name={t.icon} size={15} color={budgetTab===t.id?C.accent:C.muted}/>{t.label}{t.id==="projects"&&activeProjects.length>0?` (${activeProjects.length})`:""}</button>)}
+    </div>
+    <Btn full onClick={openNew} color={C.accent} style={{marginBottom:16,borderRadius:14,padding:"15px"}}><span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8}}><Ico name="plus" size={18} color="#111" stroke={2.5}/>{budgetTab==="projects"?"Add project":"Add budget"}</span></Btn>
 
-    {budgets.length>0&&<>
+    {budgetTab==="monthly"&&<>
+    {monthlyBudgets.length>0&&<div style={{marginBottom:16}}><MonthSelect value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} availMonths={availMonths} allowAll={false}/></div>}
+    {monthlyBudgets.length===0&&<EmptyState glyph="layers" message="No monthly budgets yet. Tap Add budget to set a monthly spending limit."/>}
+
+    {monthlyBudgets.length>0&&<>
       {/* Hero summary */}
       {totalLimit>0?(
         <Card style={{padding:"18px",marginBottom:14,display:"flex",alignItems:"center",gap:20}}>
@@ -2093,7 +2115,43 @@ function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[],onOpenBudge
         }}/>
       </div>
     </>}
-    {confirmId&&<ConfirmModal title="Delete Budget?" message="This removes the limit tracking without deleting any transactions." onClose={()=>setConfirmId(null)} onConfirm={async()=>{await onSave(budgets.filter(b=>b.id!==confirmId));setConfirmId(null);}}/>}
+    </>}
+
+    {budgetTab==="projects"&&<>
+      {activeProjects.length===0&&archivedProjects.length===0&&<EmptyState glyph="target" message="No projects yet. A project adds up the total cost of something across however many months it runs — like papers, a trip, or a repair."/>}
+      {activeProjects.map(p=>{
+        const ps=projStat(p);
+        return <SwipeRow key={p.id} onEdit={()=>startEdit(p)} onDelete={()=>setConfirmId(p.id)}>
+          <div onClick={()=>onOpenBudget&&onOpenBudget(p,"all")} className="ic" style={{padding:"16px",background:C.card,border:`1px solid ${C.border}`,borderLeft:`4px solid ${ps.col}`,borderRadius:14,cursor:"pointer",transition:"transform 0.1s ease"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+              <CatIcon glyph={p.glyph} color={p.color} name={p.name} size={34}/>
+              <div style={{flex:1,minWidth:0}}><div style={{color:C.text,fontSize:15,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div><div style={{color:C.muted,fontSize:10.5,fontWeight:600}}>{spanLabel(ps.span)}</div></div>
+              <Pill color={C.purple}>Project</Pill>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:ps.hasTarget?9:12}}>
+              <div style={{color:ps.col,fontSize:22,fontWeight:800,letterSpacing:-0.5}}>{fmt(ps.spent)}</div>
+              {ps.hasTarget&&<span style={{color:C.muted,fontSize:12,fontWeight:600}}>of {fmt(p.amount)}</span>}
+            </div>
+            {ps.hasTarget&&<><ProgressBar value={ps.spent} max={p.amount} color={ps.col}/>
+              <div style={{display:"flex",justifyContent:"space-between",marginTop:8,color:C.muted,fontSize:11}}>
+                <span>{ps.over?<span style={{color:C.red,fontWeight:700}}>{fmt(ps.spent-p.amount)} over</span>:<span><span style={{color:C.accent,fontWeight:700}}>{fmt(p.amount-ps.spent)}</span> left</span>}</span>
+              </div></>}
+            <button onClick={e=>{e.stopPropagation();setProjStatus(p,"archived");}} style={{marginTop:13,width:"100%",height:38,borderRadius:10,background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontWeight:700,fontSize:12.5,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6}}><Ico name="checkCircle" size={14} color={C.accent}/>Mark complete</button>
+          </div>
+        </SwipeRow>;
+      })}
+      {archivedProjects.length>0&&<div style={{marginTop:8}}>
+        <button onClick={()=>setShowArchived(!showArchived)} style={{background:"transparent",border:"none",color:C.muted,fontSize:12,fontWeight:700,cursor:"pointer",padding:"8px 0",display:"inline-flex",alignItems:"center",gap:6,fontFamily:"'DM Sans', sans-serif"}}><Ico name="archive" size={14} color={C.muted}/>Completed ({archivedProjects.length})<Ico name="chevR" size={13} color={C.muted} style={{transform:showArchived?"rotate(90deg)":"none",transition:"transform .2s"}}/></button>
+        {showArchived&&<div style={{marginTop:6}}>{archivedProjects.map(p=>{const ps=projStat(p);return <div key={p.id} onClick={()=>onOpenBudget&&onOpenBudget(p,"all")} className="ic" style={{padding:"14px",background:C.card,border:`1px solid ${C.border}`,borderRadius:14,marginBottom:8,cursor:"pointer",opacity:0.9}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <CatIcon glyph={p.glyph} color={p.color} name={p.name} size={30}/>
+            <div style={{flex:1,minWidth:0}}><div style={{color:C.text,fontSize:14,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div><div style={{color:C.muted,fontSize:10.5}}>{spanLabel(ps.span)} · total {fmt(ps.spent)}</div></div>
+            <button onClick={e=>{e.stopPropagation();setProjStatus(p,"active");}} style={{background:C.accentDim,border:`1px solid ${C.accent}`,color:C.accent,borderRadius:9,padding:"7px 12px",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",flexShrink:0}}>Reopen</button>
+          </div>
+        </div>;})}</div>}
+      </div>}
+    </>}
+    {confirmId&&(()=>{const di=budgets.find(b=>b.id===confirmId);const proj=di?.kind==="project";return <ConfirmModal title={proj?"Delete Project?":"Delete Budget?"} message={proj?"This removes the project. None of your transactions are deleted.":"This removes the limit tracking without deleting any transactions."} onClose={()=>setConfirmId(null)} onConfirm={async()=>{await onSave(budgets.filter(b=>b.id!==confirmId));setConfirmId(null);}}/>;})()}
   </div>;
 }
 
