@@ -546,24 +546,42 @@ function AppFooter({navigateTo,onPrivacyClick}){
 }
 
 let globalActiveSwipeClose = null;
+let globalActiveSwipeEl = null;
+// Install once: tapping anywhere outside the open swipe row closes it and swallows that tap,
+// so the tap that dismisses an open row never also activates whatever was underneath it.
+let swipeDismissInstalled = false;
+function installSwipeDismiss(){
+  if(swipeDismissInstalled||typeof document==="undefined")return;
+  swipeDismissInstalled=true;
+  document.addEventListener("pointerdown",(e)=>{
+    if(!globalActiveSwipeClose)return;
+    if(globalActiveSwipeEl&&globalActiveSwipeEl.contains(e.target))return; // tapped the open row or its actions
+    globalActiveSwipeClose();
+    const swallow=(ev)=>{ev.preventDefault();ev.stopPropagation();cleanup();};
+    const cleanup=()=>{document.removeEventListener("click",swallow,true);clearTimeout(tid);};
+    const tid=setTimeout(cleanup,500);
+    document.addEventListener("click",swallow,true);
+  },true);
+}
 function SwipeRow({onEdit,onDelete,children}){
   const [slide,setSlide]=useState(0);
-  const rowRef=useRef(null),startX=useRef(0),startY=useRef(0),currentX=useRef(0);
+  const rowRef=useRef(null),containerRef=useRef(null),startX=useRef(0),startY=useRef(0),currentX=useRef(0);
   const isH=useRef(false),isV=useRef(false),slideRef=useRef(0);
   const close=useCallback(()=>{
     setSlide(0);slideRef.current=0;currentX.current=0;
     if(rowRef.current){rowRef.current.style.transform="translateX(0px)";rowRef.current.style.transition="transform 0.4s cubic-bezier(0.175,0.885,0.32,1.15)";}
-    if(globalActiveSwipeClose===close)globalActiveSwipeClose=null;
+    if(globalActiveSwipeClose===close){globalActiveSwipeClose=null;globalActiveSwipeEl=null;}
   },[]);
   useEffect(()=>{
+    installSwipeDismiss();
     const el=rowRef.current;if(!el)return;
     const s=(e)=>{if(globalActiveSwipeClose&&globalActiveSwipeClose!==close)globalActiveSwipeClose();startX.current=e.touches[0].clientX;startY.current=e.touches[0].clientY;currentX.current=slideRef.current;isH.current=false;isV.current=false;el.style.transition="none";};
     const m=(e)=>{if(isV.current)return;const dx=e.touches[0].clientX-startX.current,dy=Math.abs(e.touches[0].clientY-startY.current);if(!isH.current){if(dy>Math.abs(dx)&&dy>3){isV.current=true;return;}if(Math.abs(dx)>10&&Math.abs(dx)>dy)isH.current=true;}if(isH.current){e.preventDefault();let t=currentX.current+dx;if(t<-95)t=-95;if(t>95)t=95;el.style.transform=`translateX(${t}px)`;setSlide(t);slideRef.current=t;}};
-    const en=()=>{if(isV.current)return;el.style.transition="transform 0.4s cubic-bezier(0.175,0.885,0.32,1.15)";const sv=slideRef.current;if(sv<-35){setSlide(-85);slideRef.current=-85;currentX.current=-85;el.style.transform="translateX(-85px)";HAPTICS.light();globalActiveSwipeClose=close;}else if(sv>35){setSlide(85);slideRef.current=85;currentX.current=85;el.style.transform="translateX(85px)";HAPTICS.light();globalActiveSwipeClose=close;}else{setSlide(0);slideRef.current=0;currentX.current=0;el.style.transform="translateX(0px)";if(globalActiveSwipeClose===close)globalActiveSwipeClose=null;}};
+    const en=()=>{if(isV.current)return;el.style.transition="transform 0.4s cubic-bezier(0.175,0.885,0.32,1.15)";const sv=slideRef.current;if(sv<-35){setSlide(-85);slideRef.current=-85;currentX.current=-85;el.style.transform="translateX(-85px)";HAPTICS.light();globalActiveSwipeClose=close;globalActiveSwipeEl=containerRef.current;}else if(sv>35){setSlide(85);slideRef.current=85;currentX.current=85;el.style.transform="translateX(85px)";HAPTICS.light();globalActiveSwipeClose=close;globalActiveSwipeEl=containerRef.current;}else{setSlide(0);slideRef.current=0;currentX.current=0;el.style.transform="translateX(0px)";if(globalActiveSwipeClose===close)globalActiveSwipeClose=null;}};
     el.addEventListener("touchstart",s,{passive:false});el.addEventListener("touchmove",m,{passive:false});el.addEventListener("touchend",en);
     return()=>{el.removeEventListener("touchstart",s);el.removeEventListener("touchmove",m);el.removeEventListener("touchend",en);};
   },[close]);
-  return <div style={{position:"relative",overflow:"hidden",borderRadius:12,marginBottom:8,userSelect:"none",WebkitUserSelect:"none"}}>
+  return <div ref={containerRef} style={{position:"relative",overflow:"hidden",borderRadius:12,marginBottom:8,userSelect:"none",WebkitUserSelect:"none"}}>
     <div style={{position:"absolute",inset:0,display:"flex",justifyContent:"space-between",zIndex:0}}>
       <button onClick={()=>{close();onEdit&&onEdit();}} style={{width:85,background:C.blueDim,border:"none",color:C.blue,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><Ico name="pencil" size={14}/>Edit</span></button>
       <button onClick={()=>{close();onDelete&&onDelete();}} style={{width:85,background:C.redDim,border:"none",color:C.red,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans', sans-serif"}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><Ico name="trash" size={14}/>Delete</span></button>
@@ -1997,7 +2015,7 @@ function BudgetsPage({budgets,expCats,onSave,onBack,currency,txns=[],onOpenBudge
           </div>
           <div style={hint}>Spending in the categories you tick counts toward this budget.</div>
         </div>
-        <Btn full onClick={handleAdd} color={color} style={{opacity:valid?1:0.5,pointerEvents:valid?"auto":"none",borderRadius:14,padding:"15px"}}>{editId?"Save changes":"Add budget"}</Btn>
+        <Btn full onClick={handleAdd} style={{opacity:valid?1:0.5,pointerEvents:valid?"auto":"none",borderRadius:14,padding:"15px"}}>{editId?"Save changes":"Add budget"}</Btn>
       </div>
     </FullPage>;
   }
@@ -2371,7 +2389,7 @@ function SubscriptionsTab({bills,onSave,banks,expCats,onAddTxn,delTxn,currency,s
           <label style={lblStyle}>Note (optional)</label>
           <input value={f.note} onChange={e=>setF("note",e.target.value)} placeholder="e.g. Family plan" style={{...is,borderRadius:14}}/>
         </div>
-        <Btn full onClick={handleSave} color={accent} style={{opacity:valid?1:0.5,pointerEvents:valid?"auto":"none",borderRadius:14,padding:"15px"}}>{f.editId?"Save Changes":"Add Subscription"}</Btn>
+        <Btn full onClick={handleSave} style={{opacity:valid?1:0.5,pointerEvents:valid?"auto":"none",borderRadius:14,padding:"15px"}}>{f.editId?"Save Changes":"Add Subscription"}</Btn>
       </div>
     </FullPage>;
   }
@@ -2843,7 +2861,7 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,d
         <div style={{padding:"4px 16px 48px"}}>
           {logoPreview(72)}
           {colorField}{itemField}{companyField}{countAmountFields}{totalField}{downPaymentField}{paidInitField}{bankPicker}{dueReminderFields}{startDateField}{noteField}
-          <Btn full onClick={handleSave} color={accent} style={{opacity:valid?1:0.5,pointerEvents:valid?"auto":"none",borderRadius:14,padding:"15px"}}>Save Changes</Btn>
+          <Btn full onClick={handleSave} style={{opacity:valid?1:0.5,pointerEvents:valid?"auto":"none",borderRadius:14,padding:"15px"}}>Save Changes</Btn>
         </div>
       </FullPage>;
     }
@@ -2878,7 +2896,7 @@ function InstallmentsTab({installments,onSave,banks,expCats,onAddTxn,onAddTxns,d
         <div style={{display:"flex",gap:12,marginTop:28}}>
           {wizStep>0&&<Btn outline onClick={goBack} color={accent} style={{borderRadius:14,padding:"15px 22px",flexShrink:0}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><Ico name="chevR" size={15} color={accent} style={{transform:"rotate(180deg)"}}/>Back</span></Btn>}
           {isLast
-            ? <Btn onClick={handleSave} color={accent} style={{flex:1,opacity:valid?1:0.5,pointerEvents:valid?"auto":"none",borderRadius:14,padding:"15px"}}><span style={{display:"inline-flex",alignItems:"center",gap:7}}><Ico name="plus" size={16} color="#111" stroke={2.5}/>Add Installment</span></Btn>
+            ? <Btn onClick={handleSave} style={{flex:1,opacity:valid?1:0.5,pointerEvents:valid?"auto":"none",borderRadius:14,padding:"15px"}}><span style={{display:"inline-flex",alignItems:"center",gap:7}}><Ico name="plus" size={16} color="#111" stroke={2.5}/>Add Installment</span></Btn>
             : <Btn onClick={goNext} color={accent} style={{flex:1,opacity:cur.ok?1:0.5,pointerEvents:cur.ok?"auto":"none",borderRadius:14,padding:"15px"}}><span style={{display:"inline-flex",alignItems:"center",gap:7}}>Next<Ico name="chevR" size={16} color="#111" stroke={2.5}/></span></Btn>}
         </div>
       </div>
