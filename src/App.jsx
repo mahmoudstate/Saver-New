@@ -753,6 +753,8 @@ function SaverApp(){
   const[showSplash,setShowSplash]=useState(true);
   const[hasSeenWelcome,setHasSeenWelcome]=useState(true);
   const[filterMonth,setFilterMonth]=useState(currentMonth());
+  // Returning to the app after it sat in the background counts as a fresh start: snap the home month filter back to the current month.
+  useEffect(()=>{const onVis=()=>{if(document.visibilityState==="visible")setFilterMonth(currentMonth());};document.addEventListener("visibilitychange",onVis);return()=>document.removeEventListener("visibilitychange",onVis);},[]);
   const[currency,setCurrencyState]=useState("EGP");
   const[theme,setThemeState]=useState("dark");
   useEffect(()=>{ setCurrencyGlobal(currency); },[currency]);
