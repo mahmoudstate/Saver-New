@@ -1183,35 +1183,37 @@ function TxnViewModal({txn,onClose}){
   const isInc=txn.type==="income";
   const isTrans=txn.type==="transfer";
   const isSav=txn.type==="saving";
-  const roStyle={width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px",color:C.text,fontSize:13,display:"flex",alignItems:"center",minHeight:36,boxSizing:"border-box"};
-  const Field=({label,children})=>(
-    <div>
-      <div style={{color:C.muted,fontSize:10,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:4}}>{label}</div>
-      <div style={roStyle}>{children}</div>
-    </div>
-  );
+  const special=isTrans||isSav||txn.type==="goal_withdraw"||txn.type==="goal_return";
+  const amtColor=isExp?C.red:isInc?C.accent:isTrans?C.blue:C.yellow;
+  const sign=isExp?"−":isInc?"+":"";
+  const specIcon=isTrans?"swap":isSav?"target":txn.type==="goal_withdraw"?"card":"bank";
+  const title=isTrans?"Transfer":isSav?"Goal Deposit":txn.type==="goal_withdraw"?"Goal Spending":txn.type==="goal_return"?"Returned to Bank":(txn.catName||"Transaction");
   const d=new Date(txn.date+"T12:00:00");
-  const shortDate=`${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  const wd=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getDay()];
+  const longDate=`${wd}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  const rows=[];
+  if(isTrans){rows.push(["From",txn.bankName]);rows.push(["To",txn.toBankName]);}
+  else rows.push(["Account",txn.bankName]);
+  if(txn.goalName)rows.push([isSav?"To goal":"From goal",txn.goalName]);
+  if(txn.splitGroupId)rows.push(["Linked","#"+txn.splitGroupId.slice(-3)]);
+  rows.push(["Note",txn.note]);
   return (
-    <Modal title="Transaction Details" onClose={onClose} center={false}>
-      <div style={{display:"flex",flexDirection:"column",gap:12}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-          <Field label="Amount"><span style={{color:isExp?C.red:isInc?C.accent:isTrans?C.blue:C.yellow,fontWeight:700}}>{isExp?"−":isInc?"+":" "}{fmt(txn.amount)}</span></Field>
-          <Field label="Date">{shortDate}</Field>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-          <Field label={isTrans?"Transfer":"Account"}><span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{isTrans?`${txn.bankName} ➔ ${txn.toBankName}`:txn.bankName}</span></Field>
-          <Field label={isTrans?"Type":"Category"}><span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{isTrans?<span style={{display:"inline-flex",alignItems:"center",gap:6}}><Ico name="swap" size={16}/>Transfer</span>:isSav?<span style={{display:"inline-flex",alignItems:"center",gap:6}}><Ico name="target" size={16}/>Goal Deposit</span>:txn.type==="goal_withdraw"?<span style={{display:"inline-flex",alignItems:"center",gap:6}}><Ico name="card" size={16}/>Goal Spending</span>:txn.type==="goal_return"?<span style={{display:"inline-flex",alignItems:"center",gap:6}}><Ico name="bank" size={16}/>Return to Bank</span>:<><CatIcon glyph={txn.catGlyph} emoji={txn.catEmoji} icon={txn.catIcon} color={txn.catColor} name={txn.catName} size={18} style={{display:"inline-flex",verticalAlign:"-4px",marginRight:6}}/>{txn.catName}</>}</span></Field>
-        </div>
-        {(txn.goalName||txn.splitGroupId)&&(
-          <div style={{display:"grid",gridTemplateColumns:txn.goalName&&txn.splitGroupId?"1fr 1fr":"1fr",gap:10}}>
-            {txn.goalName&&<Field label="Related Goal"><span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}><Ico name="target" size={14} style={{verticalAlign:"-2px",marginRight:5}}/>{txn.goalName}</span></Field>}
-            {txn.splitGroupId&&<Field label="Linked Txn">#{txn.splitGroupId.slice(-3)}</Field>}
-          </div>
-        )}
-        <Field label="Note"><span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{txn.note||<span style={{color:C.faint}}>No note</span>}</span></Field>
+    <Modal title="Transaction" onClose={onClose} center={false}>
+      <div style={{display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center",marginBottom:18}}>
+        {special
+          ?<div style={{width:62,height:62,borderRadius:18,background:amtColor+"22",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:12}}><Ico name={specIcon} size={30} color={amtColor}/></div>
+          :<CatIcon glyph={txn.catGlyph} emoji={txn.catEmoji} icon={txn.catIcon} color={txn.catColor} name={txn.catName} size={62} style={{borderRadius:18,marginBottom:12}}/>}
+        <div style={{color:C.text,fontSize:16,fontWeight:700,marginBottom:6,maxWidth:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{title}</div>
+        <div style={{color:amtColor,fontSize:34,fontWeight:800,letterSpacing:-1}}>{sign}{fmt(txn.amount)}</div>
+        <div style={{color:C.muted,fontSize:12.5,fontWeight:600,marginTop:7}}>{longDate}</div>
       </div>
-      <Btn full onClick={onClose} style={{marginTop:16}}>Close</Btn>
+      <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"2px 16px",marginBottom:18}}>
+        {rows.map(([label,value],i)=><div key={label+i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,padding:"13px 0",borderBottom:i===rows.length-1?"none":`1px solid ${C.border}`}}>
+          <span style={{color:C.muted,fontSize:13,fontWeight:600,flexShrink:0}}>{label}</span>
+          <span style={{color:value?C.text:C.faint,fontSize:14,fontWeight:700,maxWidth:"64%",textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{value||"—"}</span>
+        </div>)}
+      </div>
+      <Btn full onClick={onClose}>Close</Btn>
     </Modal>
   );
 }
@@ -1224,7 +1226,7 @@ function EditTxnModal({txn,banks,expCats,incCats,currency,onSave,onClose}){
   const[note,setNote]=useState(txn.note||"");
   const cats=txn.type==="expense"?expCats:txn.type==="income"?incCats:[];
   const isSav=txn.type==="saving";
-  const is=getIS();
+  const pf={width:"100%",background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"11px 12px",color:C.text,fontSize:15,fontWeight:600,boxSizing:"border-box",fontFamily:"'DM Sans', sans-serif"};
   const handleSave=async()=>{
     const p=parseFloat(amount);if(!amount||isNaN(p)||p<=0)return;
     const bank=banks.find(b=>b.id===bankId);const cat=cats.find(c=>c.id===catId);
@@ -1233,11 +1235,15 @@ function EditTxnModal({txn,banks,expCats,incCats,currency,onSave,onClose}){
   return <Modal title="Edit Transaction" onClose={onClose} center={false}>
     <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Amount</div><Input type="number" step="any" value={amount} onChange={e=>setAmount(e.target.value)}/></div>
     <div style={{marginBottom:14}}><div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Date</div><Input type="date" value={date} onChange={e=>setDate(e.target.value)}/></div>
-    <div style={{opacity:isSav?0.6:1,pointerEvents:isSav?"none":"auto",marginBottom:isSav?4:0}}>
-      <Select label="Account" value={bankId} onChange={e=>setBankId(e.target.value)}>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</Select>
+    <div style={{opacity:isSav?0.6:1,pointerEvents:isSav?"none":"auto",marginBottom:isSav?4:14}}>
+      <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Account</div>
+      <PickerField options={banks.map(b=>({value:b.id,label:b.name,icon:<BankIcon bank={b} size={26}/>}))} value={bankId} onChange={setBankId} title="Account" placeholder="Select account" fieldStyle={pf}/>
     </div>
     {isSav&&<div style={{color:C.orange,fontSize:11,marginBottom:14,fontWeight:600,lineHeight:1.4}}>To change the account, please delete this transaction and create a new one.</div>}
-    {cats.length>0&&<Select label="Category" value={catId} onChange={e=>setCatId(e.target.value)}>{cats.map(c=><option key={c.id} value={c.id}>{c.emoji||ICONS[c.icon]||"•"} {c.name}</option>)}</Select>}
+    {cats.length>0&&<div style={{marginBottom:14}}>
+      <div style={{color:C.muted,fontSize:11,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:6}}>Category</div>
+      <PickerField options={cats.map(c=>({value:c.id,label:c.name,icon:<CatIcon cat={c} size={26}/>}))} value={catId} onChange={setCatId} title="Category" placeholder="Select category" fieldStyle={pf}/>
+    </div>}
     <Input label="Note (optional)" value={note} onChange={e=>setNote(e.target.value)}/>
     <Btn full onClick={handleSave}>Save Changes</Btn>
   </Modal>;
