@@ -42,7 +42,7 @@ const CURRENCIES = [
   {code:"USD",name:"US Dollar",flag:"🇺🇸"},{code:"EUR",name:"Euro",flag:"🇪🇺"},
   {code:"SAR",name:"Saudi Riyal",flag:"🇸🇦"},{code:"AED",name:"UAE Dirham",flag:"🇦🇪"},
 ];
-const APP_VERSION="2.3";
+const APP_VERSION="3.0";
 let _currency = "EGP";
 const setCurrencyGlobal = (c) => { _currency = c; };
 const fmt = (n, ov) => {
@@ -538,7 +538,7 @@ function GoalToast({toast,onClose}){
 function AppFooter({navigateTo,onPrivacyClick}){
   return <div style={{textAlign:"center",marginTop:40,marginBottom:20,width:"100%"}}>
     <div style={{marginBottom:"6px",display:"flex",justifyContent:"center",alignItems:"center",gap:"8px"}}>
-      <span style={{color:C.blue,opacity:0.8,fontSize:"13px",fontWeight:"700"}}>Saver One V2.3</span>
+      <span style={{color:C.blue,opacity:0.8,fontSize:"13px",fontWeight:"700"}}>Saver One V3.0</span>
       {(navigateTo||onPrivacyClick)&&<><span style={{color:C.faint}}>|</span><span onClick={()=>onPrivacyClick?onPrivacyClick():(navigateTo&&navigateTo("privacy"))} style={{color:C.accent,fontWeight:"700",fontSize:"13px",cursor:"pointer"}}>Privacy Policy</span></>}
     </div>
     <div style={{color:C.blue,opacity:0.6,fontSize:"10px",fontWeight:"500"}}>Offline & 100% Private · Powered by Mahmoud © 2026</div>
@@ -728,7 +728,7 @@ function SplashScreen(){
     <div style={{color:"#e8e8f0",fontSize:32,fontWeight:800,letterSpacing:10,textTransform:"uppercase",marginBottom:6,animation:"saverLogoIn 1.0s 0.15s both"}}>SAVER</div>
     <div style={{color:"#6ee7b7",fontSize:12,fontWeight:500,letterSpacing:3,opacity:phase>=1?1:0,animation:phase>=1?"saverFadeUp 0.6s ease forwards":"none",marginBottom:80}}>Easy come, easy go.</div>
     <div style={{display:"flex",gap:7,position:"absolute",bottom:70}}>{[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:99,background:"#6ee7b7",animation:`saverBounce 1.3s ease ${i*0.22}s infinite`}}/>)}</div>
-    <div style={{color:"#444460",fontSize:10,position:"absolute",bottom:24,fontWeight:700,letterSpacing:1}}>Saver One V2.3</div>
+    <div style={{color:"#444460",fontSize:10,position:"absolute",bottom:24,fontWeight:700,letterSpacing:1}}>Saver One V3.0</div>
   </div>;
 }
 
@@ -1396,19 +1396,21 @@ function Dashboard({txns,txnsAll,bills,installments=[],budgets,banks,groups,expC
           <div style={{marginBottom:20}}>
             <SortableList grid items={banks} onReorder={onBanks} renderItem={(b)=>{
               const bal=bankBalance(b.id),safe=safeToSpend(b.id),frozen=frozenForBank(b.id),hasFrozen=frozen>0;
-              const amtCol=safe<0?C.red:(b.lowBalanceThreshold&&safe<=b.lowBalanceThreshold?C.yellow:C.text);
-              return <Card onClick={()=>onOpenBank(b)} className="ic" style={{padding:"14px 14px 16px",cursor:"pointer",transition:"transform 0.1s ease",height:"100%",boxSizing:"border-box",position:"relative",overflow:"hidden"}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                  <BankIcon bank={b} size={34}/>
-                  <span style={{flex:1,minWidth:0,color:C.text,fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.name}</span>
-                  {b.lowBalanceThreshold&&safe<=b.lowBalanceThreshold&&safe>=0&&<Ico name="down" size={13} color={C.yellow} stroke={2.6}/>}
-                  {safe<0&&<span style={{width:9,height:9,borderRadius:99,background:C.red,display:"inline-block",flexShrink:0}}/>}
+              const col=b.color||C.accent;
+              const isLow=b.lowBalanceThreshold&&safe<=b.lowBalanceThreshold&&safe>=0;
+              return <div onClick={()=>onOpenBank(b)} className="ic" style={{position:"relative",overflow:"hidden",borderRadius:18,padding:"14px 15px 16px",cursor:"pointer",transition:"transform 0.1s ease",height:"100%",boxSizing:"border-box",color:"#fff",background:col,boxShadow:`0 10px 22px ${col}55`}}>
+                <span style={{position:"absolute",inset:0,background:"linear-gradient(140deg,rgba(255,255,255,.16) 0%,rgba(0,0,0,.10) 45%,rgba(0,0,0,.36) 100%)"}}/>
+                <span className="bc-orb" style={{width:84,height:84,top:-28,right:-22}}/><span className="bc-shine"/>
+                <div style={{position:"relative",zIndex:2}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:12}}>
+                    <span style={{flex:1,minWidth:0,fontSize:14,fontWeight:800,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.name}</span>
+                    {safe<0?<span style={{width:9,height:9,borderRadius:99,background:"#fff",display:"inline-block",flexShrink:0}}/>:isLow?<span style={{width:24,height:24,borderRadius:8,background:"rgba(255,255,255,.22)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Ico name="down" size={14} color="#fff" stroke={2.6}/></span>:<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" style={{opacity:.9,flexShrink:0}}><path d="M5 11a3 3 0 0 1 0 2M9 8.5a6.5 6.5 0 0 1 0 7M13 6a10 10 0 0 1 0 12"/></svg>}
+                  </div>
+                  <div style={{fontSize:9.5,opacity:.85,fontWeight:800,letterSpacing:1,textTransform:"uppercase",marginBottom:2}}>Available</div>
+                  <div style={{fontSize:19,fontWeight:800,letterSpacing:-0.4}}>{hideTotal?"••••":fmt(safe)}</div>
+                  {hasFrozen&&!hideTotal&&<div style={{display:"flex",alignItems:"center",gap:5,marginTop:7}}><Ico name="lock" size={11} color="#fff"/><span style={{fontSize:11,fontWeight:700,opacity:.92}}>{fmt(frozen)} locked</span></div>}
                 </div>
-                <div style={{color:C.muted,fontSize:9,fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginBottom:2}}>Available</div>
-                <div style={{color:amtCol,fontSize:18,fontWeight:800,letterSpacing:-0.3}}>{hideTotal?"••••":fmt(safe)}</div>
-                {hasFrozen&&!hideTotal&&<div style={{display:"flex",alignItems:"center",gap:5,marginTop:7}}><Ico name="lock" size={11} color={C.yellow}/><span style={{color:C.muted,fontSize:11,fontWeight:700}}>{fmt(frozen)}</span><span style={{color:C.faint,fontSize:9,fontWeight:700,letterSpacing:.5,textTransform:"uppercase"}}>frozen</span></div>}
-                <div style={{position:"absolute",left:0,right:0,bottom:0,height:3,background:b.color||C.accent}}/>
-              </Card>;
+              </div>;
             }}/>
           </div>
           <style>{`.ic:active{transform:scale(0.97);opacity:0.9}`}</style>
@@ -2297,7 +2299,7 @@ function Privacy({onBack}){
         ))}
       </div>
       <div style={{textAlign:"center",marginTop:32}}>
-        <div style={{color:C.accent,opacity:0.85,fontSize:13,fontWeight:700,marginBottom:4}}>Saver One V2.3</div>
+        <div style={{color:C.accent,opacity:0.85,fontSize:13,fontWeight:700,marginBottom:4}}>Saver One V3.0</div>
         <div style={{color:C.faint,fontSize:10,fontWeight:500}}>Offline & 100% Private · Powered by Mahmoud © 2026</div>
       </div>
     </div>
