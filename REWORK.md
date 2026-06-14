@@ -1,0 +1,33 @@
+# Saver — Code Re-skin Tracker (Phase C)
+Re-skin the **working** React app (`saver-test`) with the **new design** (`saver-site` showcase + `ds.css`).
+**Rule:** UI only. Do NOT change logic/formulas/data (see `saver-site/APP-LOGIC.md`). Verify each slice with `npm run build` (+ local run for visual/functional test).
+
+## Foundation
+- [ ] `saver-ui.css` (design system: vars + component classes, body=--bg for full-screen app) imported in `main.jsx`
+- [ ] Theme wired: `documentElement[data-theme]` follows app theme state
+- [ ] Icon parity: map showcase icons → app `<Ico>` (extend as needed)
+- [ ] Helpers: category tile, bank-card, chip, field, sheet, dialog components
+
+## Screens / flows to re-skin (from showcase)
+- [ ] App shell: phone-less full screen + **bottom nav** (Home·Activity·[+]·Bills·Profile, squircle FAB)
+- [ ] Home: swipe balance (Total/Safe + dots) · gradient account cards (carousel, reorder) · June income/spent · Bills/Goals/Budgets calm cards · Customize entry
+- [ ] Activity: search + filter entry · grouped list · row states
+- [ ] Smart Filter sheet + Results (when/show/categories/accounts, Bills/Installments, multi-select)
+- [ ] Bills — Subscriptions / Installments (view selector, month/status filter)
+- [ ] Subscription detail (brand hero + logo) · Installment detail
+- [ ] Budgets · Budget detail · Projects · Project detail
+- [ ] Goals · Goal detail (return-to-bank, spending-mode, frozen breakdown)
+- [ ] Account ledger (bank gradient hero) · Accounts list (gradient cards)
+- [ ] Add: Expense/Income/Saving/Transfer · Quick Add · Source picker (vault) · Edit txn
+- [ ] Installment add (grouped Next wizard + focused sheet)
+- [ ] Editors: account/category/goal/budget · Quick Actions · Customize Dashboard (dnd + hide)
+- [ ] Profile/Settings · Appearance · Privacy · Backup & Restore
+- [ ] Messages: friendly toasts (success/info) + center dialogs (block/confirm) + GoalToast + inline validation
+- [ ] System: Onboarding · Help/FAQ · What's New · Empty/Celebration · Notifications
+- [ ] Push/reminder notifications copy (design ref only)
+
+## Design QA (carry over)
+- [ ] Uniform field/chip sizes + consistent label↔value arrangement (no 2-line vs 1-line mix)
+
+## Verify each slice
+`cd saver-test && npm run build` → green. Then `npm run dev` / `preview` for manual test → collect notes.

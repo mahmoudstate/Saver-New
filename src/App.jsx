@@ -758,7 +758,7 @@ function SaverApp(){
   const[currency,setCurrencyState]=useState("EGP");
   const[theme,setThemeState]=useState("dark");
   useEffect(()=>{ setCurrencyGlobal(currency); },[currency]);
-  useEffect(()=>{ setCGlobal(theme); IS=getIS(); },[theme]);
+  useEffect(()=>{ setCGlobal(theme); IS=getIS(); document.documentElement.setAttribute("data-theme",theme); },[theme]);
   const[username,setUsernameState]=useState("");
   const[lastBackup,setLastBackup]=useState(null);
   const[backupSnooze,setBackupSnooze]=useState(0);
