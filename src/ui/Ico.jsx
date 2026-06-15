@@ -5,6 +5,7 @@ export const MARKS = {
   plus: `<path d="M12 5v14M5 12h14"/>`,
   cal: `<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/>`,
   back: `<path d="m15 18-6-6 6-6"/>`,
+  transfer: `<path d="M7 8h11l-3-3M17 16H6l3 3"/>`,
   chev: `<path d="m9 18 6-6-6-6"/>`,
   close: `<path d="M6 6 18 18M18 6 6 18"/>`,
   check: `<path d="m20 6-11 11-5-5"/>`,

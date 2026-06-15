@@ -23,7 +23,7 @@ function Row({ t, bankNameOf }) {
   );
 }
 
-export default function AccountLedger({ store, bank, back }) {
+export default function AccountLedger({ store, bank, back, onMove }) {
   const { txns, banks } = store;
   const cm = currentMonth();
   const bankNameOf = (id) => banks.find((b) => b.id === id)?.name || "";
@@ -49,6 +49,9 @@ export default function AccountLedger({ store, bank, back }) {
             {frozen > 0 ? <><Ico name="lock" size={12} color="#fff" />{fmt(frozen)} locked · {fmt(bal)} total</> : <>{fmt(bal)} total balance</>}
           </div>
         </div>
+      </div>
+      <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+        <button className="btn btn-secondary" style={{ flex: 1, height: 46, fontSize: 14 }} onClick={() => onMove?.(bank)}><Ico name="transfer" size={17} />Move money</button>
       </div>
       <div className="over">This month</div>
       {list.length === 0 ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px", fontWeight: 600 }}>No transactions this month.</div>
