@@ -26,6 +26,7 @@ const MAP = {
   wifi: "phone", laptop: "phone", phone: "phone", smartphone: "phone",
   plane: "travel", "plane-takeoff": "travel", travel: "travel",
   wallet: "income", other_income: "income", "trending-up": "income", gift: "income",
+  saving: "goal", goal: "goal", target: "goal", goal_return: "goal", goal_withdraw: "goal",
 };
 
 export function resolveCat(t) {
