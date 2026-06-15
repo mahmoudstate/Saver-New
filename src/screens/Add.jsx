@@ -19,6 +19,8 @@ export default function Add({ store, onClose }) {
   const [type, setType] = useState("expense");
   const [amount, setAmount] = useState(0);
   const [bankId, setBankId] = useState(banks[0]?.id || null);
+  const [srcGoal, setSrcGoal] = useState(null); // expense paid from a goal vault (spending mode)
+  const vaults = goals.filter((g) => g.spendingMode);
   const [expCatId, setExpCatId] = useState(expCats[0]?.id || null);
   const [incCatId, setIncCatId] = useState(incCats[0]?.id || null);
   const [goalId, setGoalId] = useState(goals[0]?.id || null);
@@ -31,19 +33,22 @@ export default function Add({ store, onClose }) {
     saving: { title: "Move to goal", sign: "+", sub: "Saving · frozen & safe", accLabel: "From account", cta: "Move to goal", ctaIcon: "lock" },
   }[type];
 
+  const vaultGoal = srcGoal ? goals.find((g) => g.id === srcGoal) : null;
   const bank = banks.find((b) => b.id === bankId);
   const cat = type === "income" ? incCats.find((c) => c.id === incCatId) : expCats.find((c) => c.id === expCatId);
   const goal = goals.find((g) => g.id === goalId);
-  const canSave = amount > 0 && bankId && (type === "saving" ? goalId : cat);
+  const sourceOk = type === "expense" && srcGoal ? true : !!bankId;
+  const canSave = amount > 0 && sourceOk && (type === "saving" ? goalId : cat);
 
   const submit = () => {
     if (!canSave) return;
     let txn;
     if (type === "saving") txn = { type: "saving", amount, date: today(), bankId, bankName: bank?.name, goalId, catName: goal?.name, catIcon: "saving", note };
+    else if (type === "expense" && srcGoal) txn = { type: "goal_withdraw", amount, date: today(), goalId: srcGoal, goalName: vaultGoal?.name, catId: cat.id, catName: cat.name, catGlyph: cat.glyph, catColor: cat.color, note };
     else txn = { type, amount, date: today(), bankId, bankName: bank?.name, catId: cat.id, catName: cat.name, catGlyph: cat.glyph, catColor: cat.color, note };
     const id = store.addTxn(txn);
     if (id === false) return; // blocked (alert shown by store)
-    const label = type === "saving" ? `to ${goal?.name}` : type === "income" ? `to ${bank?.name}` : `${cat?.name}`;
+    const label = type === "saving" ? `to ${goal?.name}` : type === "income" ? `to ${bank?.name}` : srcGoal ? `from ${vaultGoal?.name} vault` : `${cat?.name}`;
     store.flash({ title: `${meta.sign}${fmt(amount)} ${type === "income" ? "in" : type === "saving" ? "saved" : "spent"}`, sub: label, color: type === "income" ? "var(--success)" : type === "saving" ? "var(--ac)" : "var(--muted)", icon: "check" });
     onClose();
   };
@@ -62,8 +67,10 @@ export default function Add({ store, onClose }) {
       </div>
 
       <div className="field" onClick={() => setSheet("account")} style={{ cursor: "pointer" }}>
-        <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: bank?.color || "var(--muted)", color: "#fff", fontWeight: 800, fontSize: 14 }}>{(bank?.name || "?").slice(0, 1).toUpperCase()}</span>
-        <div><div className="fl">{meta.accLabel}</div><div className="fv">{bank?.name || "Pick an account"}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
+        {vaultGoal
+          ? <CatTile cat="goal" name={vaultGoal.name} size={42} />
+          : <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: bank?.color || "var(--muted)", color: "#fff", fontWeight: 800, fontSize: 14 }}>{(bank?.name || "?").slice(0, 1).toUpperCase()}</span>}
+        <div><div className="fl">{vaultGoal ? "From vault" : meta.accLabel}</div><div className="fv">{vaultGoal ? vaultGoal.name : (bank?.name || "Pick an account")}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
       </div>
 
       {type === "saving" ? (
@@ -86,7 +93,10 @@ export default function Add({ store, onClose }) {
       <div className="cta"><div className={`btn btn-primary btn-full`} style={{ opacity: canSave ? 1 : .5 }} onClick={submit}><Ico name={meta.ctaIcon} size={19} />{meta.cta}</div></div>
 
       {sheet === "amount" && <AmountSheet title="Enter amount" sub={meta.title} confirmLabel="Set amount" onConfirm={(v) => { setAmount(v); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "account" && <PickerSheet title={meta.accLabel} selectedId={bankId} onPick={setBankId} onClose={() => setSheet(null)} options={banks.map((b) => ({ id: b.id, label: b.name, bankColor: b.color }))} />}
+      {sheet === "account" && <PickerSheet title={meta.accLabel} selectedId={srcGoal ? "vault:" + srcGoal : bankId} onPick={(id) => { if (id.startsWith?.("vault:")) setSrcGoal(id.slice(6)); else { setBankId(id); setSrcGoal(null); } }} onClose={() => setSheet(null)} options={[
+        ...banks.map((b) => ({ id: b.id, label: b.name, bankColor: b.color })),
+        ...(type === "expense" ? vaults.map((g) => ({ id: "vault:" + g.id, label: g.name, sub: "Goal vault · spend from here", catKey: "goal" })) : []),
+      ]} />}
       {sheet === "category" && <PickerSheet title="Category" selectedId={type === "income" ? incCatId : expCatId} onPick={type === "income" ? setIncCatId : setExpCatId} onClose={() => setSheet(null)} options={(type === "income" ? incCats : expCats).map((c) => ({ id: c.id, label: c.name, sub: c.group, catKey: catKeyOf(c) }))} />}
       {sheet === "goal" && <PickerSheet title="To goal" selectedId={goalId} onPick={setGoalId} onClose={() => setSheet(null)} options={goals.map((g) => ({ id: g.id, label: g.name, sub: `${fmt(Math.max(0, calcGoalSaved(g.id, store.txns)))} saved`, catKey: catKeyOf({ name: g.name, glyph: g.glyph }) || "goal" }))} />}
     </div>
