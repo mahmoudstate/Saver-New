@@ -20,6 +20,8 @@ import Transfer from "./screens/Transfer.jsx";
 import EditTxn from "./screens/EditTxn.jsx";
 import Accounts from "./screens/Accounts.jsx";
 import AccountEditor from "./screens/AccountEditor.jsx";
+import GoalEditor from "./screens/GoalEditor.jsx";
+import BudgetEditor from "./screens/BudgetEditor.jsx";
 import Ico from "./ui/Ico.jsx";
 
 function Placeholder({ tab }) {
@@ -47,9 +49,11 @@ export default function App() {
   else if (view?.type === "account") screen = <AccountLedger store={store} bank={view.bank} back={back} onMove={(b) => setView({ type: "transfer", fromBankId: b.id })} onEdit={(b) => setView({ type: "editAccount", account: b })} />;
   else if (view?.type === "sub") screen = <SubscriptionDetail store={store} bill={view.bill} back={back} />;
   else if (view?.type === "inst") screen = <InstallmentDetail store={store} instId={view.instId} back={back} />;
-  else if (view?.type === "goals") screen = <Goals store={store} back={back} onAdd={() => {}} onOpenGoal={(g) => setView({ type: "goal", goalId: g.id })} />;
+  else if (view?.type === "goals") screen = <Goals store={store} back={back} onAdd={() => setView({ type: "editGoal", goal: null })} onOpenGoal={(g) => setView({ type: "goal", goalId: g.id })} />;
   else if (view?.type === "goal") screen = <GoalDetail store={store} goalId={view.goalId} back={() => setView({ type: "goals" })} />;
-  else if (view?.type === "budgets") screen = <Budgets store={store} back={back} onAdd={() => {}} onOpenBudget={(b) => setView({ type: "budget", budgetId: b.id })} onOpenProject={(p) => setView({ type: "project", projectId: p.id })} />;
+  else if (view?.type === "editGoal") screen = <GoalEditor store={store} goal={view.goal} onClose={() => setView({ type: "goals" })} />;
+  else if (view?.type === "budgets") screen = <Budgets store={store} back={back} onAdd={() => setView({ type: "editBudget", budget: null })} onOpenBudget={(b) => setView({ type: "budget", budgetId: b.id })} onOpenProject={(p) => setView({ type: "project", projectId: p.id })} />;
+  else if (view?.type === "editBudget") screen = <BudgetEditor store={store} budget={view.budget} onClose={() => setView({ type: "budgets" })} />;
   else if (view?.type === "budget") screen = <BudgetDetail store={store} budgetId={view.budgetId} back={() => setView({ type: "budgets" })} />;
   else if (view?.type === "project") screen = <ProjectDetail store={store} projectId={view.projectId} back={() => setView({ type: "budgets" })} />;
   else if (tab === "home") screen = <Home store={store} onTab={setTab} onOpenBank={(bank) => setView({ type: "account", bank })} onOpenGoals={() => setView({ type: "goals" })} onOpenBudgets={() => setView({ type: "budgets" })} />;
