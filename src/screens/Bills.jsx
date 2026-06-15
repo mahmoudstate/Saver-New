@@ -9,7 +9,7 @@ function BrandChip({ name, color }) {
 }
 const guessCat = (t = "") => /phone|iphone|mobile|tablet|ipad/i.test(t) ? "phone" : /car|loan|auto|vehicle/i.test(t) ? "transport" : /laptop|pc|mac/i.test(t) ? "phone" : null;
 
-export default function Bills({ store, onAdd }) {
+export default function Bills({ store, onAdd, onOpenSub }) {
   const { bills = [], installments = [] } = store;
   const [seg, setSeg] = useState("subs");
   const cm = currentMonth();
@@ -64,7 +64,7 @@ export default function Bills({ store, onAdd }) {
       {isSubs ? (
         subs.rows.length === 0 ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px", fontWeight: 600 }}>No subscriptions yet.</div>
           : subs.rows.map((b) => (
-            <div className="icard" key={b.id}>
+            <div className="icard" key={b.id} onClick={() => onOpenSub?.(b)} style={{ cursor: "pointer" }}>
               <BrandChip name={b.name} color={b.color} />
               <div><div className="nm">{b.name}</div><div className="mt">{b.note ? b.note + " · " : ""}monthly{b.dueDay ? " · day " + b.dueDay : ""}</div></div>
               <div className="amtb"><b className="tnum">{fmt(b.amount)}</b><small style={{ color: b.statusColor }}>{b.status}</small></div>

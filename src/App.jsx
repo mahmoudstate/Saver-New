@@ -7,6 +7,7 @@ import Activity from "./screens/Activity.jsx";
 import Bills from "./screens/Bills.jsx";
 import Profile from "./screens/Profile.jsx";
 import AccountLedger from "./screens/AccountLedger.jsx";
+import SubscriptionDetail from "./screens/SubscriptionDetail.jsx";
 import Ico from "./ui/Ico.jsx";
 
 function Placeholder({ tab }) {
@@ -26,15 +27,14 @@ export default function App() {
   const openBank = (bank) => setView({ type: "account", bank });
   const back = () => setView(null);
 
-  if (view?.type === "account") {
-    return <div className="app"><AccountLedger store={store} bank={view.bank} back={back} /></div>;
-  }
+  if (view?.type === "account") return <div className="app"><AccountLedger store={store} bank={view.bank} back={back} /></div>;
+  if (view?.type === "sub") return <div className="app"><SubscriptionDetail store={store} bill={view.bill} back={back} /></div>;
 
   return (
     <div className="app">
       {tab === "home" ? <Home store={store} onTab={setTab} onOpenBank={openBank} />
         : tab === "activity" ? <Activity store={store} onFilter={() => {}} />
-          : tab === "bills" ? <Bills store={store} onAdd={() => {}} />
+          : tab === "bills" ? <Bills store={store} onAdd={() => {}} onOpenSub={(bill) => setView({ type: "sub", bill })} />
             : tab === "profile" ? <Profile store={store} go={() => {}} />
               : <Placeholder tab={tab} />}
       <BottomNav active={tab} onTab={setTab} onAdd={() => {}} />
