@@ -9,6 +9,9 @@ export const CATS = {
   phone: ["#A78BFA", `<rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/>`],
   travel: ["#16BFA6", `<path d="M2 16l9-3 7-7a2 2 0 0 1 3 3l-7 7-3 9-2-6-7-3Z"/>`],
   home: ["#E5544E", `<path d="M4 11 12 5l8 6M6 10v9h12v-9"/>`],
+  goal: ["#0E9F6E", `<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>`],
+  transfer: ["#3B82F6", `<path d="M7 8h11l-3-3M17 16H6l3 3"/>`],
+  income: ["#0E9F6E", `<path d="M3 7a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v3M3 7v10a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1v-4M3 7h16"/><circle cx="17" cy="13" r="1.4" fill="currentColor" stroke="none"/>`],
 };
 
 // map a transaction's category (glyph / id / icon) → one of our new category keys
@@ -22,6 +25,7 @@ const MAP = {
   house: "home", rent: "home", home: "home",
   wifi: "phone", laptop: "phone", phone: "phone", smartphone: "phone",
   plane: "travel", "plane-takeoff": "travel", travel: "travel",
+  wallet: "income", other_income: "income", "trending-up": "income", gift: "income",
 };
 
 export function resolveCat(t) {

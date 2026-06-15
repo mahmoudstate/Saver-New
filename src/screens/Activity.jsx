@@ -35,17 +35,19 @@ export default function Activity({ store, onFilter }) {
   }, [txns, cm]);
 
   const row = (t) => {
-    const out = t.type === "expense" || t.type === "goal_withdraw" || t.type === "saving";
-    const inc = t.type === "income";
-    const cls = inc ? "in" : out ? "out" : "";
-    const sign = inc ? "+" : out ? "−" : "";
-    const nm = t.note || t.catName || (t.type === "transfer" ? "Transfer" : t.type);
-    const sub = `${bankName(t)}${t.toBankName ? " → " + t.toBankName : t.catName ? " · " + t.catName : ""}`;
+    let cls = "", sign = "", nm, sub, cat = null, color;
+    if (t.type === "income") { cls = "in"; sign = "+"; nm = t.note || t.catName || "Income"; sub = bankName(t); }
+    else if (t.type === "expense") { cls = "out"; sign = "−"; nm = t.note || t.catName || "Expense"; sub = `${bankName(t)}${t.catName ? " · " + t.catName : ""}`; }
+    else if (t.type === "saving") { cat = "goal"; color = "var(--ac)"; nm = t.goalName ? "Saved · " + t.goalName : "Saving"; sub = `${bankName(t)} → goal`; }
+    else if (t.type === "goal_withdraw") { cls = "out"; sign = "−"; cat = "goal"; nm = t.goalName ? "Spent from " + t.goalName : "Goal spend"; sub = bankName(t); }
+    else if (t.type === "goal_return") { cls = "in"; sign = "+"; cat = "goal"; nm = t.goalName ? "Returned · " + t.goalName : "Goal return"; sub = bankName(t); }
+    else if (t.type === "transfer") { cat = "transfer"; color = "var(--blue)"; nm = "Transfer"; sub = `${bankName(t)} → ${t.toBankName || ""}`; }
+    else { nm = t.catName || t.type; sub = bankName(t); }
     return (
       <div className="icard" key={t.id}>
-        <CatTile txn={t} size={44} />
+        <CatTile txn={t} cat={cat} size={44} />
         <div><div className="nm">{nm}</div><div className="mt">{sub}</div></div>
-        <div className={`amt ${cls} tnum`}>{sign}{fmt(t.amount)}</div>
+        <div className={`amt ${cls} tnum`} style={!cls && color ? { color } : undefined}>{sign}{fmt(t.amount)}</div>
       </div>
     );
   };
