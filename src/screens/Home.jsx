@@ -6,10 +6,10 @@ import { calcBankBalance, calcGoalSaved, calcFrozenForBank, totalBalance, totalS
 
 const Contactless = ({ s = 20 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" style={{ opacity: .9 }}><path d="M5 11a3 3 0 0 1 0 2M9 8.5a6.5 6.5 0 0 1 0 7M13 6a10 10 0 0 1 0 12" /></svg>;
 
-function BankCard({ bank, available, frozen, low, money }) {
+function BankCard({ bank, available, frozen, low, money, onClick }) {
   const col = bank.color || "#0e9f6e";
   return (
-    <div className="bankcard" style={{ background: cardGradient(col) }}>
+    <div className="bankcard" onClick={onClick} style={{ background: cardGradient(col), cursor: "pointer" }}>
       <span className="bc-orb" style={{ width: 98, height: 98, top: -34, right: -26 }} />
       <span className="bc-orb" style={{ width: 44, height: 44, bottom: 30, right: 34, opacity: .5 }} />
       <span className="bc-shine" />
@@ -34,7 +34,7 @@ function BankCard({ bank, available, frozen, low, money }) {
 
 const circ = (size = 42, r = 13, bg, color) => ({ width: size, height: size, borderRadius: r, background: bg, color, display: "flex", alignItems: "center", justifyContent: "center" });
 
-export default function Home({ store, onTab }) {
+export default function Home({ store, onTab, onOpenBank }) {
   const { banks, txns, savings, bills = [], budgets = [], username } = store;
   const [hide, setHide] = useState(false);
   const [page, setPage] = useState(0);
@@ -93,7 +93,7 @@ export default function Home({ store, onTab }) {
         {banks.map((b) => {
           const bal = calcBankBalance(b.id, txns), frozen = Math.max(0, calcFrozenForBank(b.id, savings, txns)), avail = bal - frozen;
           const low = b.lowBalanceThreshold && avail <= b.lowBalanceThreshold && avail >= 0;
-          return <BankCard key={b.id} bank={b} available={avail} frozen={frozen} low={low} money={money} />;
+          return <BankCard key={b.id} bank={b} available={avail} frozen={frozen} low={low} money={money} onClick={() => onOpenBank?.(b)} />;
         })}
         <div style={{ minWidth: 84, background: "var(--surface2)", border: "var(--cardBorder)", borderRadius: 22, padding: 14, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, color: "var(--ac)" }} onClick={() => onTab?.("profile")}><Ico name="grip" size={20} /><div style={{ fontSize: 11, fontWeight: 800, textAlign: "center" }}>All</div></div>
       </div>
