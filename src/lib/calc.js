@@ -53,6 +53,16 @@ export const totalBalance = (banks, txns) => banks.reduce((s, b) => s + calcBank
 export const totalSafe = (banks, txns, savings) => banks.reduce((s, b) => s + (calcBankBalance(b.id, txns) - Math.max(0, calcFrozenForBank(b.id, savings, txns))), 0);
 export const totalFrozen = (banks, txns, savings) => banks.reduce((s, b) => s + Math.max(0, calcFrozenForBank(b.id, savings, txns)), 0);
 
+// ── Budgets & Projects (spend = expense + goal_withdraw in the budget's categories) ──
+// Monthly budgets reset each month; projects accumulate from startMonth across all months.
+const inBudget = (t, cats) => (t.type === "expense" || t.type === "goal_withdraw") && cats?.includes(t.catId);
+export const budgetTxns = (budget, txns, month) =>
+  budget.kind === "project"
+    ? txns.filter((t) => inBudget(t, budget.cats) && (!budget.startMonth || (t.date || "").slice(0, 7) >= budget.startMonth))
+    : txns.filter((t) => inBudget(t, budget.cats) && (t.date || "").startsWith(month));
+export const budgetSpentMonth = (budget, txns, month) => txns.filter((t) => inBudget(t, budget.cats) && (t.date || "").startsWith(month)).reduce((a, t) => a + t.amount, 0);
+export const projectSpent = (project, txns) => txns.filter((t) => inBudget(t, project.cats) && (!project.startMonth || (t.date || "").slice(0, 7) >= project.startMonth)).reduce((a, t) => a + t.amount, 0);
+
 // Month-scoped income / expense (expense includes goal_withdraw, per legacy)
 export const monthTxns = (txns, month) => txns.filter((t) => (t.date || "").startsWith(month));
 export const sumIncome = (txns) => txns.filter((t) => t.type === "income").reduce((a, t) => a + t.amount, 0);
