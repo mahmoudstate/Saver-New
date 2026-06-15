@@ -303,3 +303,10 @@ header.lead{padding:48px 0 6px}
 /* ── app overrides: full-screen app (no phone frame) ── */
 body{background:var(--bg)}
 #root{min-height:100dvh}
+
+/* ── app shell (real full-screen app, no phone frame) ── */
+.app{position:relative;max-width:480px;margin:0 auto;height:100dvh;background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
+.app .content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.app .nav{position:absolute}
+.hscroll{scrollbar-width:none}
+.hscroll::-webkit-scrollbar{display:none}

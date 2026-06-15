@@ -16,3 +16,6 @@ npm-debug.log*
 # local screenshot tooling
 shot.cjs
 *.shot.png
+shot.cjs
+*.png
+dist/

@@ -1,0 +1,41 @@
+{
+  "theme": "light",
+  "currency": "GBP",
+  "username": "Mahmoud",
+  "banks": [
+    { "id": "hsbc", "name": "HSBC", "color": "#ec1623" },
+    { "id": "rev", "name": "Revolut", "color": "#3a3f66" },
+    { "id": "cash", "name": "Cash wallet", "color": "#f59e0b", "lowBalanceThreshold": 200 }
+  ],
+  "savings": [
+    { "id": "laptop", "name": "New laptop", "goal": 1800, "status": "active", "spendingMode": false },
+    { "id": "holiday", "name": "Holiday", "goal": 900, "status": "active", "spendingMode": false }
+  ],
+  "txns": [
+    { "id": "1", "type": "income", "amount": 1406, "date": "2026-06-02", "bankId": "hsbc", "catId": "salary", "catName": "Salary", "catGlyph": "briefcase" },
+    { "id": "2", "type": "expense", "amount": 100, "date": "2026-06-12", "bankId": "hsbc", "catId": "food", "catName": "Food & Dining", "catGlyph": "utensils" },
+    { "id": "3", "type": "saving", "amount": 600, "date": "2026-06-05", "bankId": "hsbc", "goalId": "laptop", "goalName": "New laptop" },
+    { "id": "4", "type": "saving", "amount": 280, "date": "2026-06-05", "bankId": "hsbc", "goalId": "holiday", "goalName": "Holiday" },
+    { "id": "5", "type": "income", "amount": 980, "date": "2026-06-03", "bankId": "rev", "catId": "other_income", "catName": "Other Income", "catGlyph": "wallet" },
+    { "id": "6", "type": "income", "amount": 200, "date": "2026-06-01", "bankId": "cash", "catId": "other_income", "catName": "Other Income", "catGlyph": "wallet" },
+    { "id": "7", "type": "expense", "amount": 160, "date": "2026-06-10", "bankId": "cash", "catId": "shopping", "catName": "Groceries", "catGlyph": "shopping-bag" }
+  ],
+  "bills": [
+    { "id": "netflix", "name": "Netflix", "amount": 10, "bankId": "hsbc", "dueDay": 1, "payments": [{ "month": "2026-06" }] },
+    { "id": "spotify", "name": "Spotify", "amount": 6, "bankId": "hsbc", "dueDay": 1, "payments": [{ "month": "2026-06" }] },
+    { "id": "voda", "name": "Vodafone", "amount": 12, "bankId": "hsbc", "dueDay": 7, "payments": [] }
+  ],
+  "budgets": [
+    { "id": "std", "name": "Standard", "amount": 500, "cats": ["food", "shopping"] }
+  ],
+  "installments": [],
+  "expCats": [
+    { "id": "food", "name": "Food & Dining", "glyph": "utensils", "color": "#fb923c", "group": "daily" },
+    { "id": "shopping", "name": "Shopping", "glyph": "shopping-bag", "color": "#f472b6", "group": "lifestyle" }
+  ],
+  "incCats": [
+    { "id": "salary", "name": "Salary", "glyph": "briefcase", "color": "#34d399" },
+    { "id": "other_income", "name": "Other Income", "glyph": "wallet", "color": "#a78bfa" }
+  ],
+  "groups": []
+}
