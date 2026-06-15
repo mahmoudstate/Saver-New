@@ -2,7 +2,7 @@
 import Ico from "../ui/Ico.jsx";
 import { fmt, currentMonth, cardGradient, MONTHS } from "../lib/format.js";
 
-export default function SubscriptionDetail({ store, bill, back }) {
+export default function SubscriptionDetail({ store, bill, back, onEdit }) {
   const { banks } = store;
   const col = bill.color || "#0e9f6e";
   const cm = currentMonth();
@@ -21,6 +21,7 @@ export default function SubscriptionDetail({ store, bill, back }) {
         <div className="toprow" style={{ position: "relative", zIndex: 2 }}>
           <div className="hib" onClick={back} style={{ background: "rgba(255,255,255,.2)", color: "#fff" }}><Ico name="back" size={20} /></div>
           <div className="grow" />
+          <div className="hib" onClick={() => onEdit?.(bill)} style={{ background: "rgba(255,255,255,.2)", color: "#fff", marginRight: 8 }}><Ico name="pencil" size={18} /></div>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,.2)", padding: "6px 12px", borderRadius: 99, fontSize: 12, fontWeight: 800 }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: "#34d399" }} />Active</span>
         </div>
         <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 13, marginTop: 4 }}>

@@ -50,7 +50,7 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst }) {
   return (
     <div className="content padnav">
       <div className="hero">
-        <div className="toprow"><div className="ttl">Bills</div><div className="grow" /><div className="hib" onClick={onAdd}><Ico name="plus" size={20} /></div></div>
+        <div className="toprow"><div className="ttl">Bills</div><div className="grow" /><div className="hib" onClick={() => onAdd?.(seg)}><Ico name="plus" size={20} /></div></div>
         {isSubs
           ? <><div className="lbl">Due this month</div><div className="big tnum">{fmt(subs.due)}</div><div className="sub">{subs.active} active &nbsp;·&nbsp; {subs.soon} due soon &nbsp;·&nbsp; {subs.overdue} overdue</div></>
           : <><div className="lbl">Remaining to pay</div><div className="big tnum">{fmt(inst.remaining)}</div><div className="sub">{inst.plans} plans &nbsp;·&nbsp; {fmt(inst.dueAmt)} due this month</div></>}

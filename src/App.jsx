@@ -32,6 +32,8 @@ import Manual from "./screens/Manual.jsx";
 import QuickActions from "./screens/QuickActions.jsx";
 import QuickActionEditor from "./screens/QuickActionEditor.jsx";
 import QuickAddSheet from "./ui/QuickAddSheet.jsx";
+import SubscriptionEditor from "./screens/SubscriptionEditor.jsx";
+import InstallmentEditor from "./screens/InstallmentEditor.jsx";
 import Ico from "./ui/Ico.jsx";
 
 function Placeholder({ tab }) {
@@ -65,7 +67,9 @@ export default function App() {
   else if (view?.type === "quickactions") screen = <QuickActions store={store} back={back} onEdit={(q) => setView({ type: "editQuick", action: q })} />;
   else if (view?.type === "editQuick") screen = <QuickActionEditor store={store} action={view.action} onClose={() => setView({ type: "quickactions" })} />;
   else if (view?.type === "account") screen = <AccountLedger store={store} bank={view.bank} back={back} onMove={(b) => setView({ type: "transfer", fromBankId: b.id })} onEdit={(b) => setView({ type: "editAccount", account: b })} />;
-  else if (view?.type === "sub") screen = <SubscriptionDetail store={store} bill={view.bill} back={back} />;
+  else if (view?.type === "sub") screen = <SubscriptionDetail store={store} bill={view.bill} back={back} onEdit={(b) => setView({ type: "editSub", bill: b })} />;
+  else if (view?.type === "editSub") screen = <SubscriptionEditor store={store} bill={view.bill} onClose={back} />;
+  else if (view?.type === "editInst") screen = <InstallmentEditor store={store} plan={view.plan} onClose={back} />;
   else if (view?.type === "inst") screen = <InstallmentDetail store={store} instId={view.instId} back={back} />;
   else if (view?.type === "goals") screen = <Goals store={store} back={back} onAdd={() => setView({ type: "editGoal", goal: null })} onOpenGoal={(g) => setView({ type: "goal", goalId: g.id })} />;
   else if (view?.type === "goal") screen = <GoalDetail store={store} goalId={view.goalId} back={() => setView({ type: "goals" })} />;
@@ -78,7 +82,7 @@ export default function App() {
   else if (view?.type === "filter") screen = <SmartFilter store={store} initial={view.filter} back={back} onApply={(f) => setView({ type: "results", filter: f })} />;
   else if (view?.type === "results") screen = <FilterResults store={store} filter={view.filter} back={() => setView(null)} onEditFilter={() => setView({ type: "filter", filter: view.filter })} onEdit={(t) => setView({ type: "edit", txn: t })} />;
   else if (tab === "activity") screen = <Activity store={store} onFilter={() => setView({ type: "filter" })} onEdit={(t) => setView({ type: "edit", txn: t })} />;
-  else if (tab === "bills") screen = <Bills store={store} onAdd={() => {}} onOpenSub={(bill) => setView({ type: "sub", bill })} onOpenInst={(i) => setView({ type: "inst", instId: i.id })} />;
+  else if (tab === "bills") screen = <Bills store={store} onAdd={(seg) => setView(seg === "inst" ? { type: "editInst", plan: null } : { type: "editSub", bill: null })} onOpenSub={(bill) => setView({ type: "sub", bill })} onOpenInst={(i) => setView({ type: "inst", instId: i.id })} />;
   else if (tab === "profile") screen = <Profile store={store} go={(d) => { if (d === "accounts") setView({ type: "accounts" }); else if (d === "goals") setView({ type: "goals" }); else if (d === "budgets") setView({ type: "budgets" }); else if (d === "categories") setView({ type: "categories" }); else if (d === "appearance") setView({ type: "appearance" }); else if (d === "privacy") setView({ type: "privacy" }); else if (d === "manual") setView({ type: "manual" }); else if (d === "quickactions") setView({ type: "quickactions" }); }} />;
   else screen = <Placeholder tab={tab} />;
 
