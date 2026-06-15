@@ -26,6 +26,8 @@ import Categories from "./screens/Categories.jsx";
 import CategoryEditor from "./screens/CategoryEditor.jsx";
 import SmartFilter from "./screens/SmartFilter.jsx";
 import FilterResults from "./screens/FilterResults.jsx";
+import Appearance from "./screens/Appearance.jsx";
+import PrivacyBackup from "./screens/PrivacyBackup.jsx";
 import Ico from "./ui/Ico.jsx";
 
 function Placeholder({ tab }) {
@@ -52,6 +54,8 @@ export default function App() {
   else if (view?.type === "editAccount") screen = <AccountEditor store={store} account={view.account} onClose={() => setView(view.account ? { type: "account", bank: view.account } : { type: "accounts" })} />;
   else if (view?.type === "categories") screen = <Categories store={store} back={back} onAdd={() => setView({ type: "editCategory", category: null })} onEdit={(c) => setView({ type: "editCategory", category: c })} />;
   else if (view?.type === "editCategory") screen = <CategoryEditor store={store} category={view.category} onClose={() => setView({ type: "categories" })} />;
+  else if (view?.type === "appearance") screen = <Appearance store={store} back={back} />;
+  else if (view?.type === "privacy") screen = <PrivacyBackup store={store} back={back} />;
   else if (view?.type === "account") screen = <AccountLedger store={store} bank={view.bank} back={back} onMove={(b) => setView({ type: "transfer", fromBankId: b.id })} onEdit={(b) => setView({ type: "editAccount", account: b })} />;
   else if (view?.type === "sub") screen = <SubscriptionDetail store={store} bill={view.bill} back={back} />;
   else if (view?.type === "inst") screen = <InstallmentDetail store={store} instId={view.instId} back={back} />;
@@ -67,7 +71,7 @@ export default function App() {
   else if (view?.type === "results") screen = <FilterResults store={store} filter={view.filter} back={() => setView(null)} onEditFilter={() => setView({ type: "filter", filter: view.filter })} onEdit={(t) => setView({ type: "edit", txn: t })} />;
   else if (tab === "activity") screen = <Activity store={store} onFilter={() => setView({ type: "filter" })} onEdit={(t) => setView({ type: "edit", txn: t })} />;
   else if (tab === "bills") screen = <Bills store={store} onAdd={() => {}} onOpenSub={(bill) => setView({ type: "sub", bill })} onOpenInst={(i) => setView({ type: "inst", instId: i.id })} />;
-  else if (tab === "profile") screen = <Profile store={store} go={(d) => { if (d === "accounts") setView({ type: "accounts" }); else if (d === "goals") setView({ type: "goals" }); else if (d === "budgets") setView({ type: "budgets" }); else if (d === "categories") setView({ type: "categories" }); }} />;
+  else if (tab === "profile") screen = <Profile store={store} go={(d) => { if (d === "accounts") setView({ type: "accounts" }); else if (d === "goals") setView({ type: "goals" }); else if (d === "budgets") setView({ type: "budgets" }); else if (d === "categories") setView({ type: "categories" }); else if (d === "appearance") setView({ type: "appearance" }); else if (d === "privacy") setView({ type: "privacy" }); }} />;
   else screen = <Placeholder tab={tab} />;
 
   return (

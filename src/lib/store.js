@@ -11,7 +11,13 @@ export const KEYS = {
   groups: "et_groups", savings: "et_savings", currency: "et_currency",
   username: "et_username", lastBackup: "et_lastBackup", bills: "et_bills",
   budgets: "et_budgets", quickActions: "et_quick_actions", seenWelcome: "et_seenWelcome",
-  theme: "et_theme", installments: "et_installments",
+  theme: "et_theme", installments: "et_installments", accent: "et_accent",
+};
+
+// calm accent palette (dark+light safe): [ac, ac2]; onacc stays dark for all pastels
+export const ACCENTS = {
+  mint: ["#5FE3C0", "#8af0d6"], sage: ["#93CFA8", "#B4E0C4"], ocean: ["#86B5E6", "#A9CDF0"],
+  lavender: ["#C0A9E6", "#D6C6F0"], rose: ["#F1AECB", "#F8CFE0"], honey: ["#E6C98A", "#F0DDAE"],
 };
 
 export const loadKey = (key, fallback) => { try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; } catch { return fallback; } };
@@ -21,7 +27,7 @@ const ENTITIES = {
   txns: [], banks: [], expCats: [], incCats: [], groups: [], savings: [],
   bills: [], budgets: [], installments: [], quickActions: [],
 };
-const SCALARS = { currency: "EGP", username: "", theme: "dark" };
+const SCALARS = { currency: "EGP", username: "", theme: "dark", accent: "mint" };
 
 // Single store hook: loads everything, exposes data + persisted setters + locked actions.
 export function useStore() {
@@ -51,6 +57,7 @@ export function useStore() {
   // keep currency formatter + theme attribute in sync
   useEffect(() => { setCurrency(data.currency); }, [data.currency]);
   useEffect(() => { document.documentElement.setAttribute("data-theme", data.theme === "dark" ? "dark" : "light"); }, [data.theme]);
+  useEffect(() => { const [ac, ac2] = ACCENTS[data.accent] || ACCENTS.mint; const s = document.documentElement.style; s.setProperty("--ac", ac); s.setProperty("--ac2", ac2); }, [data.accent]);
 
   const set = useCallback((key, valOrFn) => {
     setData((prev) => {
