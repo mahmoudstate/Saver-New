@@ -16,7 +16,7 @@ function dayLabel(date) {
   return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 }
 
-export default function Activity({ store, onFilter }) {
+export default function Activity({ store, onFilter, onEdit }) {
   const { txns, banks } = store;
   const cm = currentMonth();
   const bankName = (t) => t.bankName || banks.find((b) => b.id === t.bankId)?.name || "";
@@ -44,7 +44,7 @@ export default function Activity({ store, onFilter }) {
     else if (t.type === "transfer") { cat = "transfer"; color = "var(--blue)"; nm = "Transfer"; sub = `${bankName(t)} → ${t.toBankName || ""}`; }
     else { nm = t.catName || t.type; sub = bankName(t); }
     return (
-      <div className="icard" key={t.id}>
+      <div className="icard" key={t.id} onClick={() => onEdit?.(t)} style={{ cursor: "pointer" }}>
         <CatTile txn={t} cat={cat} size={44} />
         <div><div className="nm">{nm}</div><div className="mt">{sub}</div></div>
         <div className={`amt ${cls} tnum`} style={!cls && color ? { color } : undefined}>{sign}{fmt(t.amount)}</div>
