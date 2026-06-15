@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useStore } from "./lib/store.js";
 import BottomNav from "./ui/BottomNav.jsx";
 import Home from "./screens/Home.jsx";
+import Activity from "./screens/Activity.jsx";
 import Ico from "./ui/Ico.jsx";
 
 function Placeholder({ tab }) {
@@ -21,9 +22,9 @@ export default function App() {
 
   return (
     <div className="app">
-      {tab === "home"
-        ? <Home store={store} onTab={setTab} onOpenBank={() => {}} />
-        : <Placeholder tab={tab} />}
+      {tab === "home" ? <Home store={store} onTab={setTab} onOpenBank={() => {}} />
+        : tab === "activity" ? <Activity store={store} onFilter={() => {}} />
+          : <Placeholder tab={tab} />}
       <BottomNav active={tab} onTab={setTab} onAdd={() => {}} />
     </div>
   );

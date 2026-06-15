@@ -310,3 +310,6 @@ body{background:var(--bg)}
 .app .nav{position:absolute}
 .hscroll{scrollbar-width:none}
 .hscroll::-webkit-scrollbar{display:none}
+
+/* unify hero (mint cover) height across screens */
+.app .hero{min-height:252px;box-sizing:border-box}

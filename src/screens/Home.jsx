@@ -72,7 +72,7 @@ export default function Home({ store, onTab }) {
           <div className="hib" onClick={() => setHide((v) => !v)}><Ico name={hide ? "eyeOff" : "eye"} size={20} /></div>
           <div className="hib" onClick={() => onTab?.("activity")}><Ico name="bell" size={20} /></div>
         </div>
-        <div className="hscroll" ref={pagerRef} onScroll={onScroll} style={{ overflow: "hidden", marginTop: 6, display: "flex", overflowX: "auto", scrollSnapType: "x mandatory" }}>
+        <div className="hscroll" ref={pagerRef} onScroll={onScroll} style={{ overflow: "hidden", marginTop: 2, display: "flex", overflowX: "auto", scrollSnapType: "x mandatory" }}>
           <div style={{ minWidth: "100%", scrollSnapAlign: "start" }}>
             <div className="lbl">Total balance</div><div className="big tnum">{money(d.tb)}</div>
             <div className="sub">Net this month {d.net < 0 ? "−" : "+"}{hide ? "••" : fmt(Math.abs(d.net))}</div>
@@ -82,7 +82,7 @@ export default function Home({ store, onTab }) {
             <div className="sub">{d.tf > 0 ? `${money(d.tf)} frozen in goals` : "Nothing frozen"}</div>
           </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 12 }}>
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 16, display: "flex", justifyContent: "center", gap: 6, zIndex: 1 }}>
           <span style={{ width: page === 0 ? 18 : 6, height: 6, borderRadius: 3, background: page === 0 ? "#fff" : "rgba(255,255,255,.45)" }} />
           <span style={{ width: page === 1 ? 18 : 6, height: 6, borderRadius: 3, background: page === 1 ? "#fff" : "rgba(255,255,255,.45)" }} />
         </div>
