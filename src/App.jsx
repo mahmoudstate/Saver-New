@@ -22,6 +22,8 @@ import Accounts from "./screens/Accounts.jsx";
 import AccountEditor from "./screens/AccountEditor.jsx";
 import GoalEditor from "./screens/GoalEditor.jsx";
 import BudgetEditor from "./screens/BudgetEditor.jsx";
+import Categories from "./screens/Categories.jsx";
+import CategoryEditor from "./screens/CategoryEditor.jsx";
 import Ico from "./ui/Ico.jsx";
 
 function Placeholder({ tab }) {
@@ -46,6 +48,8 @@ export default function App() {
   else if (view?.type === "edit") screen = <EditTxn store={store} txn={view.txn} onClose={back} />;
   else if (view?.type === "accounts") screen = <Accounts store={store} back={back} onOpen={(b) => setView({ type: "account", bank: b })} onAdd={() => setView({ type: "editAccount", account: null })} />;
   else if (view?.type === "editAccount") screen = <AccountEditor store={store} account={view.account} onClose={() => setView(view.account ? { type: "account", bank: view.account } : { type: "accounts" })} />;
+  else if (view?.type === "categories") screen = <Categories store={store} back={back} onAdd={() => setView({ type: "editCategory", category: null })} onEdit={(c) => setView({ type: "editCategory", category: c })} />;
+  else if (view?.type === "editCategory") screen = <CategoryEditor store={store} category={view.category} onClose={() => setView({ type: "categories" })} />;
   else if (view?.type === "account") screen = <AccountLedger store={store} bank={view.bank} back={back} onMove={(b) => setView({ type: "transfer", fromBankId: b.id })} onEdit={(b) => setView({ type: "editAccount", account: b })} />;
   else if (view?.type === "sub") screen = <SubscriptionDetail store={store} bill={view.bill} back={back} />;
   else if (view?.type === "inst") screen = <InstallmentDetail store={store} instId={view.instId} back={back} />;
@@ -59,7 +63,7 @@ export default function App() {
   else if (tab === "home") screen = <Home store={store} onTab={setTab} onOpenBank={(bank) => setView({ type: "account", bank })} onOpenGoals={() => setView({ type: "goals" })} onOpenBudgets={() => setView({ type: "budgets" })} />;
   else if (tab === "activity") screen = <Activity store={store} onFilter={() => {}} onEdit={(t) => setView({ type: "edit", txn: t })} />;
   else if (tab === "bills") screen = <Bills store={store} onAdd={() => {}} onOpenSub={(bill) => setView({ type: "sub", bill })} onOpenInst={(i) => setView({ type: "inst", instId: i.id })} />;
-  else if (tab === "profile") screen = <Profile store={store} go={(d) => { if (d === "accounts") setView({ type: "accounts" }); else if (d === "goals") setView({ type: "goals" }); else if (d === "budgets") setView({ type: "budgets" }); }} />;
+  else if (tab === "profile") screen = <Profile store={store} go={(d) => { if (d === "accounts") setView({ type: "accounts" }); else if (d === "goals") setView({ type: "goals" }); else if (d === "budgets") setView({ type: "budgets" }); else if (d === "categories") setView({ type: "categories" }); }} />;
   else screen = <Placeholder tab={tab} />;
 
   return (
