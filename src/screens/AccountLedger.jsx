@@ -23,7 +23,7 @@ function Row({ t, bankNameOf }) {
   );
 }
 
-export default function AccountLedger({ store, bank, back, onMove }) {
+export default function AccountLedger({ store, bank, back, onMove, onEdit }) {
   const { txns, banks } = store;
   const cm = currentMonth();
   const bankNameOf = (id) => banks.find((b) => b.id === id)?.name || "";
@@ -40,7 +40,7 @@ export default function AccountLedger({ store, bank, back, onMove }) {
           <div className="hib" onClick={back} style={{ background: "rgba(255,255,255,.2)", color: "#fff" }}><Ico name="back" size={20} /></div>
           <div className="ttl">{bank.name}</div><div className="grow" />
           <Ico name="contactless" size={20} color="#fff" stroke={2} style={{ opacity: .9, marginRight: 8 }} />
-          <div className="hib" style={{ background: "rgba(255,255,255,.2)", color: "#fff" }}><Ico name="note" size={18} /></div>
+          <div className="hib" style={{ background: "rgba(255,255,255,.2)", color: "#fff" }} onClick={() => onEdit?.(bank)}><Ico name="pencil" size={18} /></div>
         </div>
         <div style={{ position: "relative", zIndex: 2 }}>
           <div className="lbl" style={{ color: "rgba(255,255,255,.82)" }}>Available</div>

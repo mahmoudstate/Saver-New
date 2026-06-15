@@ -19,6 +19,7 @@ import Add from "./screens/Add.jsx";
 import Transfer from "./screens/Transfer.jsx";
 import EditTxn from "./screens/EditTxn.jsx";
 import Accounts from "./screens/Accounts.jsx";
+import AccountEditor from "./screens/AccountEditor.jsx";
 import Ico from "./ui/Ico.jsx";
 
 function Placeholder({ tab }) {
@@ -41,8 +42,9 @@ export default function App() {
   if (view?.type === "add") screen = <Add store={store} onClose={back} />;
   else if (view?.type === "transfer") screen = <Transfer store={store} fromBankId={view.fromBankId} onClose={back} />;
   else if (view?.type === "edit") screen = <EditTxn store={store} txn={view.txn} onClose={back} />;
-  else if (view?.type === "accounts") screen = <Accounts store={store} back={back} onOpen={(b) => setView({ type: "account", bank: b })} onAdd={() => {}} />;
-  else if (view?.type === "account") screen = <AccountLedger store={store} bank={view.bank} back={back} onMove={(b) => setView({ type: "transfer", fromBankId: b.id })} />;
+  else if (view?.type === "accounts") screen = <Accounts store={store} back={back} onOpen={(b) => setView({ type: "account", bank: b })} onAdd={() => setView({ type: "editAccount", account: null })} />;
+  else if (view?.type === "editAccount") screen = <AccountEditor store={store} account={view.account} onClose={() => setView(view.account ? { type: "account", bank: view.account } : { type: "accounts" })} />;
+  else if (view?.type === "account") screen = <AccountLedger store={store} bank={view.bank} back={back} onMove={(b) => setView({ type: "transfer", fromBankId: b.id })} onEdit={(b) => setView({ type: "editAccount", account: b })} />;
   else if (view?.type === "sub") screen = <SubscriptionDetail store={store} bill={view.bill} back={back} />;
   else if (view?.type === "inst") screen = <InstallmentDetail store={store} instId={view.instId} back={back} />;
   else if (view?.type === "goals") screen = <Goals store={store} back={back} onAdd={() => {}} onOpenGoal={(g) => setView({ type: "goal", goalId: g.id })} />;
