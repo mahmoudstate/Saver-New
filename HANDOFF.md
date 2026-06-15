@@ -55,7 +55,8 @@ APP-LOGIC.md also has: full **AlertModal / ConfirmModal** message catalog (verba
 ---
 
 ## 3. Migration (Phase C) — clean architecture in `saver-test`
-**Done & verified (screenshots):** foundation, logic layer, Home, Activity, icons, hero unify, v3.0.
+**Done & verified (screenshots), pushed to branch:** foundation + logic layer (calc/store, verified vs real backup) · **all 4 tabs**: Home, Activity, Bills (Subscriptions+Installments), Profile · **Account ledger** (bank-gradient hero) · **Subscription detail** (brand hero+logo) · new icons (Ico+CATS) · hero unified 252px · v3.0 · **push-navigation** (App `view` state: tapping a Home bank card → Account ledger; a Bills subscription → Subscription detail; back returns to tab).
+Latest commit: `8839513` (branch `claude/file-transfer-k1kui7`).
 ```
 src/
   lib/format.js   – fmt, currency, dates, MONTHS, darken/cardGradient, HAPTICS
@@ -65,9 +66,13 @@ src/
   ui/cats.js      – CATS category icons (new design) + resolveCat(txn) mapper
   ui/CatTile.jsx  – neutral tile + coloured glyph (matches showcase catTile)
   ui/BottomNav.jsx– Home·Activity·[+]·Bills·Profile (squircle FAB)
-  screens/Home.jsx     – ported 1:1 from showcase 01
+  screens/Home.jsx     – ported 1:1 from showcase 01 (bank cards tap → ledger)
   screens/Activity.jsx – ported 1:1 from showcase 02 (per-type rows: saving/goal/transfer)
-  App.jsx         – shell: useStore + tab switch + BottomNav (+ Placeholder for not-yet-built tabs)
+  screens/Bills.jsx    – ported 1:1 from 05/06 (Subscriptions+Installments seg; rows tap → sub detail)
+  screens/Profile.jsx  – ported 1:1 from 23 (wired username/accounts/theme)
+  screens/AccountLedger.jsx   – showcase 11 (bank-gradient hero + month ledger)
+  screens/SubscriptionDetail.jsx – showcase 15 (brand hero + logo + history)
+  App.jsx         – shell: useStore + tab switch + BottomNav + `view` push-nav (account/sub) + Placeholder
   saver-ui.css    – copy of ds.css + app overrides (.app shell full-screen, body=--bg, .hero min-height:252, .hscroll)
   _legacy/App.reference.jsx – OLD app, REFERENCE ONLY (not imported/built)
 demo.json         – clean showcase-style data for visual verification
@@ -86,11 +91,11 @@ BK=./demo.json [TAB=activity] node shot.cjs http://localhost:8099 out.png
 ---
 
 ## 4. Remaining work (port each 1:1 from showcase, then verify)
-- [ ] **Bills** tab (subscriptions + installments, view-selector, month/status filter)
-- [ ] **Subscription detail** (brand hero+logo) · **Installment detail** (ring, schedule, pay/undo)
+- [x] All 4 tabs · Account ledger · Subscription detail (DONE)
+- [ ] **Installment detail** (ring, schedule, pay/undo) — wire from Bills installment rows
 - [ ] **Budgets** + Budget detail · **Projects** + Project detail
 - [ ] **Goals** + Goal detail (return-to-bank, spending-mode, frozen breakdown)
-- [ ] **Account ledger** (bank-gradient hero) · **Accounts list** (gradient cards, reorder)
+- [ ] **Accounts list** (gradient cards, reorder) — from Profile→Accounts
 - [ ] **Add** Expense/Income/Saving · **Transfer** · **Quick Add** · **Source picker** (vault) · **Edit txn**
 - [ ] **Installment add** wizard + focused sheet · smart number entry
 - [ ] **Editors**: account/category/goal/budget · **Quick Actions** · **Customize Dashboard** (dnd + hide)
@@ -105,4 +110,10 @@ BK=./demo.json [TAB=activity] node shot.cjs http://localhost:8099 out.png
 ---
 
 ## 5. Quick status one-liner
-Clean React rebuild on new design: **Home + Activity done & verified** (new icons, unified 252px hero, logic layer verified vs real backup). Continue porting remaining ~50 screens **1:1 from the showcase** using the method above. Logic locked. No emoji. Verify each screen by screenshot before moving on.
+Clean React rebuild on the new design: **4 tabs + Account ledger + Subscription detail done & verified**, push-navigation working, logic layer verified vs real backup, hero unified 252px, new icons only, v3.0. Continue porting the remaining detail/add/editor/filter/message screens **1:1 from the showcase** (method in §0). Logic locked. No emoji. Verify each screen by screenshot (local server + shot.cjs) before moving on. Work locally; push at checkpoints.
+
+## 6. How to resume in a NEW session
+1. Clone `saver-test`, checkout `claude/file-transfer-k1kui7`, `npm install`.
+2. Read this file + `saver-site/APP-LOGIC.md` (locked logic/messages) + open the showcase https://mahmoudstate.github.io/saver-site/screens.html.
+3. Pick the next screen from §4 → open its showcase markup in `saver-site/screens.html` → port 1:1 to a React screen (classes + `<Ico>`/`<CatTile>`) → wire to `store` → verify: `npm run build`, serve `dist` (`python3 -m http.server 8099`), screenshot with puppeteer seeding `demo.json` into localStorage (click `[aria-label="…"]` / `.seg b` / `.bankcard` to reach a view).
+4. Keep heroes at 252px, new icons only, no emoji, logic untouched.
