@@ -18,7 +18,7 @@ Re-skin the **working** React app (`saver-test`) with the **new design** (`saver
 - [x] Budgets · Budget detail · Projects · Project detail (tabbed Monthly/Projects; spend = expense+goal_withdraw in cats; project mark-complete)
 - [x] Goals · Goal detail (return-to-bank, spending-mode, frozen breakdown) — wired; Add money + Return to bank via reusable AmountSheet (keypad)
 - [ ] Account ledger (bank gradient hero) · Accounts list (gradient cards)
-- [ ] Add: Expense/Income/Saving/Transfer · Quick Add · Source picker (vault) · Edit txn
+- [~] Add: Expense/Income/Saving DONE (screen + keypad + pickers, wired to addTxn) · Transfer · Quick Add · Source picker (vault) · Edit txn pending
 - [ ] Installment add (grouped Next wizard + focused sheet)
 - [ ] Editors: account/category/goal/budget · Quick Actions · Customize Dashboard (dnd + hide)
 - [ ] Profile/Settings · Appearance · Privacy · Backup & Restore

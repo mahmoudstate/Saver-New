@@ -15,6 +15,7 @@ import GoalDetail from "./screens/GoalDetail.jsx";
 import Budgets from "./screens/Budgets.jsx";
 import BudgetDetail from "./screens/BudgetDetail.jsx";
 import ProjectDetail from "./screens/ProjectDetail.jsx";
+import Add from "./screens/Add.jsx";
 import Ico from "./ui/Ico.jsx";
 
 function Placeholder({ tab }) {
@@ -34,7 +35,8 @@ export default function App() {
   const back = () => setView(null);
 
   let screen;
-  if (view?.type === "account") screen = <AccountLedger store={store} bank={view.bank} back={back} />;
+  if (view?.type === "add") screen = <Add store={store} onClose={back} />;
+  else if (view?.type === "account") screen = <AccountLedger store={store} bank={view.bank} back={back} />;
   else if (view?.type === "sub") screen = <SubscriptionDetail store={store} bill={view.bill} back={back} />;
   else if (view?.type === "inst") screen = <InstallmentDetail store={store} instId={view.instId} back={back} />;
   else if (view?.type === "goals") screen = <Goals store={store} back={back} onAdd={() => {}} onOpenGoal={(g) => setView({ type: "goal", goalId: g.id })} />;
@@ -51,7 +53,7 @@ export default function App() {
   return (
     <div className="app">
       {screen}
-      {!view && <BottomNav active={tab} onTab={setTab} onAdd={() => {}} />}
+      {!view && <BottomNav active={tab} onTab={setTab} onAdd={() => setView({ type: "add" })} />}
       <Overlays store={store} />
     </div>
   );
