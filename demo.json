@@ -21,14 +21,17 @@
     { "id": "7", "type": "expense", "amount": 160, "date": "2026-06-10", "bankId": "cash", "catId": "shopping", "catName": "Groceries", "catGlyph": "shopping-bag" }
   ],
   "bills": [
-    { "id": "netflix", "name": "Netflix", "amount": 10, "bankId": "hsbc", "dueDay": 1, "payments": [{ "month": "2026-06" }] },
-    { "id": "spotify", "name": "Spotify", "amount": 6, "bankId": "hsbc", "dueDay": 1, "payments": [{ "month": "2026-06" }] },
-    { "id": "voda", "name": "Vodafone", "amount": 12, "bankId": "hsbc", "dueDay": 7, "payments": [] }
+    { "id": "netflix", "name": "Netflix", "amount": 10, "bankId": "hsbc", "color": "#E50914", "dueDay": 5, "payments": [{ "month": "2026-06" }] },
+    { "id": "voda", "name": "Vodafone", "amount": 12, "bankId": "hsbc", "color": "#E60000", "dueDay": 16, "note": "Mobile", "payments": [] },
+    { "id": "spotify", "name": "Spotify", "amount": 6, "bankId": "hsbc", "color": "#1DB954", "dueDay": 9, "payments": [{ "month": "2026-06" }] }
   ],
   "budgets": [
     { "id": "std", "name": "Standard", "amount": 500, "cats": ["food", "shopping"] }
   ],
-  "installments": [],
+  "installments": [
+    { "id": "iphone", "itemType": "iPhone 15", "company": "iPhone 15", "color": "#3a3f66", "totalInstallments": 12, "installmentAmount": 200, "totalAmount": 2400, "paidInstallments": 3, "dueDay": 5, "startDate": "2026-04-01", "payments": [{ "month": "2026-04" }, { "month": "2026-05" }, { "month": "2026-06" }] },
+    { "id": "car", "itemType": "Car loan", "company": "Car loan", "color": "#3B82F6", "totalInstallments": 24, "installmentAmount": 500, "totalAmount": 12000, "paidInstallments": 7, "dueDay": 20, "startDate": "2025-11-01", "payments": [{ "month": "2025-11" }, { "month": "2025-12" }, { "month": "2026-01" }, { "month": "2026-02" }, { "month": "2026-03" }, { "month": "2026-04" }, { "month": "2026-05" }] }
+  ],
   "expCats": [
     { "id": "food", "name": "Food & Dining", "glyph": "utensils", "color": "#fb923c", "group": "daily" },
     { "id": "shopping", "name": "Shopping", "glyph": "shopping-bag", "color": "#f472b6", "group": "lifestyle" }
