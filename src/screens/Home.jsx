@@ -34,7 +34,7 @@ function BankCard({ bank, available, frozen, low, money, onClick }) {
 
 const circ = (size = 42, r = 13, bg, color) => ({ width: size, height: size, borderRadius: r, background: bg, color, display: "flex", alignItems: "center", justifyContent: "center" });
 
-export default function Home({ store, onTab, onOpenBank }) {
+export default function Home({ store, onTab, onOpenBank, onOpenGoals }) {
   const { banks, txns, savings, bills = [], budgets = [], username } = store;
   const [hide, setHide] = useState(false);
   const [page, setPage] = useState(0);
@@ -121,7 +121,7 @@ export default function Home({ store, onTab, onOpenBank }) {
 
       {/* Goals */}
       {d.goals.length > 0 && (
-        <div className="tile" style={{ marginBottom: 13 }} onClick={() => onTab?.("profile")}>
+        <div className="tile" style={{ marginBottom: 13 }} onClick={() => onOpenGoals?.()}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 13 }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={circ(42, 13, "var(--acDim)", "var(--ac)")}><Ico name="target" size={21} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Goals · {d.goals.length} active</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.goalsSaved)} saved</div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
           <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
             {d.goals.slice(0, 2).map((g) => (

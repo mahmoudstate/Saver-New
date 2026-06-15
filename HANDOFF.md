@@ -94,9 +94,9 @@ BK=./demo.json [TAB=activity] node shot.cjs http://localhost:8099 out.png
 - [x] All 4 tabs · Account ledger · Subscription detail (DONE)
 - [x] **Installment detail** (ring, schedule, pay/undo) — DONE: showcase 37 ported (`screens/InstallmentDetail.jsx`), opens from Bills installment rows; pay logs an expense + advances the ring + success toast; tap a paid row to undo (confirm dialog). Verified light+dark, block + success paths.
 - [ ] **Budgets** + Budget detail · **Projects** + Project detail
-- [ ] **Goals** + Goal detail (return-to-bank, spending-mode, frozen breakdown)
+- [x] **Goals** + Goal detail (return-to-bank, spending-mode, frozen breakdown) — DONE: `screens/Goals.jsx` (showcase 04) + `screens/GoalDetail.jsx` (showcase 13). Add money (saving) + Return to bank (goal_return, auto-splits across frozen banks) via reusable `ui/AmountSheet.jsx` (keypad + source picker); spending-mode toggle + complete/archive wired. Opens from the Home Goals card. Verified light+dark + a real add (£600→£800, progress + frozen + contribution + toast).
 - [ ] **Accounts list** (gradient cards, reorder) — from Profile→Accounts
-- [ ] **Add** Expense/Income/Saving · **Transfer** · **Quick Add** · **Source picker** (vault) · **Edit txn**
+- [~] **Add** Expense/Income/Saving · **Transfer** · **Quick Add** · **Source picker** (vault) · **Edit txn** — partial: `ui/AmountSheet.jsx` keypad+source picker exists and `saving` (Add money to goal) is wired. Still TODO: the full Add screen (segmented Expense/Income/Saving), Transfer, Quick Add, vault source picker, Edit txn.
 - [ ] **Installment add** wizard + focused sheet · smart number entry
 - [ ] **Editors**: account/category/goal/budget · **Quick Actions** · **Customize Dashboard** (dnd + hide)
 - [ ] **Profile/Settings** · Appearance · Privacy · **Backup & Restore**

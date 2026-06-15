@@ -16,7 +16,7 @@ Re-skin the **working** React app (`saver-test`) with the **new design** (`saver
 - [ ] Bills — Subscriptions / Installments (view selector, month/status filter)
 - [x] Subscription detail (brand hero + logo) · [x] Installment detail (ring · schedule · pay/undo, wired)
 - [ ] Budgets · Budget detail · Projects · Project detail
-- [ ] Goals · Goal detail (return-to-bank, spending-mode, frozen breakdown)
+- [x] Goals · Goal detail (return-to-bank, spending-mode, frozen breakdown) — wired; Add money + Return to bank via reusable AmountSheet (keypad)
 - [ ] Account ledger (bank gradient hero) · Accounts list (gradient cards)
 - [ ] Add: Expense/Income/Saving/Transfer · Quick Add · Source picker (vault) · Edit txn
 - [ ] Installment add (grouped Next wizard + focused sheet)

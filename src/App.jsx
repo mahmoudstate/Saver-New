@@ -10,6 +10,8 @@ import Profile from "./screens/Profile.jsx";
 import AccountLedger from "./screens/AccountLedger.jsx";
 import SubscriptionDetail from "./screens/SubscriptionDetail.jsx";
 import InstallmentDetail from "./screens/InstallmentDetail.jsx";
+import Goals from "./screens/Goals.jsx";
+import GoalDetail from "./screens/GoalDetail.jsx";
 import Ico from "./ui/Ico.jsx";
 
 function Placeholder({ tab }) {
@@ -32,7 +34,9 @@ export default function App() {
   if (view?.type === "account") screen = <AccountLedger store={store} bank={view.bank} back={back} />;
   else if (view?.type === "sub") screen = <SubscriptionDetail store={store} bill={view.bill} back={back} />;
   else if (view?.type === "inst") screen = <InstallmentDetail store={store} instId={view.instId} back={back} />;
-  else if (tab === "home") screen = <Home store={store} onTab={setTab} onOpenBank={(bank) => setView({ type: "account", bank })} />;
+  else if (view?.type === "goals") screen = <Goals store={store} back={back} onAdd={() => {}} onOpenGoal={(g) => setView({ type: "goal", goalId: g.id })} />;
+  else if (view?.type === "goal") screen = <GoalDetail store={store} goalId={view.goalId} back={() => setView({ type: "goals" })} />;
+  else if (tab === "home") screen = <Home store={store} onTab={setTab} onOpenBank={(bank) => setView({ type: "account", bank })} onOpenGoals={() => setView({ type: "goals" })} />;
   else if (tab === "activity") screen = <Activity store={store} onFilter={() => {}} />;
   else if (tab === "bills") screen = <Bills store={store} onAdd={() => {}} onOpenSub={(bill) => setView({ type: "sub", bill })} onOpenInst={(i) => setView({ type: "inst", instId: i.id })} />;
   else if (tab === "profile") screen = <Profile store={store} go={() => {}} />;
