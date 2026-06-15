@@ -5,6 +5,7 @@ import BottomNav from "./ui/BottomNav.jsx";
 import Home from "./screens/Home.jsx";
 import Activity from "./screens/Activity.jsx";
 import Bills from "./screens/Bills.jsx";
+import Profile from "./screens/Profile.jsx";
 import Ico from "./ui/Ico.jsx";
 
 function Placeholder({ tab }) {
@@ -26,6 +27,7 @@ export default function App() {
       {tab === "home" ? <Home store={store} onTab={setTab} onOpenBank={() => {}} />
         : tab === "activity" ? <Activity store={store} onFilter={() => {}} />
           : tab === "bills" ? <Bills store={store} onAdd={() => {}} />
+          : tab === "profile" ? <Profile store={store} go={() => {}} />
           : <Placeholder tab={tab} />}
       <BottomNav active={tab} onTab={setTab} onAdd={() => {}} />
     </div>
