@@ -92,7 +92,7 @@ BK=./demo.json [TAB=activity] node shot.cjs http://localhost:8099 out.png
 
 ## 4. Remaining work (port each 1:1 from showcase, then verify)
 - [x] All 4 tabs · Account ledger · Subscription detail (DONE)
-- [ ] **Installment detail** (ring, schedule, pay/undo) — wire from Bills installment rows
+- [x] **Installment detail** (ring, schedule, pay/undo) — DONE: showcase 37 ported (`screens/InstallmentDetail.jsx`), opens from Bills installment rows; pay logs an expense + advances the ring + success toast; tap a paid row to undo (confirm dialog). Verified light+dark, block + success paths.
 - [ ] **Budgets** + Budget detail · **Projects** + Project detail
 - [ ] **Goals** + Goal detail (return-to-bank, spending-mode, frozen breakdown)
 - [ ] **Accounts list** (gradient cards, reorder) — from Profile→Accounts
@@ -100,11 +100,11 @@ BK=./demo.json [TAB=activity] node shot.cjs http://localhost:8099 out.png
 - [ ] **Installment add** wizard + focused sheet · smart number entry
 - [ ] **Editors**: account/category/goal/budget · **Quick Actions** · **Customize Dashboard** (dnd + hide)
 - [ ] **Profile/Settings** · Appearance · Privacy · **Backup & Restore**
-- [ ] **Messages**: friendly toasts + centre dialogs + GoalToast + inline validation (apply friendly catalog)
+- [~] **Messages**: foundation DONE — `ui/Modal.jsx` (friendly `AlertModal` block + `ConfirmModal` + `Toast`) mounted once in `App.jsx`, driven by store (`alert/setAlert`, `confirm/setConfirm`, `toast/flash`). Overlay styles (`.dim/.dialog/.sheet/.toast`) in `saver-ui.css` scoped to `.app`. Still TODO: GoalToast celebration + inline field validation + full friendly copy catalog.
 - [ ] **Smart Filter** sheet + **Results**
 - [ ] System (LAST, latest content): Onboarding · Help/FAQ · What’s New · Empty/Celebration · Notifications
 - [ ] **Design QA pass**: uniform field/chip sizes + consistent label↔value layout
-- [ ] Wire real **CRUD/actions** from legacy into `lib/store.js` (addTxn split logic, delTxn, updateTxn, bill/installment pay/undo, goal spend/return) — port verbatim, keep validation messages
+- [~] Wire real **CRUD/actions** from legacy into `lib/store.js` — DONE for `addTxn` (incl. goal split logic), `addTxns`, `delTxn` (+ `reconcileLinked`), `updateTxn`, all ported verbatim with locked validation. Installment pay/undo wired. Still TODO: bill record-payment, goal spend/return UI wiring (engine ready).
 - [ ] Final functional test with the **real backup**, then user deploys
 
 ---

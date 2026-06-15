@@ -30,6 +30,17 @@ export function calcFrozenForBank(bankId, savings, txns) {
   }, 0);
 }
 
+// Per-bank goal balance map (used to split a goal withdraw/return across the banks it was frozen in)
+export function goalBalancesPerBank(goalId, txns) {
+  const balances = {};
+  txns.forEach((t) => {
+    if (t.goalId !== goalId) return;
+    if (t.type === "saving") balances[t.bankId] = (balances[t.bankId] || 0) + t.amount;
+    if (t.type === "goal_withdraw" || t.type === "goal_return") balances[t.bankId] = (balances[t.bankId] || 0) - t.amount;
+  });
+  return balances;
+}
+
 // Derived helpers (clamped where legacy clamps with Math.max(0, …))
 export const makeCalc = (txns, savings = []) => ({
   bankBalance: (id) => calcBankBalance(id, txns),

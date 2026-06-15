@@ -6,7 +6,7 @@ Re-skin the **working** React app (`saver-test`) with the **new design** (`saver
 - [ ] `saver-ui.css` (design system: vars + component classes, body=--bg for full-screen app) imported in `main.jsx`
 - [ ] Theme wired: `documentElement[data-theme]` follows app theme state
 - [ ] Icon parity: map showcase icons → app `<Ico>` (extend as needed)
-- [ ] Helpers: category tile, bank-card, chip, field, sheet, dialog components
+- [~] Helpers: category tile, bank-card, chip done; dialog/toast done (ui/Modal.jsx); sheet/field to come with Add flows
 
 ## Screens / flows to re-skin (from showcase)
 - [ ] App shell: phone-less full screen + **bottom nav** (Home·Activity·[+]·Bills·Profile, squircle FAB)
@@ -14,7 +14,7 @@ Re-skin the **working** React app (`saver-test`) with the **new design** (`saver
 - [ ] Activity: search + filter entry · grouped list · row states
 - [ ] Smart Filter sheet + Results (when/show/categories/accounts, Bills/Installments, multi-select)
 - [ ] Bills — Subscriptions / Installments (view selector, month/status filter)
-- [ ] Subscription detail (brand hero + logo) · Installment detail
+- [x] Subscription detail (brand hero + logo) · [x] Installment detail (ring · schedule · pay/undo, wired)
 - [ ] Budgets · Budget detail · Projects · Project detail
 - [ ] Goals · Goal detail (return-to-bank, spending-mode, frozen breakdown)
 - [ ] Account ledger (bank gradient hero) · Accounts list (gradient cards)
@@ -22,7 +22,7 @@ Re-skin the **working** React app (`saver-test`) with the **new design** (`saver
 - [ ] Installment add (grouped Next wizard + focused sheet)
 - [ ] Editors: account/category/goal/budget · Quick Actions · Customize Dashboard (dnd + hide)
 - [ ] Profile/Settings · Appearance · Privacy · Backup & Restore
-- [ ] Messages: friendly toasts (success/info) + center dialogs (block/confirm) + GoalToast + inline validation
+- [~] Messages: friendly toasts (success/info) + center dialogs (block/confirm) wired via store (AlertModal/ConfirmModal/Toast in ui/Modal.jsx); GoalToast + inline validation still to do
 - [ ] System: Onboarding · Help/FAQ · What's New · Empty/Celebration · Notifications
 - [ ] Push/reminder notifications copy (design ref only)
 

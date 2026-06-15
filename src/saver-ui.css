@@ -313,3 +313,24 @@ body{background:var(--bg)}
 
 /* unify hero (mint cover) height across screens */
 .app .hero{min-height:252px;box-sizing:border-box}
+
+/* ---------- 19. OVERLAYS (dialog · sheet · toast) — ported from showcase, scoped to .app ---------- */
+.app .dim{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:40;animation:fade .2s ease both}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.app .dialog{position:absolute;left:26px;right:26px;top:50%;transform:translateY(-50%);background:var(--surface);border-radius:24px;padding:24px;z-index:41;box-shadow:var(--elev);text-align:center;animation:pop .26s var(--e-out) both}
+@keyframes pop{from{opacity:0;transform:translateY(-50%) scale(.94)}to{opacity:1;transform:translateY(-50%) scale(1)}}
+.app .dialog .dico{width:56px;height:56px;border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.app .dialog .dttl{font-size:18px;font-weight:800;letter-spacing:-.3px;margin-bottom:7px}
+.app .dialog .dmsg{font-size:14px;line-height:1.5;color:var(--muted);font-weight:600}
+.app .dialog .drow{display:flex;gap:10px;margin-top:20px}
+.app .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--bg);border-radius:26px 26px 0 0;padding:10px 20px calc(26px + var(--safe-bottom,0px));box-shadow:0 -18px 40px rgba(0,0,0,.3);z-index:41;animation:sheetUp .3s var(--e-out) both}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.app .sheet .grab{width:42px;height:5px;border-radius:999px;background:color-mix(in srgb,var(--text) 16%,transparent);margin:0 auto 16px}
+.app .toast{position:absolute;left:16px;right:16px;bottom:calc(88px + var(--safe-bottom,0px));background:var(--surface);border:var(--cardBorder);box-shadow:var(--elev);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:12px;z-index:42;animation:toastIn .3s var(--e-out) both}
+@keyframes toastIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.app .toast .tx{font-size:13.5px;font-weight:700}
+.app .toast .ts{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:1px}
+.app .toast .ic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff}
+/* secondary/danger button tints for dialog rows */
+.btn-ghost{background:var(--surface2);color:var(--text)}
+.btn-danger{background:var(--red);color:#fff}
