@@ -167,7 +167,7 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
       )}
       </Fragment>);
       SEC.budgets = (<Fragment key="budgets">{d.limit > 0 && (
-        <div className="tile" onClick={() => onOpenBudgets?.()}>
+        <div className="tile" style={{ marginBottom: 13 }} onClick={() => onOpenBudgets?.()}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 13 }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={circ(42, 13, "var(--purpleDim)", "var(--purple)")}><Ico name="layers" size={20} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Budgets · {mName}</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.spent)} <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 700 }}>of {fmt(d.limit)}</span></div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
           <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)" }}><i style={{ display: "block", width: `${d.limit > 0 ? Math.min(100, (d.spent / d.limit) * 100) : 0}%`, height: "100%", borderRadius: 4, background: "var(--purple)" }} /></div>
         </div>
