@@ -9,22 +9,22 @@ const KNOWN_SECTIONS = DASH_SECTIONS.map((s) => s.id);
 
 const Contactless = ({ s = 20 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" style={{ opacity: .9 }}><path d="M5 11a3 3 0 0 1 0 2M9 8.5a6.5 6.5 0 0 1 0 7M13 6a10 10 0 0 1 0 12" /></svg>;
 
-export function BankCard({ bank, available, frozen, low, money, onClick, wide }) {
+export function BankCard({ bank, available, frozen, low, money, onClick, wide, grid }) {
   const col = bank.color || "#0e9f6e";
   return (
-    <div className="bankcard" onClick={onClick} style={{ background: cardGradient(col), cursor: "pointer", ...(wide ? { width: "100%", height: 168 } : {}) }}>
+    <div className="bankcard" onClick={onClick} style={{ background: cardGradient(col), cursor: "pointer", ...(wide ? { width: "100%", height: 168 } : {}), ...(grid ? { minWidth: 0, width: "100%", height: 152 } : {}), ...(low ? { boxShadow: "0 12px 24px -10px rgba(0,0,0,.45), inset 0 0 0 2px #F8B53D" } : {}) }}>
       <span className="bc-orb" style={{ width: 98, height: 98, top: -34, right: -26 }} />
       <span className="bc-orb" style={{ width: 44, height: 44, bottom: 30, right: 34, opacity: .5 }} />
       <span className="bc-shine" />
       <div style={{ position: "relative", zIndex: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontWeight: 800, fontSize: 14.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bank.name}</span>
+        <span style={{ fontWeight: 800, fontSize: grid ? 13.5 : 14.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bank.name}</span>
         {available < 0 ? <span style={{ width: 9, height: 9, borderRadius: 99, background: "#fff", flexShrink: 0 }} />
-          : low ? <span style={{ width: 27, height: 27, borderRadius: 9, background: "rgba(255,255,255,.24)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M19 12l-7 7-7-7" /></svg></span>
+          : low ? <span style={{ display: "flex", alignItems: "center", gap: 3, background: "#F8B53D", color: "#3A2400", fontWeight: 800, fontSize: 10.5, letterSpacing: ".02em", padding: "4px 8px 4px 6px", borderRadius: 8, flexShrink: 0 }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3A2400" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M19 12l-7 7-7-7" /></svg>LOW</span>
             : <Contactless />}
       </div>
       <div style={{ position: "relative", zIndex: 2 }}>
         <div style={{ fontSize: 10, opacity: .85, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".09em" }}>{low && frozen <= 0 ? "Available · low" : "Available"}</div>
-        <div className="tnum" style={{ fontSize: 27, fontWeight: 800, letterSpacing: -.6, lineHeight: 1.08 }}>{money(available)}</div>
+        <div className="tnum" style={{ fontSize: grid ? 22 : 27, fontWeight: 800, letterSpacing: -.6, lineHeight: 1.08 }}>{money(available)}</div>
         {frozen > 0
           ? <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6 }}><Ico name="lock" size={11} color="#fff" /><span className="tnum" style={{ fontSize: 11.5, fontWeight: 700, opacity: .92 }}>{money(frozen)} locked · goals</span></div>
           : low

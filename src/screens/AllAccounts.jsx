@@ -18,13 +18,13 @@ export default function AllAccounts({ store, back, onOpenBank, onAdd }) {
         <div className="sub">{banks.length} account{banks.length === 1 ? "" : "s"}{frozen > 0 ? ` · ${fmt(frozen)} frozen in goals` : ""}</div>
       </div>
 
-      <div style={{ display: "grid", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
         {banks.map((b) => {
           const bal = calcBankBalance(b.id, txns), fr = Math.max(0, calcFrozenForBank(b.id, savings, txns)), avail = bal - fr;
           const low = b.lowBalanceThreshold && avail <= b.lowBalanceThreshold && avail >= 0;
-          return <BankCard key={b.id} wide bank={b} available={avail} frozen={fr} low={low} money={fmt} onClick={() => onOpenBank?.(b)} />;
+          return <BankCard key={b.id} grid bank={b} available={avail} frozen={fr} low={low} money={fmt} onClick={() => onOpenBank?.(b)} />;
         })}
-        <div className="icard" onClick={onAdd} style={{ cursor: "pointer", borderStyle: "dashed" }}>
+        <div className="icard" onClick={onAdd} style={{ cursor: "pointer", borderStyle: "dashed", gridColumn: "1 / -1" }}>
           <span className="circ" style={{ width: 44, height: 44, borderRadius: 14, background: "var(--surface2)", color: "var(--acText)" }}><Ico name="plus" size={22} /></span>
           <div className="nm" style={{ color: "var(--acText)" }}>Add account</div>
         </div>
