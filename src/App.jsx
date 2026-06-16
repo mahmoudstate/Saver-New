@@ -39,6 +39,8 @@ import CustomizeDashboard from "./screens/CustomizeDashboard.jsx";
 import Onboarding from "./screens/Onboarding.jsx";
 import Celebration from "./screens/Celebration.jsx";
 import WhatsNew from "./ui/WhatsNew.jsx";
+import AllAccounts from "./screens/AllAccounts.jsx";
+import Breakdown from "./screens/Breakdown.jsx";
 import Ico from "./ui/Ico.jsx";
 
 function Placeholder({ tab }) {
@@ -89,7 +91,9 @@ export default function App() {
   else if (view?.type === "editBudget") screen = <BudgetEditor store={store} budget={view.budget} onClose={() => setView({ type: "budgets" })} />;
   else if (view?.type === "budget") screen = <BudgetDetail store={store} budgetId={view.budgetId} back={() => setView({ type: "budgets" })} />;
   else if (view?.type === "project") screen = <ProjectDetail store={store} projectId={view.projectId} back={() => setView({ type: "budgets" })} />;
-  else if (tab === "home") screen = <Home store={store} onTab={setTab} onOpenBank={(bank) => setView({ type: "account", bank })} onOpenGoals={() => setView({ type: "goals" })} onOpenBudgets={() => setView({ type: "budgets" })} onOpenNotifications={() => setView({ type: "notifications" })} />;
+  else if (view?.type === "allAccounts") screen = <AllAccounts store={store} back={back} onOpenBank={(b) => setView({ type: "account", bank: b })} onAdd={() => setView({ type: "editAccount", account: null })} />;
+  else if (view?.type === "breakdown") screen = <Breakdown store={store} back={back} onFilter={() => setView({ type: "filter" })} />;
+  else if (tab === "home") screen = <Home store={store} onTab={setTab} onOpenBank={(bank) => setView({ type: "account", bank })} onOpenGoals={() => setView({ type: "goals" })} onOpenBudgets={() => setView({ type: "budgets" })} onOpenNotifications={() => setView({ type: "notifications" })} onOpenAllAccounts={() => setView({ type: "allAccounts" })} onOpenBreakdown={() => setView({ type: "breakdown" })} onCustomize={() => setView({ type: "customize" })} />;
   else if (view?.type === "filter") screen = <SmartFilter store={store} initial={view.filter} back={back} onApply={(f) => setView({ type: "results", filter: f })} />;
   else if (view?.type === "results") screen = <FilterResults store={store} filter={view.filter} back={() => setView(null)} onEditFilter={() => setView({ type: "filter", filter: view.filter })} onEdit={(t) => setView({ type: "edit", txn: t })} />;
   else if (tab === "activity") screen = <Activity store={store} onFilter={() => setView({ type: "filter" })} onEdit={(t) => setView({ type: "edit", txn: t })} onAdd={() => setView({ type: "add" })} />;

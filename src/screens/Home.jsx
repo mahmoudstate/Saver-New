@@ -6,10 +6,10 @@ import { calcBankBalance, calcGoalSaved, calcFrozenForBank, totalBalance, totalS
 
 const Contactless = ({ s = 20 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" style={{ opacity: .9 }}><path d="M5 11a3 3 0 0 1 0 2M9 8.5a6.5 6.5 0 0 1 0 7M13 6a10 10 0 0 1 0 12" /></svg>;
 
-function BankCard({ bank, available, frozen, low, money, onClick }) {
+export function BankCard({ bank, available, frozen, low, money, onClick, wide }) {
   const col = bank.color || "#0e9f6e";
   return (
-    <div className="bankcard" onClick={onClick} style={{ background: cardGradient(col), cursor: "pointer" }}>
+    <div className="bankcard" onClick={onClick} style={{ background: cardGradient(col), cursor: "pointer", ...(wide ? { width: "100%", height: 168 } : {}) }}>
       <span className="bc-orb" style={{ width: 98, height: 98, top: -34, right: -26 }} />
       <span className="bc-orb" style={{ width: 44, height: 44, bottom: 30, right: 34, opacity: .5 }} />
       <span className="bc-shine" />
@@ -34,7 +34,7 @@ function BankCard({ bank, available, frozen, low, money, onClick }) {
 
 const circ = (size = 42, r = 13, bg, color) => ({ width: size, height: size, borderRadius: r, background: bg, color, display: "flex", alignItems: "center", justifyContent: "center" });
 
-export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudgets, onOpenNotifications }) {
+export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudgets, onOpenNotifications, onOpenAllAccounts, onOpenBreakdown, onCustomize }) {
   const { banks, txns, savings, bills = [], budgets = [], username } = store;
   const [hide, setHide] = useState(false);
   const [page, setPage] = useState(0);
@@ -75,7 +75,7 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
         <div className="hscroll" ref={pagerRef} onScroll={onScroll} style={{ overflow: "hidden", marginTop: 2, display: "flex", overflowX: "auto", scrollSnapType: "x mandatory" }}>
           <div style={{ minWidth: "100%", scrollSnapAlign: "start" }}>
             <div className="lbl">Total balance</div><div className="big tnum">{money(d.tb)}</div>
-            <div className="sub">Net this month {d.net < 0 ? "−" : "+"}{hide ? "••" : fmt(Math.abs(d.net))}</div>
+            <div className="sub">{banks.length} account{banks.length === 1 ? "" : "s"}</div>
           </div>
           <div style={{ minWidth: "100%", scrollSnapAlign: "start" }}>
             <div className="lbl">Safe to spend</div><div className="big tnum">{money(d.ts)}</div>
@@ -92,24 +92,28 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
       const dash = store.dashboard?.order ? store.dashboard : { order: ["accounts", "income", "bills", "budgets", "goals"], hidden: [] };
       const SEC = {};
       SEC.accounts = (<Fragment key="accounts">
-      <div className="sectit"><div className="t">Accounts</div><div className="m" onClick={() => onTab?.("profile")}>All accounts</div></div>
+      <div className="sectit"><div className="t">Accounts</div><div className="m" onClick={() => onOpenAllAccounts?.()}>All accounts</div></div>
       <div className="hscroll" style={{ display: "flex", gap: 13, overflowX: "auto", marginBottom: 16, paddingBottom: 2 }}>
         {banks.map((b) => {
           const bal = calcBankBalance(b.id, txns), frozen = Math.max(0, calcFrozenForBank(b.id, savings, txns)), avail = bal - frozen;
           const low = b.lowBalanceThreshold && avail <= b.lowBalanceThreshold && avail >= 0;
           return <BankCard key={b.id} bank={b} available={avail} frozen={frozen} low={low} money={money} onClick={() => onOpenBank?.(b)} />;
         })}
-        <div style={{ minWidth: 84, background: "var(--surface2)", border: "var(--cardBorder)", borderRadius: 22, padding: 14, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, color: "var(--ac)" }} onClick={() => onTab?.("profile")}><Ico name="grip" size={20} /><div style={{ fontSize: 11, fontWeight: 800, textAlign: "center" }}>All</div></div>
+        <div style={{ minWidth: 84, background: "var(--surface2)", border: "var(--cardBorder)", borderRadius: 22, padding: 14, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, color: "var(--ac)" }} onClick={() => onOpenAllAccounts?.()}><Ico name="layers" size={20} /><div style={{ fontSize: 11, fontWeight: 800, textAlign: "center" }}>All</div></div>
       </div>
 
       </Fragment>);
       SEC.income = (<Fragment key="income">
-      <div className="tile" style={{ marginBottom: 13 }}>
+      <div className="tile" style={{ marginBottom: 13, cursor: "pointer" }} onClick={() => onOpenBreakdown?.()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>{mName} · this month</div><Ico name="chev" size={16} color="var(--faint)" /></div>
         <div style={{ display: "flex", alignItems: "center" }}>
           <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 11 }}><span style={circ(38, 12, "rgba(16,185,129,.15)", "var(--success)")}><Ico name="arrowUp" size={18} stroke={2.5} /></span><div><div style={{ fontSize: 11.5, color: "var(--muted)", fontWeight: 700 }}>Income</div><div className="tnum" style={{ fontSize: 19, fontWeight: 800, color: "var(--success)" }}>{hide ? "••••" : "+" + fmt(d.inc)}</div></div></div>
           <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", margin: "2px 16px" }} />
           <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 11 }}><span style={circ(38, 12, "rgba(229,84,78,.15)", "var(--red)")}><Ico name="arrowDown" size={18} stroke={2.5} /></span><div><div style={{ fontSize: 11.5, color: "var(--muted)", fontWeight: 700 }}>Spent</div><div className="tnum" style={{ fontSize: 19, fontWeight: 800, color: "var(--red)" }}>{hide ? "••••" : "−" + fmt(d.exp)}</div></div></div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, paddingTop: 13, borderTop: "1px solid var(--line)" }}>
+          <span style={{ fontSize: 12, color: "var(--muted)", fontWeight: 700 }}>Net this month</span>
+          <span className="tnum" style={{ fontSize: 15, fontWeight: 800, color: d.net < 0 ? "var(--red)" : "var(--success)" }}>{hide ? "••••" : (d.net < 0 ? "−" : "+") + fmt(Math.abs(d.net))}</span>
         </div>
       </div>
 
@@ -146,6 +150,12 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
       )}</Fragment>);
       return dash.order.filter((id) => !(dash.hidden || []).includes(id)).map((id) => SEC[id]);
       })()}
+
+      <div className="icard" onClick={() => onCustomize?.()} style={{ cursor: "pointer", marginTop: 16, borderStyle: "dashed", background: "transparent" }}>
+        <span className="circ" style={{ width: 36, height: 36, borderRadius: 11, background: "var(--surface2)", color: "var(--ac)" }}><Ico name="grip" size={18} /></span>
+        <div className="nm" style={{ color: "var(--ac)" }}>Customize home</div>
+        <span style={{ marginLeft: "auto", color: "var(--faint)" }}><Ico name="chev" size={18} /></span>
+      </div>
     </div>
   );
 }
