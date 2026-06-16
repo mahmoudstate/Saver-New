@@ -181,9 +181,9 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
       return dash.order.filter((id) => !(dash.hidden || []).includes(id)).map((id) => SEC[id]);
       })()}
 
-      <div className="icard" onClick={() => onCustomize?.()} style={{ cursor: "pointer", marginTop: 16, borderStyle: "dashed", background: "transparent", justifyContent: "center", gap: 9 }}>
-        <span className="circ" style={{ width: 36, height: 36, borderRadius: 11, background: "var(--surface2)", color: "var(--acText)" }}><Ico name="grip" size={18} /></span>
-        <div className="nm" style={{ color: "var(--acText)" }}>Customize home</div>
+      <div className="customize-cta" onClick={() => onCustomize?.()}>
+        <span className="g"><Ico name="grip" size={16} /></span>
+        Customize home
       </div>
     </div>
   );
