@@ -12,18 +12,18 @@ Re-skin the **working** React app (`saver-test`) with the **new design** (`saver
 - [ ] App shell: phone-less full screen + **bottom nav** (Home·Activity·[+]·Bills·Profile, squircle FAB)
 - [ ] Home: swipe balance (Total/Safe + dots) · gradient account cards (carousel, reorder) · June income/spent · Bills/Goals/Budgets calm cards · Customize entry
 - [ ] Activity: search + filter entry · grouped list · row states
-- [ ] Smart Filter sheet + Results (when/show/categories/accounts, Bills/Installments, multi-select)
+- [x] Smart Filter sheet + Results (when/show/categories/accounts, multi-select)
 - [ ] Bills — Subscriptions / Installments (view selector, month/status filter)
 - [x] Subscription detail (brand hero + logo) · [x] Installment detail (ring · schedule · pay/undo, wired)
 - [x] Budgets · Budget detail · Projects · Project detail (tabbed Monthly/Projects; spend = expense+goal_withdraw in cats; project mark-complete)
 - [x] Goals · Goal detail (return-to-bank, spending-mode, frozen breakdown) — wired; Add money + Return to bank via reusable AmountSheet (keypad)
-- [ ] Account ledger (bank gradient hero) · Accounts list (gradient cards)
+- [x] Account ledger (bank gradient hero) · Accounts list
 - [~] Add: Expense/Income/Saving DONE (screen + keypad + pickers, wired to addTxn) · Transfer · Quick Add · Source picker (vault) · Edit txn pending
-- [ ] Installment add (grouped Next wizard + focused sheet)
-- [ ] Editors: account/category/goal/budget · Quick Actions · Customize Dashboard (dnd + hide)
-- [ ] Profile/Settings · Appearance · Privacy · Backup & Restore
+- [x] Installment add (form editor; grouped-wizard polish later)
+- [x] Editors: account/category/goal/budget · Quick Actions · Customize Dashboard (dnd + hide)
+- [x] Profile/Settings · Appearance (theme+accents) · Privacy · Backup & Restore
 - [~] Messages: friendly toasts (success/info) + center dialogs (block/confirm) wired via store (AlertModal/ConfirmModal/Toast in ui/Modal.jsx); GoalToast + inline validation still to do
-- [ ] System: Onboarding · Help/FAQ · What's New · Empty/Celebration · Notifications
+- [~] System: Notifications DONE; Onboarding · Help/FAQ · What's New · Empty/Celebration deferred (content)
 - [ ] Push/reminder notifications copy (design ref only)
 
 ## Design QA (carry over)
