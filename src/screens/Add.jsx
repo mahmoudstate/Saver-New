@@ -41,7 +41,11 @@ export default function Add({ store, onClose }) {
   const canSave = amount > 0 && sourceOk && (type === "saving" ? goalId : cat);
 
   const submit = () => {
-    if (!canSave) return;
+    if (!canSave) {
+      const why = amount <= 0 ? "Enter an amount first" : !sourceOk ? "Pick an account" : type === "saving" ? "Pick a goal" : "Pick a category";
+      store.flash({ title: why, color: "var(--yellow)", icon: "bell" });
+      return;
+    }
     let txn;
     if (type === "saving") txn = { type: "saving", amount, date: today(), bankId, bankName: bank?.name, goalId, catName: goal?.name, catIcon: "saving", note };
     else if (type === "expense" && srcGoal) txn = { type: "goal_withdraw", amount, date: today(), goalId: srcGoal, goalName: vaultGoal?.name, catId: cat.id, catName: cat.name, catGlyph: cat.glyph, catColor: cat.color, note };
@@ -90,7 +94,7 @@ export default function Add({ store, onClose }) {
         <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add a note…" style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", flex: 1, minWidth: 0 }} />
       </label>
 
-      <div className="cta"><div className={`btn btn-primary btn-full`} style={{ opacity: canSave ? 1 : .5 }} onClick={submit}><Ico name={meta.ctaIcon} size={19} />{meta.cta}</div></div>
+      <div className="cta"><div className={`btn btn-primary btn-full`} onClick={submit}><Ico name={meta.ctaIcon} size={19} />{meta.cta}</div></div>
 
       {sheet === "amount" && <AmountSheet title="Enter amount" sub={meta.title} confirmLabel="Set amount" onConfirm={(v) => { setAmount(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "account" && <PickerSheet title={meta.accLabel} selectedId={srcGoal ? "vault:" + srcGoal : bankId} onPick={(id) => { if (id.startsWith?.("vault:")) setSrcGoal(id.slice(6)); else { setBankId(id); setSrcGoal(null); } }} onClose={() => setSheet(null)} options={[
