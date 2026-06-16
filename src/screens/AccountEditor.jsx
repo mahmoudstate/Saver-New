@@ -1,38 +1,39 @@
 // Saver — Add / Edit account: ported from showcase 17 (bank or cash · colour · alert).
 // New account optionally seeds an opening-balance income txn (existing income path).
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Ico from "../ui/Ico.jsx";
 import AmountSheet from "../ui/AmountSheet.jsx";
 import { fmt, today, cardGradient } from "../lib/format.js";
 import { calcBankBalance } from "../lib/calc.js";
 import { loadKey, saveKey } from "../lib/store.js";
 
-// First-run seed only — the palette is fully user-managed after that (add via the
-// wheel, remove via the × on each swatch). Nothing here is forced on the user.
-const SEED = ["#E5544E", "#2563EB", "#0E9F6E", "#D97706", "#7C3AED", "#0D9488", "#EC4899", "#3a3f66"];
+const DEFAULT_COLOR = "#0E9F6E"; // only the fallback for a brand-new account
 
 export default function AccountEditor({ store, account, onClose, onDeleted }) {
   const editing = !!account;
   const [kind, setKind] = useState(account?.glyph === "banknote" ? "cash" : "bank");
   const [name, setName] = useState(account?.name || "");
-  const [color, setColor] = useState(account?.color || SEED[0]);
+  const [color, setColor] = useState(account?.color || DEFAULT_COLOR);
   const [opening, setOpening] = useState(0);
   const [alertOn, setAlertOn] = useState(account?.lowBalanceThreshold != null);
   const [threshold, setThreshold] = useState(account?.lowBalanceThreshold || 0);
-  const [sheet, setSheet] = useState(null); // opening | threshold | palette
-  const [draft, setDraft] = useState(account?.color || SEED[0]); // colour being picked in the palette sheet
-  // User-managed colour palette (persisted). Show the bank's current colour too so it's selectable.
-  const [palette, setPalette] = useState(() => {
-    const base = loadKey("et_bankColors", SEED);
-    return account?.color && !base.includes(account.color) ? [...base, account.color] : base;
-  });
+  const [sheet, setSheet] = useState(null); // opening | threshold
+  // Colours the user has added (persisted). We never seed any — the row only ever
+  // shows the current colour plus whatever the user added via the + picker.
+  const [palette, setPalette] = useState(() => loadKey("et_bankColors", []));
+  const holdRef = useRef(null);
 
   const canSave = name.trim().length > 0;
+  // shown = the current colour first, then the user's added colours (no duplicates)
+  const shown = [color, ...palette.filter((c) => c !== color)];
+
   const persistPalette = (pl) => { setPalette(pl); saveKey("et_bankColors", pl); };
   const addColor = (c) => { if (!c) return; setColor(c); if (!palette.includes(c)) persistPalette([...palette, c]); };
   const removeColor = (c) => persistPalette(palette.filter((x) => x !== c));
+  // long-press a swatch to remove it from the palette (iOS-style)
+  const holdStart = (c) => { holdRef.current = setTimeout(() => removeColor(c), 550); };
+  const holdEnd = () => { clearTimeout(holdRef.current); };
 
-  // toggling the alert on with no amount yet jumps straight to the keypad
   const toggleAlert = () => setAlertOn((v) => { const nv = !v; if (nv && !threshold) setSheet("threshold"); return nv; });
 
   const save = () => {
@@ -65,7 +66,6 @@ export default function AccountEditor({ store, account, onClose, onDeleted }) {
       onConfirm: () => {
         store.set("banks", (list) => list.map((b) => (b.id === account.id ? { ...b, archived: true } : b)));
         store.flash({ title: "Account removed", sub: account.name, color: "var(--red)", icon: "trash" });
-        // go straight back to the accounts list (skip the now-deleted account's ledger)
         (onDeleted || onClose)();
       },
     });
@@ -92,11 +92,20 @@ export default function AccountEditor({ store, account, onClose, onDeleted }) {
         </div><span className="chev"><Ico name="pencil" size={17} /></span>
       </label>
 
-      {/* One swatch showing the current colour — tap it to open the palette (choose / add / remove inside) */}
-      <div className="field" style={{ margin: "13px 0", cursor: "pointer" }} onClick={() => { setDraft(color); setSheet("palette"); }}>
-        <span style={{ width: 38, height: 38, borderRadius: 12, background: color, boxShadow: "inset 0 0 0 2px rgba(255,255,255,.45)", flexShrink: 0 }} />
-        <div style={{ flex: 1 }}><div className="fl">Colour</div><div className="fv">Tap to choose</div></div>
-        <span className="chev"><Ico name="chev" size={18} /></span>
+      {/* original showcase look: a row of swatches. We add none — + opens the system
+          picker (added colours show here), long-press a swatch to remove it. */}
+      <div className="tile" style={{ margin: "13px 0", display: "flex", alignItems: "center", gap: 12, padding: 14 }}>
+        <div className="fl">Colour</div>
+        <div style={{ marginLeft: "auto", display: "flex", flexWrap: "wrap", justifyContent: "flex-end", gap: 11, maxWidth: "76%" }}>
+          {shown.map((c) => (
+            <span key={c} onClick={() => setColor(c)} onPointerDown={() => holdStart(c)} onPointerUp={holdEnd} onPointerLeave={holdEnd} onContextMenu={(e) => { e.preventDefault(); removeColor(c); }}
+              style={{ width: 26, height: 26, borderRadius: "50%", background: c, cursor: "pointer", boxShadow: color === c ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "none" }} />
+          ))}
+          <label style={{ width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--muted)", cursor: "pointer", position: "relative" }}>
+            <Ico name="plus" size={15} />
+            <input type="color" value={color} onChange={(e) => addColor(e.target.value)} style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", height: "100%", cursor: "pointer" }} />
+          </label>
+        </div>
       </div>
 
       <div className="field">
@@ -114,37 +123,6 @@ export default function AccountEditor({ store, account, onClose, onDeleted }) {
 
       {editing && <div className="btn btn-full" style={{ marginTop: 12, background: "transparent", color: "var(--red)", border: "1px solid color-mix(in srgb, var(--red) 40%, transparent)" }} onClick={del}><Ico name="trash" size={17} />Delete account</div>}
 
-      {sheet === "palette" && (
-        <>
-          <div className="dim" onClick={() => setSheet(null)} />
-          <div className="sheet">
-            <div className="grab" />
-            <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: -.3 }}>Colours</div>
-            <div style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, margin: "3px 0 16px" }}>Pick a colour and add it to your set. Remove any below.</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 13, marginBottom: 18 }}>
-              <label style={{ position: "relative", width: 52, height: 52, borderRadius: 16, cursor: "pointer", flexShrink: 0, background: draft, boxShadow: "inset 0 0 0 2px rgba(255,255,255,.5), 0 6px 16px -6px rgba(0,0,0,.4)" }}>
-                <input type="color" value={draft} onChange={(e) => setDraft(e.target.value)} style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", height: "100%", cursor: "pointer" }} />
-              </label>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>Pick a colour</div>
-                <div className="tnum" style={{ color: "var(--muted)", fontSize: 12.5, fontWeight: 600, textTransform: "uppercase" }}>{draft}</div>
-              </div>
-              <button className="btn btn-primary" style={{ height: 44, padding: "0 18px" }} onClick={() => addColor(draft)}><Ico name="plus" size={17} />Add</button>
-            </div>
-            <div className="fl" style={{ marginBottom: 11 }}>Your colours</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 15, paddingBottom: 2 }}>
-              {palette.length === 0 && <div style={{ color: "var(--faint)", fontSize: 13, fontWeight: 600 }}>No colours yet — pick one above and add it.</div>}
-              {palette.map((c) => (
-                <span key={c} style={{ position: "relative", width: 34, height: 34 }}>
-                  <span onClick={() => setColor(c)} style={{ display: "block", width: 34, height: 34, borderRadius: "50%", background: c, cursor: "pointer", boxShadow: color === c ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "none" }} />
-                  <span onClick={() => removeColor(c)} style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: "50%", background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)", fontSize: 12, fontWeight: 700, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "var(--cardShadow)" }}>×</span>
-                </span>
-              ))}
-            </div>
-            <div className="cta"><div className="btn btn-secondary btn-full" onClick={() => setSheet(null)}>Done</div></div>
-          </div>
-        </>
-      )}
       {sheet === "opening" && <AmountSheet title="Opening balance" confirmLabel="Set" onConfirm={(v) => { setOpening(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "threshold" && <AmountSheet title="Low-balance alert" sub="Warn me below this" confirmLabel="Set" onConfirm={(v) => { setThreshold(v); setSheet(null); }} onClose={() => setSheet(null)} />}
     </div>
