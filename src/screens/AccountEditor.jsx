@@ -92,15 +92,11 @@ export default function AccountEditor({ store, account, onClose, onDeleted }) {
         </div><span className="chev"><Ico name="pencil" size={17} /></span>
       </label>
 
-      <div className="tile" style={{ margin: "13px 0", padding: 14 }}>
-        <div className="fl" style={{ marginBottom: 11 }}>Colour</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 13, alignItems: "center" }}>
-          {palette.map((c) => (
-            <span key={c} onClick={() => setColor(c)} style={{ width: 28, height: 28, borderRadius: "50%", background: c, cursor: "pointer", boxShadow: color === c ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "none" }} />
-          ))}
-          {/* the one circle that opens the colour palette (add/remove happens inside) */}
-          <span onClick={() => { setDraft(color); setSheet("palette"); }} style={{ width: 28, height: 28, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", background: "conic-gradient(#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)", boxShadow: "inset 0 0 0 2px rgba(255,255,255,.55)" }}><Ico name="plus" size={14} color="#fff" /></span>
-        </div>
+      {/* One swatch showing the current colour — tap it to open the palette (choose / add / remove inside) */}
+      <div className="field" style={{ margin: "13px 0", cursor: "pointer" }} onClick={() => { setDraft(color); setSheet("palette"); }}>
+        <span style={{ width: 38, height: 38, borderRadius: 12, background: color, boxShadow: "inset 0 0 0 2px rgba(255,255,255,.45)", flexShrink: 0 }} />
+        <div style={{ flex: 1 }}><div className="fl">Colour</div><div className="fv">Tap to choose</div></div>
+        <span className="chev"><Ico name="chev" size={18} /></span>
       </div>
 
       <div className="field">
