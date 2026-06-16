@@ -7,7 +7,7 @@ import { fmt, today, cardGradient } from "../lib/format.js";
 import { calcBankBalance } from "../lib/calc.js";
 import { loadKey, saveKey } from "../lib/store.js";
 
-const DEFAULTS = ["#0E9F6E", "#2563EB", "#D97706", "#E5544E"]; // 4 base colours, always shown
+const DEFAULTS = ["#0E9F6E", "#2563EB", "#D97706", "#E5544E"]; // first-run seed only; all removable after
 
 export default function AccountEditor({ store, account, onClose, onDeleted }) {
   const editing = !!account;
@@ -18,22 +18,27 @@ export default function AccountEditor({ store, account, onClose, onDeleted }) {
   const [alertOn, setAlertOn] = useState(account?.lowBalanceThreshold != null);
   const [threshold, setThreshold] = useState(account?.lowBalanceThreshold || 0);
   const [sheet, setSheet] = useState(null); // opening | threshold
-  // Only the colours the user deliberately added (persisted). Self-heals the old
-  // pollution bug (a runaway list) by ignoring an unreasonably long saved array.
-  const [custom, setCustom] = useState(() => { const c = loadKey("et_bankColors", []); return Array.isArray(c) && c.length <= 12 ? c.filter((x) => !DEFAULTS.includes(x)) : []; });
+  // The user's colour palette (persisted). Seeded with 4 defaults on first run, then
+  // fully user-managed: add via +, remove any (including the defaults) via long-press.
+  // Self-heals the old pollution bug by reseeding if the saved list is missing/runaway.
+  const [palette, setPalette] = useState(() => {
+    const saved = loadKey("et_bankColors", null);
+    if (Array.isArray(saved) && saved.length > 0 && saved.length <= 12) return saved;
+    saveKey("et_bankColors", DEFAULTS);
+    return DEFAULTS;
+  });
   const holdRef = useRef(null);
 
   const canSave = name.trim().length > 0;
-  // row = 4 defaults + the user's added colours; plus the current colour if it's neither
-  const base = [...DEFAULTS, ...custom];
-  const shown = base.includes(color) ? base : [color, ...base];
+  // show the palette; include the current colour too if it isn't one of them
+  const shown = palette.includes(color) ? palette : [color, ...palette];
 
-  const persistCustom = (pl) => { setCustom(pl); saveKey("et_bankColors", pl); };
+  const persistPalette = (pl) => { setPalette(pl); saveKey("et_bankColors", pl); };
   // commit ONE colour when the picker closes (not on every scrub) — no more pollution
-  const addCustom = (c) => { if (!c || DEFAULTS.includes(c) || custom.includes(c)) return; persistCustom([...custom, c]); };
-  const removeCustom = (c) => { if (custom.includes(c)) persistCustom(custom.filter((x) => x !== c)); }; // defaults stay
-  // long-press a user-added swatch to remove it (defaults can't be removed)
-  const holdStart = (c) => { holdRef.current = setTimeout(() => removeCustom(c), 550); };
+  const addColor = (c) => { if (!c || palette.includes(c)) return; persistPalette([...palette, c]); };
+  const removeColor = (c) => persistPalette(palette.filter((x) => x !== c)); // any colour, defaults included
+  // long-press a swatch to remove it
+  const holdStart = (c) => { holdRef.current = setTimeout(() => removeColor(c), 550); };
   const holdEnd = () => { clearTimeout(holdRef.current); };
 
   const toggleAlert = () => setAlertOn((v) => { const nv = !v; if (nv && !threshold) setSheet("threshold"); return nv; });
@@ -100,12 +105,12 @@ export default function AccountEditor({ store, account, onClose, onDeleted }) {
         <div className="fl">Colour</div>
         <div style={{ marginLeft: "auto", display: "flex", flexWrap: "wrap", justifyContent: "flex-end", gap: 11, maxWidth: "76%" }}>
           {shown.map((c) => (
-            <span key={c} onClick={() => setColor(c)} onPointerDown={() => holdStart(c)} onPointerUp={holdEnd} onPointerLeave={holdEnd} onContextMenu={(e) => { e.preventDefault(); removeCustom(c); }}
+            <span key={c} onClick={() => setColor(c)} onPointerDown={() => holdStart(c)} onPointerUp={holdEnd} onPointerLeave={holdEnd} onContextMenu={(e) => { e.preventDefault(); removeColor(c); }}
               style={{ width: 26, height: 26, borderRadius: "50%", background: c, cursor: "pointer", boxShadow: color === c ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "none" }} />
           ))}
           <label style={{ width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--muted)", cursor: "pointer", position: "relative" }}>
             <Ico name="plus" size={15} />
-            <input type="color" value={color} onChange={(e) => setColor(e.target.value)} onBlur={(e) => addCustom(e.target.value)} style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", height: "100%", cursor: "pointer" }} />
+            <input type="color" value={color} onChange={(e) => setColor(e.target.value)} onBlur={(e) => addColor(e.target.value)} style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", height: "100%", cursor: "pointer" }} />
           </label>
         </div>
       </div>
