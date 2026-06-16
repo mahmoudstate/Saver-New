@@ -36,7 +36,7 @@ const ENTITIES = {
   txns: [], banks: [], expCats: [], incCats: [], groups: [], savings: [],
   bills: [], budgets: [], installments: [], quickActions: [],
 };
-const SCALARS = { currency: "EGP", username: "", theme: "dark", accent: "mint", dashboard: DASH_DEFAULT };
+const SCALARS = { currency: "EGP", username: "", theme: "dark", accent: "mint", dashboard: DASH_DEFAULT, seenWelcome: false };
 
 // Single store hook: loads everything, exposes data + persisted setters + locked actions.
 export function useStore() {

@@ -2,6 +2,7 @@
 import { useMemo } from "react";
 import Ico from "../ui/Ico.jsx";
 import CatTile from "../ui/CatTile.jsx";
+import EmptyState from "../ui/EmptyState.jsx";
 import { fmt, currentMonth, MONTHS, today } from "../lib/format.js";
 import { monthTxns, sumIncome, sumExpense } from "../lib/calc.js";
 
@@ -16,7 +17,7 @@ function dayLabel(date) {
   return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 }
 
-export default function Activity({ store, onFilter, onEdit }) {
+export default function Activity({ store, onFilter, onEdit, onAdd }) {
   const { txns, banks } = store;
   const cm = currentMonth();
   const bankName = (t) => t.bankName || banks.find((b) => b.id === t.bankId)?.name || "";
@@ -66,7 +67,7 @@ export default function Activity({ store, onFilter, onEdit }) {
         <div onClick={onFilter} role="button" aria-label="filter" style={{ width: 48, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--acDim)", border: "1px solid var(--ac)", borderRadius: 13, color: "var(--ac)" }}><Funnel /></div>
       </div>
 
-      {groups.length === 0 && <div style={{ textAlign: "center", color: "var(--muted)", padding: "48px 20px", fontWeight: 600 }}>No transactions yet.</div>}
+      {groups.length === 0 && <EmptyState title="Nothing here… yet!" message="Pop in your first one and watch your balance, savings and spending spring to life." cta="Add my first" onCta={() => onAdd?.()} />}
       {groups.map((g) => (
         <div key={g.date}>
           <div className="over">{dayLabel(g.date)}</div>

@@ -334,3 +334,10 @@ body{background:var(--bg)}
 /* secondary/danger button tints for dialog rows */
 .btn-ghost{background:var(--surface2);color:var(--text)}
 .btn-danger{background:var(--red);color:#fff}
+
+/* ---------- 20. EMPTY STATE + CELEBRATION ---------- */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 30px}
+.empty .ei{width:84px;height:84px;border-radius:28px;background:var(--acDim);color:var(--ac);display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+.celebrate{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 28px;background:var(--heroGrad);color:var(--heroText);position:relative;overflow:hidden}
+.celebrate .cdot{position:absolute;border-radius:2px;opacity:.95;animation:cfall 2.6s var(--e-out) infinite}
+@keyframes cfall{0%{transform:translateY(-30px) rotate(0);opacity:0}10%{opacity:.95}100%{transform:translateY(520px) rotate(220deg);opacity:0}}

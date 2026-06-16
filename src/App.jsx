@@ -36,6 +36,9 @@ import SubscriptionEditor from "./screens/SubscriptionEditor.jsx";
 import InstallmentEditor from "./screens/InstallmentEditor.jsx";
 import Notifications from "./screens/Notifications.jsx";
 import CustomizeDashboard from "./screens/CustomizeDashboard.jsx";
+import Onboarding from "./screens/Onboarding.jsx";
+import Celebration from "./screens/Celebration.jsx";
+import WhatsNew from "./ui/WhatsNew.jsx";
 import Ico from "./ui/Ico.jsx";
 
 function Placeholder({ tab }) {
@@ -53,7 +56,10 @@ export default function App() {
   const [tab, setTab] = useState("home");
   const [view, setView] = useState(null); // pushed detail screen
   const [quickAdd, setQuickAdd] = useState(false);
+  const [whatsNew, setWhatsNew] = useState(false);
   const back = () => setView(null);
+
+  if (!store.seenWelcome) return <div className="app"><Onboarding onDone={() => { store.set("seenWelcome", true); setWhatsNew(true); }} /></div>;
 
   let screen;
   if (view?.type === "add") screen = <Add store={store} onClose={back} />;
@@ -68,6 +74,7 @@ export default function App() {
   else if (view?.type === "manual") screen = <Manual store={store} back={back} />;
   else if (view?.type === "notifications") screen = <Notifications store={store} back={back} />;
   else if (view?.type === "customize") screen = <CustomizeDashboard store={store} back={back} />;
+  else if (view?.type === "celebrate") screen = <Celebration goal={view.goal} saved={view.saved} onKeep={() => setView({ type: "goal", goalId: view.goalId })} onArchive={() => { if (view.saved > 0) store.addTxn({ type: "goal_return", amount: view.saved, date: new Date().toISOString().slice(0, 10), bankId: store.banks[0]?.id, goalId: view.goalId, goalName: view.goal, catName: "Goal archived", catIcon: "saving" }); store.set("savings", (l) => l.map((s) => (s.id === view.goalId ? { ...s, status: "archived", spendingMode: false } : s))); setView({ type: "goals" }); }} />;
   else if (view?.type === "quickactions") screen = <QuickActions store={store} back={back} onEdit={(q) => setView({ type: "editQuick", action: q })} />;
   else if (view?.type === "editQuick") screen = <QuickActionEditor store={store} action={view.action} onClose={() => setView({ type: "quickactions" })} />;
   else if (view?.type === "account") screen = <AccountLedger store={store} bank={view.bank} back={back} onMove={(b) => setView({ type: "transfer", fromBankId: b.id })} onEdit={(b) => setView({ type: "editAccount", account: b })} />;
@@ -76,7 +83,7 @@ export default function App() {
   else if (view?.type === "editInst") screen = <InstallmentEditor store={store} plan={view.plan} onClose={back} />;
   else if (view?.type === "inst") screen = <InstallmentDetail store={store} instId={view.instId} back={back} />;
   else if (view?.type === "goals") screen = <Goals store={store} back={back} onAdd={() => setView({ type: "editGoal", goal: null })} onOpenGoal={(g) => setView({ type: "goal", goalId: g.id })} />;
-  else if (view?.type === "goal") screen = <GoalDetail store={store} goalId={view.goalId} back={() => setView({ type: "goals" })} />;
+  else if (view?.type === "goal") screen = <GoalDetail store={store} goalId={view.goalId} back={() => setView({ type: "goals" })} onReached={(g, saved) => setView({ type: "celebrate", goalId: g.id, goal: g.name, saved })} />;
   else if (view?.type === "editGoal") screen = <GoalEditor store={store} goal={view.goal} onClose={() => setView({ type: "goals" })} />;
   else if (view?.type === "budgets") screen = <Budgets store={store} back={back} onAdd={() => setView({ type: "editBudget", budget: null })} onOpenBudget={(b) => setView({ type: "budget", budgetId: b.id })} onOpenProject={(p) => setView({ type: "project", projectId: p.id })} />;
   else if (view?.type === "editBudget") screen = <BudgetEditor store={store} budget={view.budget} onClose={() => setView({ type: "budgets" })} />;
@@ -85,9 +92,9 @@ export default function App() {
   else if (tab === "home") screen = <Home store={store} onTab={setTab} onOpenBank={(bank) => setView({ type: "account", bank })} onOpenGoals={() => setView({ type: "goals" })} onOpenBudgets={() => setView({ type: "budgets" })} onOpenNotifications={() => setView({ type: "notifications" })} />;
   else if (view?.type === "filter") screen = <SmartFilter store={store} initial={view.filter} back={back} onApply={(f) => setView({ type: "results", filter: f })} />;
   else if (view?.type === "results") screen = <FilterResults store={store} filter={view.filter} back={() => setView(null)} onEditFilter={() => setView({ type: "filter", filter: view.filter })} onEdit={(t) => setView({ type: "edit", txn: t })} />;
-  else if (tab === "activity") screen = <Activity store={store} onFilter={() => setView({ type: "filter" })} onEdit={(t) => setView({ type: "edit", txn: t })} />;
+  else if (tab === "activity") screen = <Activity store={store} onFilter={() => setView({ type: "filter" })} onEdit={(t) => setView({ type: "edit", txn: t })} onAdd={() => setView({ type: "add" })} />;
   else if (tab === "bills") screen = <Bills store={store} onAdd={(seg) => setView(seg === "inst" ? { type: "editInst", plan: null } : { type: "editSub", bill: null })} onOpenSub={(bill) => setView({ type: "sub", bill })} onOpenInst={(i) => setView({ type: "inst", instId: i.id })} />;
-  else if (tab === "profile") screen = <Profile store={store} go={(d) => { if (d === "accounts") setView({ type: "accounts" }); else if (d === "goals") setView({ type: "goals" }); else if (d === "budgets") setView({ type: "budgets" }); else if (d === "categories") setView({ type: "categories" }); else if (d === "appearance") setView({ type: "appearance" }); else if (d === "privacy") setView({ type: "privacy" }); else if (d === "manual") setView({ type: "manual" }); else if (d === "quickactions") setView({ type: "quickactions" }); else if (d === "customize") setView({ type: "customize" }); }} />;
+  else if (tab === "profile") screen = <Profile store={store} go={(d) => { if (d === "accounts") setView({ type: "accounts" }); else if (d === "goals") setView({ type: "goals" }); else if (d === "budgets") setView({ type: "budgets" }); else if (d === "categories") setView({ type: "categories" }); else if (d === "appearance") setView({ type: "appearance" }); else if (d === "privacy") setView({ type: "privacy" }); else if (d === "manual") setView({ type: "manual" }); else if (d === "quickactions") setView({ type: "quickactions" }); else if (d === "customize") setView({ type: "customize" }); else if (d === "whatsnew") setWhatsNew(true); }} />;
   else screen = <Placeholder tab={tab} />;
 
   return (
@@ -95,6 +102,7 @@ export default function App() {
       {screen}
       {!view && <BottomNav active={tab} onTab={setTab} onAdd={() => setView({ type: "add" })} onQuickAdd={() => setQuickAdd(true)} />}
       {quickAdd && <QuickAddSheet store={store} onClose={() => setQuickAdd(false)} onSetup={() => { setQuickAdd(false); setView({ type: "quickactions" }); }} />}
+      {whatsNew && <WhatsNew onClose={() => setWhatsNew(false)} />}
       <Overlays store={store} />
     </div>
   );

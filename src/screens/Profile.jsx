@@ -38,6 +38,7 @@ export default function Profile({ store, go }) {
       <Row icon="palette" bg="var(--acDim)" color="var(--ac)" label="Appearance" value={`Mint · ${theme === "dark" ? "Dark" : "Light"}`} onClick={() => go?.("appearance")} />
       <Row icon="shield" bg="var(--blueDim)" color="var(--blue)" label="Privacy & backup" onClick={() => go?.("privacy")} />
       <Row icon="note" bg="var(--surface2)" color="var(--muted)" label="Guide" onClick={() => go?.("manual")} />
+      <Row icon="sparkles" bg="var(--acDim)" color="var(--ac)" label="What’s new" value={`v${APP_VERSION}`} onClick={() => go?.("whatsnew")} />
 
       <div style={{ textAlign: "center", color: "var(--faint)", fontSize: 11, fontWeight: 700, letterSpacing: ".04em", marginTop: 22 }}>Saver One V{APP_VERSION} · Offline & private · Powered by Mahmoud</div>
     </div>

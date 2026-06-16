@@ -11,7 +11,7 @@ import { calcGoalSaved, goalBalancesPerBank } from "../lib/calc.js";
 
 const goalCat = (g) => resolveCat({ catGlyph: g.glyph, catName: g.name }) || "goal";
 
-export default function GoalDetail({ store, goalId, back }) {
+export default function GoalDetail({ store, goalId, back, onReached }) {
   const { savings = [], banks = [], txns = [] } = store;
   const goal = savings.find((s) => s.id === goalId);
   const [sheet, setSheet] = useState(null); // "add" | "return"
@@ -32,7 +32,7 @@ export default function GoalDetail({ store, goalId, back }) {
     const id = store.addTxn({ type: "saving", amount, date: today(), bankId, bankName: bank?.name, goalId, catName: goal.name, catIcon: "saving", note: "" });
     if (id === false) return;
     setSheet(null);
-    if (saved + amount >= target && target > 0) store.setAlert({ title: "Goal reached!", message: `Amazing — "${goal.name}" is fully funded. ${fmt(target)} saved.`, color: "var(--ac)", icon: "check" });
+    if (saved + amount >= target && target > 0 && onReached) onReached(goal, saved + amount);
     else store.flash({ title: `${fmt(amount)} added`, sub: `${goal.name} · from ${bank?.name || "bank"}`, color: "var(--success)" });
   };
 
