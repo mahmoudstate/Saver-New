@@ -219,7 +219,7 @@ header.lead{padding:48px 0 6px}
 .nav .it{width:46px;height:40px;display:flex;align-items:center;justify-content:center;color:var(--faint);border-radius:13px}
 .nav .it.on{color:var(--acText);background:var(--acDim)}
 /* modern gradient bank card */
-.bankcard{position:relative;overflow:hidden;border-radius:22px;padding:16px 17px;color:#fff;display:flex;flex-direction:column;justify-content:space-between;min-width:208px;height:160px;box-shadow:0 16px 34px rgba(0,0,0,.22)}
+.bankcard{position:relative;overflow:hidden;border-radius:22px;padding:16px 17px;color:#fff;display:flex;flex-direction:column;justify-content:space-between;min-width:208px;height:160px;box-shadow:0 12px 24px -10px rgba(0,0,0,.45)}
 .bankcard .bc-shine{position:absolute;top:0;left:-75%;width:55%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.30),transparent);transform:skewX(-20deg);animation:bcShine 4.2s ease-in-out infinite;pointer-events:none}
 .bankcard .bc-orb{position:absolute;border-radius:50%;background:rgba(255,255,255,.16);filter:blur(2px)}
 @keyframes bcShine{0%{left:-75%}55%,100%{left:145%}}
