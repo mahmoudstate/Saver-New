@@ -41,7 +41,7 @@ export default function SmartFilter({ store, initial, onApply, back }) {
       </>}
 
       <div className="over">Accounts</div>
-      <div style={{ ...row, marginBottom: 8 }}><Chip on={accSel.length === 0} onClick={() => setAccSel([])}>All</Chip>{banks.map((b) => <Chip key={b.id} on={accSel.includes(b.id)} onClick={() => toggle(accSel, setAccSel, b.id)}>{b.name}</Chip>)}</div>
+      <div style={{ ...row, marginBottom: 8 }}><Chip on={accSel.length === 0} onClick={() => setAccSel([])}>All</Chip>{banks.filter((b) => !b.archived).map((b) => <Chip key={b.id} on={accSel.includes(b.id)} onClick={() => toggle(accSel, setAccSel, b.id)}>{b.name}</Chip>)}</div>
 
       <div className="cta"><div className="btn btn-primary btn-full" style={{ opacity: count ? 1 : .5 }} onClick={() => count && onApply(filter)}><Ico name="search" size={17} />Show {count} result{count === 1 ? "" : "s"} · {fmt(total)}</div></div>
     </div>

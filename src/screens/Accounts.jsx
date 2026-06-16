@@ -14,10 +14,10 @@ export default function Accounts({ store, back, onOpen, onAdd }) {
         <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">Accounts</div><div className="grow" /><div className="hib" onClick={onAdd}><Ico name="plus" size={20} /></div></div>
         <div className="lbl">Total balance</div>
         <div className="big tnum">{fmt(total)}</div>
-        <div className="sub">{banks.length} accounts{frozen > 0 ? ` · ${fmt(frozen)} frozen in goals` : ""}</div>
+        <div className="sub">{banks.filter((b) => !b.archived).length} accounts{frozen > 0 ? ` · ${fmt(frozen)} frozen in goals` : ""}</div>
       </div>
 
-      {banks.map((b) => {
+      {banks.filter((b) => !b.archived).map((b) => {
         const fr = Math.max(0, calcFrozenForBank(b.id, savings, txns));
         const sub = b.lowBalanceThreshold ? `Low-balance alert ${fmt(b.lowBalanceThreshold)}` : fr > 0 ? `${fmt(fr)} frozen · goals` : "Account";
         return (

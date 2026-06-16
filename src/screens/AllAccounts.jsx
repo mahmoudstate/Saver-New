@@ -15,11 +15,11 @@ export default function AllAccounts({ store, back, onOpenBank, onAdd }) {
         <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">All accounts</div><div className="grow" /><div className="hib" onClick={onAdd}><Ico name="plus" size={20} /></div></div>
         <div className="lbl">Total balance</div>
         <div className="big tnum">{fmt(total)}</div>
-        <div className="sub">{banks.length} account{banks.length === 1 ? "" : "s"}{frozen > 0 ? ` · ${fmt(frozen)} frozen in goals` : ""}</div>
+        <div className="sub">{banks.filter((b) => !b.archived).length} account{banks.filter((b) => !b.archived).length === 1 ? "" : "s"}{frozen > 0 ? ` · ${fmt(frozen)} frozen in goals` : ""}</div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
-        {banks.map((b) => {
+        {banks.filter((b) => !b.archived).map((b) => {
           const bal = calcBankBalance(b.id, txns), fr = Math.max(0, calcFrozenForBank(b.id, savings, txns)), avail = bal - fr;
           const low = b.lowBalanceThreshold && avail <= b.lowBalanceThreshold && avail >= 0;
           return <BankCard key={b.id} grid bank={b} available={avail} frozen={fr} low={low} money={fmt} onClick={() => onOpenBank?.(b)} />;

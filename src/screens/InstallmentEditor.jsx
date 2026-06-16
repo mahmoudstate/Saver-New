@@ -67,7 +67,7 @@ export default function InstallmentEditor({ store, plan, onClose }) {
       <div className="cta"><div className="btn btn-primary btn-full" style={{ opacity: canSave ? 1 : .5 }} onClick={save}><Ico name="check" size={18} />{editing ? "Save plan" : "Add installment"}</div></div>
 
       {sheet === "monthly" && <AmountSheet title="Monthly amount" confirmLabel="Set" onConfirm={(v) => { setMonthly(v); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "account" && <PickerSheet title="Pays from" selectedId={bankId} onPick={setBankId} onClose={() => setSheet(null)} options={banks.map((b) => ({ id: b.id, label: b.name, bankColor: b.color }))} />}
+      {sheet === "account" && <PickerSheet title="Pays from" selectedId={bankId} onPick={setBankId} onClose={() => setSheet(null)} options={banks.filter((b) => !b.archived).map((b) => ({ id: b.id, label: b.name, bankColor: b.color }))} />}
     </div>
   );
 }

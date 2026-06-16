@@ -23,8 +23,10 @@ function Row({ t, bankNameOf }) {
   );
 }
 
-export default function AccountLedger({ store, bank, back, onMove, onEdit }) {
+export default function AccountLedger({ store, bank: bankProp, back, onMove, onEdit }) {
   const { txns, banks } = store;
+  // Always read the latest bank from the store so edits (colour/name) reflect immediately.
+  const bank = banks.find((b) => b.id === bankProp.id) || bankProp;
   const cm = currentMonth();
   const bankNameOf = (id) => banks.find((b) => b.id === id)?.name || "";
   const bal = calcBankBalance(bank.id, txns), frozen = Math.max(0, calcFrozenForBank(bank.id, [], txns)), avail = bal - frozen;

@@ -29,7 +29,7 @@ export default function Profile({ store, go }) {
       </div>
 
       <div className="over">Your money</div>
-      <Row icon="wallet" bg="var(--blueDim)" color="var(--blue)" label="Accounts" value={banks.length} onClick={() => go?.("accounts")} />
+      <Row icon="wallet" bg="var(--blueDim)" color="var(--blue)" label="Accounts" value={banks.filter((b) => !b.archived).length} onClick={() => go?.("accounts")} />
       <Row icon="layers" bg="var(--purpleDim)" color="var(--purple)" label="Categories & groups" onClick={() => go?.("categories")} />
       <Row icon="zap" bg="var(--yellowDim)" color="var(--yellow)" label="Quick actions" onClick={() => go?.("quickactions")} />
 

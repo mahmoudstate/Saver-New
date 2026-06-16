@@ -4,7 +4,7 @@ import { useState } from "react";
 import Ico from "../ui/Ico.jsx";
 import AmountSheet from "../ui/AmountSheet.jsx";
 import { fmt, today, cardGradient } from "../lib/format.js";
-import { loadKey, saveKey } from "../lib/store.js";
+import { calcBankBalance } from "../lib/calc.js";
 
 const COLORS = ["#E5544E", "#2563EB", "#0E9F6E", "#D97706", "#7C3AED", "#0D9488", "#EC4899", "#3a3f66"];
 
@@ -17,21 +17,10 @@ export default function AccountEditor({ store, account, onClose }) {
   const [alertOn, setAlertOn] = useState(account?.lowBalanceThreshold != null);
   const [threshold, setThreshold] = useState(account?.lowBalanceThreshold || 0);
   const [sheet, setSheet] = useState(null); // opening | threshold
-  // User-added colours persist locally so they show up as swatches next time.
-  const [custom, setCustom] = useState(() => loadKey("et_bankColors", []));
 
   const canSave = name.trim().length > 0;
-  const swatches = [...COLORS, ...custom.filter((c) => !COLORS.includes(c))];
-
-  const pickCustom = (c) => {
-    if (!c) return;
-    setColor(c);
-    if (!COLORS.includes(c) && !custom.includes(c)) {
-      const nl = [...custom, c];
-      setCustom(nl);
-      saveKey("et_bankColors", nl);
-    }
-  };
+  // presets only; if the chosen colour is a custom one, show just that single extra swatch
+  const swatches = COLORS.includes(color) ? COLORS : [...COLORS, color];
 
   // toggling the alert on with no amount yet jumps straight to the keypad
   const toggleAlert = () => setAlertOn((v) => { const nv = !v; if (nv && !threshold) setSheet("threshold"); return nv; });
@@ -49,6 +38,26 @@ export default function AccountEditor({ store, account, onClose }) {
     }
     store.flash({ title: editing ? "Account saved" : "Account added", sub: name.trim(), color: "var(--success)", icon: "check" });
     onClose();
+  };
+
+  // Delete = soft delete: blocked while the account holds money; once empty it's hidden
+  // from the UI but the record stays so historical transactions keep resolving.
+  const del = () => {
+    const bal = calcBankBalance(account.id, store.txns);
+    if (Math.abs(bal) > 0.005) {
+      store.setAlert({ title: "Empty it first", message: `This account still holds ${fmt(bal)}. Move or spend it down to ${fmt(0)}, then you can delete it.`, color: "var(--red)", icon: "lock" });
+      return;
+    }
+    store.setConfirm({
+      title: `Delete ${account.name}?`,
+      message: "It'll be removed from your accounts. Past transactions stay so your history and totals don't change. This can't be undone.",
+      confirmText: "Delete", danger: true, icon: "trash",
+      onConfirm: () => {
+        store.set("banks", (list) => list.map((b) => (b.id === account.id ? { ...b, archived: true } : b)));
+        store.flash({ title: "Account removed", sub: account.name, color: "var(--red)", icon: "trash" });
+        onClose();
+      },
+    });
   };
 
   return (
@@ -77,9 +86,9 @@ export default function AccountEditor({ store, account, onClose }) {
         <div style={{ display: "flex", flexWrap: "wrap", gap: 11 }}>
           {swatches.map((c) => <span key={c} onClick={() => setColor(c)} style={{ width: 28, height: 28, borderRadius: "50%", background: c, cursor: "pointer", boxShadow: color === c ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "none" }} />)}
           {/* colour wheel: pick any colour; it's remembered as a swatch */}
-          <label style={{ width: 28, height: 28, borderRadius: "50%", cursor: "pointer", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", background: "conic-gradient(#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)", boxShadow: !swatches.includes(color) ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "inset 0 0 0 2px rgba(255,255,255,.5)" }}>
+          <label style={{ width: 28, height: 28, borderRadius: "50%", cursor: "pointer", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", background: "conic-gradient(#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)", boxShadow: !COLORS.includes(color) ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "inset 0 0 0 2px rgba(255,255,255,.5)" }}>
             <Ico name="plus" size={13} color="#fff" />
-            <input type="color" value={color} onChange={(e) => pickCustom(e.target.value)} style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }} />
+            <input type="color" value={color} onChange={(e) => setColor(e.target.value)} style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }} />
           </label>
         </div>
       </div>
@@ -96,6 +105,8 @@ export default function AccountEditor({ store, account, onClose }) {
       )}
 
       <div className="cta"><div className="btn btn-primary btn-full" style={{ opacity: canSave ? 1 : .5 }} onClick={save}><Ico name="check" size={18} />{editing ? "Save account" : "Add account"}</div></div>
+
+      {editing && <div className="btn btn-full" style={{ marginTop: 12, background: "transparent", color: "var(--red)", border: "1px solid color-mix(in srgb, var(--red) 40%, transparent)" }} onClick={del}><Ico name="trash" size={17} />Delete account</div>}
 
       {sheet === "opening" && <AmountSheet title="Opening balance" confirmLabel="Set" onConfirm={(v) => { setOpening(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "threshold" && <AmountSheet title="Low-balance alert" sub="Warn me below this" confirmLabel="Set" onConfirm={(v) => { setThreshold(v); setSheet(null); }} onClose={() => setSheet(null)} />}

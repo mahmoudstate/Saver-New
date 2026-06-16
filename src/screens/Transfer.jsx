@@ -55,8 +55,8 @@ export default function Transfer({ store, fromBankId: initialFrom, onClose }) {
       <div className="cta"><div className="btn btn-primary btn-full" style={{ opacity: canSave ? 1 : .5 }} onClick={submit}><Ico name="check" size={18} />{amount > 0 ? `Transfer ${fmt(amount)}` : "Transfer"}</div></div>
 
       {sheet === "amount" && <AmountSheet title="Enter amount" sub="Transfer" confirmLabel="Set amount" max={from ? Math.max(0, bal(fromId)) : undefined} onConfirm={(v) => { setAmount(v); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "from" && <PickerSheet title="From account" selectedId={fromId} onPick={(id) => { setFromId(id); if (id === toId) setToId(banks.find((b) => b.id !== id)?.id || null); }} onClose={() => setSheet(null)} options={banks.map((b) => ({ id: b.id, label: b.name, sub: fmt(bal(b.id)), bankColor: b.color }))} />}
-      {sheet === "to" && <PickerSheet title="To account" selectedId={toId} onPick={(id) => { setToId(id); if (id === fromId) setFromId(banks.find((b) => b.id !== id)?.id || null); }} onClose={() => setSheet(null)} options={banks.map((b) => ({ id: b.id, label: b.name, sub: fmt(bal(b.id)), bankColor: b.color }))} />}
+      {sheet === "from" && <PickerSheet title="From account" selectedId={fromId} onPick={(id) => { setFromId(id); if (id === toId) setToId(banks.find((b) => b.id !== id)?.id || null); }} onClose={() => setSheet(null)} options={banks.filter((b) => !b.archived).map((b) => ({ id: b.id, label: b.name, sub: fmt(bal(b.id)), bankColor: b.color }))} />}
+      {sheet === "to" && <PickerSheet title="To account" selectedId={toId} onPick={(id) => { setToId(id); if (id === fromId) setFromId(banks.find((b) => b.id !== id)?.id || null); }} onClose={() => setSheet(null)} options={banks.filter((b) => !b.archived).map((b) => ({ id: b.id, label: b.name, sub: fmt(bal(b.id)), bankColor: b.color }))} />}
     </div>
   );
 }

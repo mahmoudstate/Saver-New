@@ -98,7 +98,7 @@ export default function Add({ store, onClose }) {
 
       {sheet === "amount" && <AmountSheet title="Enter amount" sub={meta.title} confirmLabel="Set amount" onConfirm={(v) => { setAmount(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "account" && <PickerSheet title={meta.accLabel} selectedId={srcGoal ? "vault:" + srcGoal : bankId} onPick={(id) => { if (id.startsWith?.("vault:")) setSrcGoal(id.slice(6)); else { setBankId(id); setSrcGoal(null); } }} onClose={() => setSheet(null)} options={[
-        ...banks.map((b) => ({ id: b.id, label: b.name, bankColor: b.color })),
+        ...banks.filter((b) => !b.archived).map((b) => ({ id: b.id, label: b.name, bankColor: b.color })),
         ...(type === "expense" ? vaults.map((g) => ({ id: "vault:" + g.id, label: g.name, sub: "Goal vault · spend from here", catKey: "goal" })) : []),
       ]} />}
       {sheet === "category" && <PickerSheet title="Category" selectedId={type === "income" ? incCatId : expCatId} onPick={type === "income" ? setIncCatId : setExpCatId} onClose={() => setSheet(null)} options={(type === "income" ? incCats : expCats).map((c) => ({ id: c.id, label: c.name, sub: c.group, catKey: catKeyOf(c) }))} />}

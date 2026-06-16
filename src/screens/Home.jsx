@@ -87,7 +87,7 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
         <div className="hscroll" ref={pagerRef} onScroll={onScroll} style={{ overflow: "hidden", marginTop: 2, display: "flex", overflowX: "auto", scrollSnapType: "x mandatory" }}>
           <div style={{ minWidth: "100%", scrollSnapAlign: "start" }}>
             <div className="lbl">Total balance</div><div className="big tnum">{money(d.tb)}</div>
-            <div className="sub">{banks.length} account{banks.length === 1 ? "" : "s"}</div>
+            <div className="sub">{banks.filter((b) => !b.archived).length} account{banks.filter((b) => !b.archived).length === 1 ? "" : "s"}</div>
           </div>
           <div style={{ minWidth: "100%", scrollSnapAlign: "start" }}>
             <div className="lbl">Safe to spend</div><div className="big tnum">{money(d.ts)}</div>
@@ -109,7 +109,7 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
       SEC.accounts = (<Fragment key="accounts">
       <div className="sectit"><div className="t">Accounts</div><div className="m" onClick={() => onOpenAllAccounts?.()}>All accounts</div></div>
       <div className="hscroll" style={{ display: "flex", gap: 13, overflowX: "auto", marginBottom: 4, paddingBottom: 30, paddingTop: 4, marginLeft: -20, marginRight: -20, paddingLeft: 20, paddingRight: 20 }}>
-        {banks.map((b) => {
+        {banks.filter((b) => !b.archived).map((b) => {
           const bal = calcBankBalance(b.id, txns), frozen = Math.max(0, calcFrozenForBank(b.id, savings, txns)), avail = bal - frozen;
           const low = b.lowBalanceThreshold && avail <= b.lowBalanceThreshold && avail >= 0;
           return <BankCard key={b.id} bank={b} available={avail} frozen={frozen} low={low} money={money} onClick={() => onOpenBank?.(b)} />;

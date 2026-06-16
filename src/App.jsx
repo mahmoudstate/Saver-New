@@ -65,7 +65,10 @@ export default function App() {
   const [quickAdd, setQuickAdd] = useState(false);
   const [whatsNew, setWhatsNew] = useState(false);
   const push = (v) => setStack((s) => [...s, v]);          // open a deeper screen
-  const back = (n = 1) => setStack((s) => s.slice(0, -n));  // pop back to the previous screen
+  // NOTE: back is wired straight to onClick/onClose in screens, so it must take NO
+  // numeric arg (the click event would land there). Use popN for multi-level pops.
+  const back = () => setStack((s) => s.slice(0, -1));       // pop back to the previous screen
+  const popN = (n) => setStack((s) => s.slice(0, -n));      // pop several at once
   const replace = (v) => setStack((s) => [...s.slice(0, -1), v]); // swap the top (sideways nav)
   // Bottom-nav tap: clear the stack and land on a fresh tab (re-tapping Home resets it to the top).
   const navTab = (t) => { setBillsSeg(null); setStack([]); setTab(t); setTabKey((k) => k + 1); };
@@ -96,7 +99,7 @@ export default function App() {
   else if (view?.type === "manual") viewScreen = <Manual store={store} back={back} />;
   else if (view?.type === "notifications") viewScreen = <Notifications store={store} back={back} />;
   else if (view?.type === "customize") viewScreen = <CustomizeDashboard store={store} back={back} />;
-  else if (view?.type === "celebrate") viewScreen = <Celebration goal={view.goal} saved={view.saved} onKeep={() => back()} onArchive={() => { if (view.saved > 0) store.addTxn({ type: "goal_return", amount: view.saved, date: new Date().toISOString().slice(0, 10), bankId: store.banks[0]?.id, goalId: view.goalId, goalName: view.goal, catName: "Goal archived", catIcon: "saving" }); store.set("savings", (l) => l.map((s) => (s.id === view.goalId ? { ...s, status: "archived", spendingMode: false } : s))); back(2); }} />;
+  else if (view?.type === "celebrate") viewScreen = <Celebration goal={view.goal} saved={view.saved} onKeep={() => back()} onArchive={() => { if (view.saved > 0) store.addTxn({ type: "goal_return", amount: view.saved, date: new Date().toISOString().slice(0, 10), bankId: store.banks[0]?.id, goalId: view.goalId, goalName: view.goal, catName: "Goal archived", catIcon: "saving" }); store.set("savings", (l) => l.map((s) => (s.id === view.goalId ? { ...s, status: "archived", spendingMode: false } : s))); popN(2); }} />;
   else if (view?.type === "quickactions") viewScreen = <QuickActions store={store} back={back} onEdit={(q) => push({ type: "editQuick", action: q })} />;
   else if (view?.type === "editQuick") viewScreen = <QuickActionEditor store={store} action={view.action} onClose={back} />;
   else if (view?.type === "account") viewScreen = <AccountLedger store={store} bank={view.bank} back={back} onMove={(b) => push({ type: "transfer", fromBankId: b.id })} onEdit={(b) => push({ type: "editAccount", account: b })} />;
