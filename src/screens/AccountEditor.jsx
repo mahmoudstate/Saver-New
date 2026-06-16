@@ -1,13 +1,13 @@
 // Saver — Add / Edit account: ported from showcase 17 (bank or cash · colour · alert).
 // New account optionally seeds an opening-balance income txn (existing income path).
-import { useState, useRef } from "react";
+import { useState } from "react";
 import Ico from "../ui/Ico.jsx";
 import AmountSheet from "../ui/AmountSheet.jsx";
 import { fmt, today, cardGradient } from "../lib/format.js";
 import { calcBankBalance } from "../lib/calc.js";
 import { loadKey, saveKey } from "../lib/store.js";
 
-const DEFAULTS = ["#0E9F6E", "#2563EB", "#D97706", "#E5544E"]; // first-run seed only; all removable after
+const DEFAULTS = ["#0E9F6E", "#2563EB", "#D97706", "#E5544E"]; // first-run seed only; all removable inside the palette
 
 export default function AccountEditor({ store, account, onClose, onDeleted }) {
   const editing = !!account;
@@ -17,29 +17,24 @@ export default function AccountEditor({ store, account, onClose, onDeleted }) {
   const [opening, setOpening] = useState(0);
   const [alertOn, setAlertOn] = useState(account?.lowBalanceThreshold != null);
   const [threshold, setThreshold] = useState(account?.lowBalanceThreshold || 0);
-  const [sheet, setSheet] = useState(null); // opening | threshold
-  // The user's colour palette (persisted). Seeded with 4 defaults on first run, then
-  // fully user-managed: add via +, remove any (including the defaults) via long-press.
-  // Self-heals the old pollution bug by reseeding if the saved list is missing/runaway.
+  const [sheet, setSheet] = useState(null); // opening | threshold | palette
+
+  // The user's colour palette (persisted). Seeded once with 4 defaults, then fully
+  // managed INSIDE the palette sheet (+ to add, × to remove — defaults included).
+  // Self-heals the old pollution bug by reseeding a missing/runaway saved list.
   const [palette, setPalette] = useState(() => {
     const saved = loadKey("et_bankColors", null);
-    if (Array.isArray(saved) && saved.length > 0 && saved.length <= 12) return saved;
+    if (Array.isArray(saved) && saved.length > 0 && saved.length <= 24) return saved;
     saveKey("et_bankColors", DEFAULTS);
     return DEFAULTS;
   });
-  const holdRef = useRef(null);
 
   const canSave = name.trim().length > 0;
-  // show the palette; include the current colour too if it isn't one of them
-  const shown = palette.includes(color) ? palette : [color, ...palette];
-
   const persistPalette = (pl) => { setPalette(pl); saveKey("et_bankColors", pl); };
-  // commit ONE colour when the picker closes (not on every scrub) — no more pollution
   const addColor = (c) => { if (!c || palette.includes(c)) return; persistPalette([...palette, c]); };
-  const removeColor = (c) => persistPalette(palette.filter((x) => x !== c)); // any colour, defaults included
-  // long-press a swatch to remove it
-  const holdStart = (c) => { holdRef.current = setTimeout(() => removeColor(c), 550); };
-  const holdEnd = () => { clearTimeout(holdRef.current); };
+  const removeColor = (c) => persistPalette(palette.filter((x) => x !== c));
+  // outside row: at most 4 swatches, current colour first, then a + that opens the palette
+  const outside = (palette.includes(color) ? palette : [color, ...palette]).slice(0, 4);
 
   const toggleAlert = () => setAlertOn((v) => { const nv = !v; if (nv && !threshold) setSheet("threshold"); return nv; });
 
@@ -99,19 +94,14 @@ export default function AccountEditor({ store, account, onClose, onDeleted }) {
         </div><span className="chev"><Ico name="pencil" size={17} /></span>
       </label>
 
-      {/* original showcase look: a row of swatches. We add none — + opens the system
-          picker (added colours show here), long-press a swatch to remove it. */}
-      <div className="tile" style={{ margin: "13px 0", display: "flex", alignItems: "center", gap: 12, padding: 14 }}>
+      {/* outside: label, then up to 4 swatches + a + that opens the palette (left-aligned) */}
+      <div className="tile" style={{ margin: "13px 0", display: "flex", alignItems: "center", gap: 14, padding: 14 }}>
         <div className="fl">Colour</div>
-        <div style={{ marginLeft: "auto", display: "flex", flexWrap: "wrap", justifyContent: "flex-end", gap: 11, maxWidth: "76%" }}>
-          {shown.map((c) => (
-            <span key={c} onClick={() => setColor(c)} onPointerDown={() => holdStart(c)} onPointerUp={holdEnd} onPointerLeave={holdEnd} onContextMenu={(e) => { e.preventDefault(); removeColor(c); }}
-              style={{ width: 26, height: 26, borderRadius: "50%", background: c, cursor: "pointer", boxShadow: color === c ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "none" }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+          {outside.map((c) => (
+            <span key={c} onClick={() => setColor(c)} style={{ width: 26, height: 26, borderRadius: "50%", background: c, cursor: "pointer", boxShadow: color === c ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "none" }} />
           ))}
-          <label style={{ width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--muted)", cursor: "pointer", position: "relative" }}>
-            <Ico name="plus" size={15} />
-            <input type="color" value={color} onChange={(e) => setColor(e.target.value)} onBlur={(e) => addColor(e.target.value)} style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", height: "100%", cursor: "pointer" }} />
-          </label>
+          <span onClick={() => setSheet("palette")} style={{ width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--muted)", cursor: "pointer" }}><Ico name="plus" size={15} /></span>
         </div>
       </div>
 
@@ -130,6 +120,30 @@ export default function AccountEditor({ store, account, onClose, onDeleted }) {
 
       {editing && <div className="btn btn-full" style={{ marginTop: 12, background: "transparent", color: "var(--red)", border: "1px solid color-mix(in srgb, var(--red) 40%, transparent)" }} onClick={del}><Ico name="trash" size={17} />Delete account</div>}
 
+      {sheet === "palette" && (
+        <>
+          <div className="dim" onClick={() => setSheet(null)} />
+          <div className="sheet">
+            <div className="grab" />
+            <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: -.3 }}>Colours</div>
+            <div style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, margin: "3px 0 16px" }}>Tap a colour to use it. Add with +, tap × to remove.</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 16, paddingBottom: 2 }}>
+              {palette.map((c) => (
+                <span key={c} style={{ position: "relative", width: 36, height: 36 }}>
+                  <span onClick={() => setColor(c)} style={{ display: "block", width: 36, height: 36, borderRadius: "50%", background: c, cursor: "pointer", boxShadow: color === c ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "none" }} />
+                  <span onClick={() => removeColor(c)} style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: "50%", background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)", fontSize: 12, fontWeight: 700, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "var(--cardShadow)" }}>×</span>
+                </span>
+              ))}
+              {/* the + inside the palette: opens the system picker and adds the colour on close */}
+              <label style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--acDim)", color: "var(--acText)", cursor: "pointer", position: "relative" }}>
+                <Ico name="plus" size={19} />
+                <input type="color" value={color} onChange={(e) => setColor(e.target.value)} onBlur={(e) => addColor(e.target.value)} style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", height: "100%", cursor: "pointer" }} />
+              </label>
+            </div>
+            <div style={{ marginTop: 20 }}><div className="btn btn-secondary btn-full" onClick={() => setSheet(null)}>Done</div></div>
+          </div>
+        </>
+      )}
       {sheet === "opening" && <AmountSheet title="Opening balance" confirmLabel="Set" onConfirm={(v) => { setOpening(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "threshold" && <AmountSheet title="Low-balance alert" sub="Warn me below this" confirmLabel="Set" onConfirm={(v) => { setThreshold(v); setSheet(null); }} onClose={() => setSheet(null)} />}
     </div>
