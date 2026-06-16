@@ -34,6 +34,7 @@ import QuickActionEditor from "./screens/QuickActionEditor.jsx";
 import QuickAddSheet from "./ui/QuickAddSheet.jsx";
 import SubscriptionEditor from "./screens/SubscriptionEditor.jsx";
 import InstallmentEditor from "./screens/InstallmentEditor.jsx";
+import Notifications from "./screens/Notifications.jsx";
 import Ico from "./ui/Ico.jsx";
 
 function Placeholder({ tab }) {
@@ -64,6 +65,7 @@ export default function App() {
   else if (view?.type === "appearance") screen = <Appearance store={store} back={back} />;
   else if (view?.type === "privacy") screen = <PrivacyBackup store={store} back={back} />;
   else if (view?.type === "manual") screen = <Manual store={store} back={back} />;
+  else if (view?.type === "notifications") screen = <Notifications store={store} back={back} />;
   else if (view?.type === "quickactions") screen = <QuickActions store={store} back={back} onEdit={(q) => setView({ type: "editQuick", action: q })} />;
   else if (view?.type === "editQuick") screen = <QuickActionEditor store={store} action={view.action} onClose={() => setView({ type: "quickactions" })} />;
   else if (view?.type === "account") screen = <AccountLedger store={store} bank={view.bank} back={back} onMove={(b) => setView({ type: "transfer", fromBankId: b.id })} onEdit={(b) => setView({ type: "editAccount", account: b })} />;
@@ -78,7 +80,7 @@ export default function App() {
   else if (view?.type === "editBudget") screen = <BudgetEditor store={store} budget={view.budget} onClose={() => setView({ type: "budgets" })} />;
   else if (view?.type === "budget") screen = <BudgetDetail store={store} budgetId={view.budgetId} back={() => setView({ type: "budgets" })} />;
   else if (view?.type === "project") screen = <ProjectDetail store={store} projectId={view.projectId} back={() => setView({ type: "budgets" })} />;
-  else if (tab === "home") screen = <Home store={store} onTab={setTab} onOpenBank={(bank) => setView({ type: "account", bank })} onOpenGoals={() => setView({ type: "goals" })} onOpenBudgets={() => setView({ type: "budgets" })} />;
+  else if (tab === "home") screen = <Home store={store} onTab={setTab} onOpenBank={(bank) => setView({ type: "account", bank })} onOpenGoals={() => setView({ type: "goals" })} onOpenBudgets={() => setView({ type: "budgets" })} onOpenNotifications={() => setView({ type: "notifications" })} />;
   else if (view?.type === "filter") screen = <SmartFilter store={store} initial={view.filter} back={back} onApply={(f) => setView({ type: "results", filter: f })} />;
   else if (view?.type === "results") screen = <FilterResults store={store} filter={view.filter} back={() => setView(null)} onEditFilter={() => setView({ type: "filter", filter: view.filter })} onEdit={(t) => setView({ type: "edit", txn: t })} />;
   else if (tab === "activity") screen = <Activity store={store} onFilter={() => setView({ type: "filter" })} onEdit={(t) => setView({ type: "edit", txn: t })} />;

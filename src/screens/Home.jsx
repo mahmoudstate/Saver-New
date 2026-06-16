@@ -34,7 +34,7 @@ function BankCard({ bank, available, frozen, low, money, onClick }) {
 
 const circ = (size = 42, r = 13, bg, color) => ({ width: size, height: size, borderRadius: r, background: bg, color, display: "flex", alignItems: "center", justifyContent: "center" });
 
-export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudgets }) {
+export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudgets, onOpenNotifications }) {
   const { banks, txns, savings, bills = [], budgets = [], username } = store;
   const [hide, setHide] = useState(false);
   const [page, setPage] = useState(0);
@@ -70,7 +70,7 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
           <div><div style={{ fontSize: 11, letterSpacing: ".05em", textTransform: "uppercase", opacity: .72, fontWeight: 700 }}>{greet}</div><div style={{ fontSize: 15, fontWeight: 800, marginTop: 1 }}>{username || "there"}</div></div>
           <div className="grow" />
           <div className="hib" onClick={() => setHide((v) => !v)}><Ico name={hide ? "eyeOff" : "eye"} size={20} /></div>
-          <div className="hib" onClick={() => onTab?.("activity")}><Ico name="bell" size={20} /></div>
+          <div className="hib" onClick={() => onOpenNotifications?.()}><Ico name="bell" size={20} /></div>
         </div>
         <div className="hscroll" ref={pagerRef} onScroll={onScroll} style={{ overflow: "hidden", marginTop: 2, display: "flex", overflowX: "auto", scrollSnapType: "x mandatory" }}>
           <div style={{ minWidth: "100%", scrollSnapAlign: "start" }}>
