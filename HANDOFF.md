@@ -123,3 +123,72 @@ Clean React rebuild on the new design — **largely feature-complete**: 4 tabs +
 2. Read this file + `saver-site/APP-LOGIC.md` (locked logic/messages) + open the showcase https://mahmoudstate.github.io/saver-site/screens.html.
 3. Pick the next screen from §4 → open its showcase markup in `saver-site/screens.html` → port 1:1 to a React screen (classes + `<Ico>`/`<CatTile>`) → wire to `store` → verify: `npm run build`, serve `dist` (`python3 -m http.server 8099`), screenshot with puppeteer seeding `demo.json` into localStorage (click `[aria-label="…"]` / `.seg b` / `.bankcard` to reach a view).
 4. Keep heroes at 252px, new icons only, no emoji, logic untouched.
+
+---
+
+## 7. Real-device QA & Sign-off Plan (LIVE — work top to bottom)
+
+> **How this works:** Mahmoud tests the built app for real and reviews it **page by page, section by section**. For each page he lists notes → Claude fixes & re-verifies (build + screenshot, both themes) → iterate until Mahmoud says it's good → Claude marks that page **✅ CONFIRMED** and asks for the **next** page. After all pages, we do the **General / cross-cutting** tasks the same way. **Nothing is ✅ until Mahmoud explicitly confirms it.** Claude must NOT reopen a ✅ item without being asked.
+>
+> **Status legend:** ☐ not started / awaiting notes · 🔄 notes being addressed · ✅ CONFIRMED (locked).
+> Keep each task's notes inline under it (bullet list) so history is preserved.
+
+### A · Pages — review one at a time
+**Core tabs**
+- ☐ A1. Home (greeting, balance swipe Total/Safe, account cards, this-month, Bills/Goals/Budgets cards, customize)
+- ☐ A2. Activity (month summary, search/filter entry, grouped list, row states, empty)
+- ☐ A3. Bills · Subscriptions (hero, segment, rows, statuses, +)
+- ☐ A4. Bills · Installments (hero, segment, rows, progress, +)
+- ☐ A5. Profile (header, Your money rows, App rows, version footer)
+
+**Detail screens**
+- ☐ A6. Account ledger (bank-gradient hero, Move, month ledger)
+- ☐ A7. Subscription detail (brand hero+logo, chips, history, record payment, edit)
+- ☐ A8. Installment detail (ring, schedule, pay/undo)
+- ☐ A9. Goals list + A10. Goal detail (progress, add/return, spending-mode, frozen breakdown, contributions, archive)
+- ☐ A11. Budgets/Projects list + A12. Budget detail + A13. Project detail
+- ☐ A14. Accounts list
+
+**Add / input**
+- ☐ A15. Add (Expense/Income/Saving — keypad, pickers, vault source)
+- ☐ A16. Transfer
+- ☐ A17. Quick Add sheet (long-press +)
+- ☐ A18. Edit / delete transaction
+
+**Editors & setup**
+- ☐ A19. Account editor · A20. Category editor + list · A21. Goal editor · A22. Budget editor
+- ☐ A23. Subscription editor · A24. Installment editor · A25. Quick Actions setup
+- ☐ A26. Customize Dashboard (drag + hide)
+
+**System / settings**
+- ☐ A27. Smart Filter + A28. Filter Results
+- ☐ A29. Appearance (theme + accents) · A30. Privacy & Backup
+- ☐ A31. Notifications · A32. Onboarding · A33. What’s New · A34. Empty state · A35. Goal celebration
+- ☐ A36. Guide / Manual (currently a deferred empty scaffold — confirm when content lands)
+
+### B · General / cross-cutting — after the pages
+- ☐ B1. Typography (DM Sans Latin · IBM Plex Sans Arabic; sizes/weights/line-heights consistent)
+- ☐ B2. Colour & accents (calm palette, semantic in/out/warn/info, dark+light parity per element)
+- ☐ B3. Hero / cover consistency (unified 252px, gradient, orbs)
+- ☐ B4. Buttons (sizes, primary/secondary/ghost/danger, pressed/disabled states)
+- ☐ B5. Fields & chips (uniform size, consistent label↔value, single-line chips)
+- ☐ B6. Cards / list rows / tiles (padding, radius, elevation, dividers)
+- ☐ B7. Icons (one set, no emoji, stroke/size consistency, category tiles)
+- ☐ B8. Bank cards (gradient, shine, contactless, available/frozen/low-balance)
+- ☐ B9. Bottom nav + FAB (squircle, long-press, active states)
+- ☐ B10. Overlays (dialog / confirm / toast / sheet — spacing, motion, scrim)
+- ☐ B11. Motion (reveal, count-up, transitions; reduced-motion)
+- ☐ B12. Spacing / radius / elevation scale (4pt grid)
+- ☐ B13. Empty / loading / error states across lists
+- ☐ B14. Currency & number formatting (multi-currency, tabular nums)
+- ☐ B15. RTL / Arabic readiness (logical props, mirroring)
+- ☐ B16. Native readiness (safe-areas, ≥44px touch targets, status/nav bars)
+- ☐ B17. Light/Dark parity full pass
+- ☐ B18. Copy / tone (friendly voice, no emoji, message catalog)
+- ☐ B19. Performance / no console errors / build clean
+
+### C · Sign-off
+- ☐ C1. Final functional test with the **real backup** (calc vs real data)
+- ☐ C2. Mahmoud final approval → merge to `main` / deploy
+
+> **Current cursor:** start at **A1 · Home**. Mahmoud will paste Home notes; Claude addresses them, then asks to confirm Home before moving to A2.
