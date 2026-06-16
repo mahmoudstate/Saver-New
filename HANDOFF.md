@@ -95,22 +95,28 @@ BK=./demo.json [TAB=activity] node shot.cjs http://localhost:8099 out.png
 - [x] **Installment detail** (ring, schedule, pay/undo) — DONE: showcase 37 ported (`screens/InstallmentDetail.jsx`), opens from Bills installment rows; pay logs an expense + advances the ring + success toast; tap a paid row to undo (confirm dialog). Verified light+dark, block + success paths.
 - [x] **Budgets** + Budget detail · **Projects** + Project detail — DONE: `screens/Budgets.jsx` (tabbed Monthly/Projects, showcase 03+36), `screens/BudgetDetail.jsx` (showcase 12, monthly category ledger), `screens/ProjectDetail.jsx` (showcase 42, cross-month + mark-complete). Calc helpers `budgetSpentMonth/projectSpent/budgetTxns` in calc.js (spend = expense+goal_withdraw in the budget's cats; monthly resets per month, projects accumulate from startMonth). Opens from the Home Budgets card. Added one demo project ("Apartment setup") for verification. Verified light+dark.
 - [x] **Goals** + Goal detail (return-to-bank, spending-mode, frozen breakdown) — DONE: `screens/Goals.jsx` (showcase 04) + `screens/GoalDetail.jsx` (showcase 13). Add money (saving) + Return to bank (goal_return, auto-splits across frozen banks) via reusable `ui/AmountSheet.jsx` (keypad + source picker); spending-mode toggle + complete/archive wired. Opens from the Home Goals card. Verified light+dark + a real add (£600→£800, progress + frozen + contribution + toast).
-- [ ] **Accounts list** (gradient cards, reorder) — from Profile→Accounts
-- [x] **Add** Expense/Income/Saving (screen done; Transfer/Quick Add/vault picker pending) · **Transfer** · **Quick Add** · **Source picker** (vault) · **Edit txn** — partial: `ui/AmountSheet.jsx` keypad+source picker exists and `saving` (Add money to goal) is wired. Still TODO: the full Add screen (segmented Expense/Income/Saving), Transfer, Quick Add, vault source picker, Edit txn.
-- [ ] **Installment add** wizard + focused sheet · smart number entry
-- [ ] **Editors**: account/category/goal/budget · **Quick Actions** · **Customize Dashboard** (dnd + hide)
-- [ ] **Profile/Settings** · Appearance · Privacy · **Backup & Restore**
-- [~] **Messages**: foundation DONE — `ui/Modal.jsx` (friendly `AlertModal` block + `ConfirmModal` + `Toast`) mounted once in `App.jsx`, driven by store (`alert/setAlert`, `confirm/setConfirm`, `toast/flash`). Overlay styles (`.dim/.dialog/.sheet/.toast`) in `saver-ui.css` scoped to `.app`. Still TODO: GoalToast celebration + inline field validation + full friendly copy catalog.
-- [ ] **Smart Filter** sheet + **Results**
-- [ ] System (LAST, latest content): Onboarding · Help/FAQ · What’s New · Empty/Celebration · Notifications
+- [x] **Accounts list** — DONE: `screens/Accounts.jsx` (showcase 40), total/frozen hero + per-bank rows (frozen / low-balance) + dashed Add account; tap a row opens its ledger. (reorder still TODO)
+- [x] **Add** Expense/Income/Saving · **Transfer** · **Quick Add** · **Source picker** (vault) · **Edit txn** — DONE: `screens/Add.jsx` (segmented, keypad via `AmountSheet`, account/category/goal via `PickerSheet`, vault sources for spending-mode goals → goal_withdraw), `screens/Transfer.jsx` (from Account ledger “Move”), `ui/QuickAddSheet.jsx` (long-press the + FAB), `screens/EditTxn.jsx` (amend/delete from Activity rows). Add CTA always tappable + inline helper.
+- [~] **Installment add** — `screens/InstallmentEditor.jsx` (grouped form: item/months/amount/day/account → installments). Grouped multi-step wizard + back-fill (down payment / already-paid via addTxns) still TODO.
+- [x] **Editors**: `AccountEditor` (17, opening-balance income), `CategoryEditor`+`Categories` (18/41), `GoalEditor` (19), `BudgetEditor` (20, name+amount+cats model), `SubscriptionEditor` (38), `InstallmentEditor`, **Quick Actions** (`QuickActions`+`QuickActionEditor`, 21), **Customize Dashboard** (`CustomizeDashboard`, 22, dnd-kit reorder + eye-hide; Home renders sections by saved order).
+- [x] **Profile/Settings** · **Appearance** (`Appearance.jsx`, 24 — theme + 6 calm accents, live `--ac` retint, persisted) · **Privacy & Backup** (`PrivacyBackup.jsx`, 25+39 — real JSON download + restore-from-file via `store.restore`).
+- [x] **Messages**: `ui/Modal.jsx` (`AlertModal` block + `ConfirmModal` + `Toast`) driven by store (`alert/confirm/toast/flash`); **GoalToast = `Celebration.jsx`** (goal-reached confetti, archive/keep); inline validation on Add. Full friendly copy catalog still a polish item.
+- [x] **Smart Filter** sheet + **Results** — `lib/filter.js` (pure period/show/cats/accounts match + summary), `screens/SmartFilter.jsx` (live count·total), `screens/FilterResults.jsx` (summary hero + chips + list → edit). Activity search/funnel opens it.
+- [x] System: **Onboarding** (27, first-run, gated on `seenWelcome`), **What’s New** (28, sheet, also Profile), **Empty state** (`ui/EmptyState.jsx`, 32, used in Activity), **Goal celebration** (33), **Notifications** (29, data-driven from bills/goals/low-balance/backup; Home bell). DEFERRED (per user): **Guide/Manual** (`Manual.jsx` empty scaffold) + Help/FAQ.
 - [ ] **Design QA pass**: uniform field/chip sizes + consistent label↔value layout
-- [~] Wire real **CRUD/actions** from legacy into `lib/store.js` — DONE for `addTxn` (incl. goal split logic), `addTxns`, `delTxn` (+ `reconcileLinked`), `updateTxn`, all ported verbatim with locked validation. Installment pay/undo wired. Still TODO: bill record-payment, goal spend/return UI wiring (engine ready).
-- [ ] Final functional test with the **real backup**, then user deploys
+- [x] Wire real **CRUD/actions** into `lib/store.js` — `addTxn` (incl. goal split), `addTxns`, `delTxn` (+ `reconcileLinked`), `updateTxn`, ported verbatim with locked validation; installment pay/undo, goal add/return/spend, transfer, quick-add all wired.
+- [x] **Functional test (logic)**: 17/17 locked-math invariants pass (total=Σbank, safe=bal−frozen, expense/income/saving/goal_return/transfer/clamp); 0 console errors across all screens. **Still TODO: final test with the real backup, then user deploys.**
+
+### Still open (next session)
+- Installment grouped wizard + back-fill (down payment / already-paid); smart number entry quick-picks.
+- Reorder accounts/cards within sections (53). Bills view-selector (Timeline/Categories/History) + month/status filters.
+- Guide/Manual + Help/FAQ content (deferred). Friendly message copy catalog. Design QA pass (uniform fields/chips).
+- Final functional test with the **real backup**, then deploy.
 
 ---
 
 ## 5. Quick status one-liner
-Clean React rebuild on the new design: **4 tabs + Account ledger + Subscription detail done & verified**, push-navigation working, logic layer verified vs real backup, hero unified 252px, new icons only, v3.0. Continue porting the remaining detail/add/editor/filter/message screens **1:1 from the showcase** (method in §0). Logic locked. No emoji. Verify each screen by screenshot (local server + shot.cjs) before moving on. Work locally; push at checkpoints.
+Clean React rebuild on the new design — **largely feature-complete**: 4 tabs + all detail screens (account ledger, subscription, installment, budget/project, goal) + full Add/Transfer/Quick-Add/Edit + every editor (account/category/goal/budget/subscription/installment/quick-actions) + Smart Filter + Appearance (theme+accents) + Privacy & Backup + Notifications + Customize Dashboard + onboarding/what's-new/empty/celebration. Locked CRUD wired in `lib/store.js`; **17/17 logic invariants pass, 0 console errors**. Open: installment grouped wizard, reorder, Bills view-selector, Guide/Help content, design-QA pass, final test with the real backup. Method in §0. Logic locked. No emoji. Work locally; push at checkpoints.
 
 ## 6. How to resume in a NEW session
 1. Clone `saver-test`, checkout `claude/file-transfer-k1kui7`, `npm install`.
