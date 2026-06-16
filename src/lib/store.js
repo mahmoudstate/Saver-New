@@ -11,8 +11,17 @@ export const KEYS = {
   groups: "et_groups", savings: "et_savings", currency: "et_currency",
   username: "et_username", lastBackup: "et_lastBackup", bills: "et_bills",
   budgets: "et_budgets", quickActions: "et_quick_actions", seenWelcome: "et_seenWelcome",
-  theme: "et_theme", installments: "et_installments", accent: "et_accent",
+  theme: "et_theme", installments: "et_installments", accent: "et_accent", dashboard: "et_dashboard",
 };
+
+export const DASH_SECTIONS = [
+  { id: "accounts", label: "Accounts & balance", icon: "wallet", bg: "var(--acDim)", color: "var(--ac)" },
+  { id: "income", label: "Income & expenses", icon: "activity", bg: "var(--blueDim)", color: "var(--blue)" },
+  { id: "bills", label: "Monthly bills", icon: "bills", bg: "var(--blueDim)", color: "var(--blue)" },
+  { id: "budgets", label: "Monthly budgets", icon: "layers", bg: "var(--purpleDim)", color: "var(--purple)" },
+  { id: "goals", label: "Savings goals", icon: "target", bg: "var(--acDim)", color: "var(--ac)" },
+];
+export const DASH_DEFAULT = { order: DASH_SECTIONS.map((s) => s.id), hidden: [] };
 
 // calm accent palette (dark+light safe): [ac, ac2]; onacc stays dark for all pastels
 export const ACCENTS = {
@@ -27,7 +36,7 @@ const ENTITIES = {
   txns: [], banks: [], expCats: [], incCats: [], groups: [], savings: [],
   bills: [], budgets: [], installments: [], quickActions: [],
 };
-const SCALARS = { currency: "EGP", username: "", theme: "dark", accent: "mint" };
+const SCALARS = { currency: "EGP", username: "", theme: "dark", accent: "mint", dashboard: DASH_DEFAULT };
 
 // Single store hook: loads everything, exposes data + persisted setters + locked actions.
 export function useStore() {

@@ -1,5 +1,5 @@
 // Saver — Home: PORTED 1:1 from showcase screen 01 (same classes/markup), data injected.
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, Fragment } from "react";
 import Ico from "../ui/Ico.jsx";
 import { fmt, currentMonth, MONTHS, cardGradient } from "../lib/format.js";
 import { calcBankBalance, calcGoalSaved, calcFrozenForBank, totalBalance, totalSafe, totalFrozen, monthTxns, sumIncome, sumExpense } from "../lib/calc.js";
@@ -88,6 +88,10 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
         </div>
       </div>
 
+      {(() => {
+      const dash = store.dashboard?.order ? store.dashboard : { order: ["accounts", "income", "bills", "budgets", "goals"], hidden: [] };
+      const SEC = {};
+      SEC.accounts = (<Fragment key="accounts">
       <div className="sectit"><div className="t">Accounts</div><div className="m" onClick={() => onTab?.("profile")}>All accounts</div></div>
       <div className="hscroll" style={{ display: "flex", gap: 13, overflowX: "auto", marginBottom: 16, paddingBottom: 2 }}>
         {banks.map((b) => {
@@ -98,7 +102,8 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
         <div style={{ minWidth: 84, background: "var(--surface2)", border: "var(--cardBorder)", borderRadius: 22, padding: 14, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, color: "var(--ac)" }} onClick={() => onTab?.("profile")}><Ico name="grip" size={20} /><div style={{ fontSize: 11, fontWeight: 800, textAlign: "center" }}>All</div></div>
       </div>
 
-      {/* June overview */}
+      </Fragment>);
+      SEC.income = (<Fragment key="income">
       <div className="tile" style={{ marginBottom: 13 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>{mName} · this month</div><Ico name="chev" size={16} color="var(--faint)" /></div>
         <div style={{ display: "flex", alignItems: "center" }}>
@@ -108,8 +113,8 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
         </div>
       </div>
 
-      {/* Bills */}
-      {bills.length > 0 && (
+      </Fragment>);
+      SEC.bills = (<Fragment key="bills">{bills.length > 0 && (
         <div className="tile" style={{ marginBottom: 13 }} onClick={() => onTab?.("bills")}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={circ(42, 13, "var(--blueDim)", "var(--blue)")}><Ico name="bills" size={21} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Bills · {mName}</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.billsDue)} due</div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
           <div style={{ display: "flex", gap: 7, marginTop: 13 }}>
@@ -118,9 +123,8 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
           </div>
         </div>
       )}
-
-      {/* Goals */}
-      {d.goals.length > 0 && (
+      </Fragment>);
+      SEC.goals = (<Fragment key="goals">{d.goals.length > 0 && (
         <div className="tile" style={{ marginBottom: 13 }} onClick={() => onOpenGoals?.()}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 13 }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={circ(42, 13, "var(--acDim)", "var(--ac)")}><Ico name="target" size={21} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Goals · {d.goals.length} active</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.goalsSaved)} saved</div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
           <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
@@ -133,14 +137,15 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
           </div>
         </div>
       )}
-
-      {/* Budgets */}
-      {d.limit > 0 && (
+      </Fragment>);
+      SEC.budgets = (<Fragment key="budgets">{d.limit > 0 && (
         <div className="tile" onClick={() => onOpenBudgets?.()}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 13 }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={circ(42, 13, "var(--purpleDim)", "var(--purple)")}><Ico name="layers" size={20} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Budgets · {mName}</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.spent)} <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 700 }}>of {fmt(d.limit)}</span></div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
           <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)" }}><i style={{ display: "block", width: `${d.limit > 0 ? Math.min(100, (d.spent / d.limit) * 100) : 0}%`, height: "100%", borderRadius: 4, background: "var(--purple)" }} /></div>
         </div>
-      )}
+      )}</Fragment>);
+      return dash.order.filter((id) => !(dash.hidden || []).includes(id)).map((id) => SEC[id]);
+      })()}
     </div>
   );
 }
