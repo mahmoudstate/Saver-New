@@ -108,7 +108,7 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
       const SEC = {};
       SEC.accounts = (<Fragment key="accounts">
       <div className="sectit"><div className="t">Accounts</div><div className="m" onClick={() => onOpenAllAccounts?.()}>All accounts</div></div>
-      <div className="hscroll" style={{ display: "flex", gap: 13, overflowX: "auto", marginBottom: 16, paddingBottom: 2 }}>
+      <div className="hscroll" style={{ display: "flex", gap: 13, overflowX: "auto", marginBottom: 4, paddingBottom: 30, paddingTop: 4 }}>
         {banks.map((b) => {
           const bal = calcBankBalance(b.id, txns), frozen = Math.max(0, calcFrozenForBank(b.id, savings, txns)), avail = bal - frozen;
           const low = b.lowBalanceThreshold && avail <= b.lowBalanceThreshold && avail >= 0;
