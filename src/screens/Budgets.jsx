@@ -12,9 +12,9 @@ const monthLabel = (m) => MONTHS[+m.split("-")[1] - 1];
 const rangeLabel = (start, end) => `${MONTHS[+(start || end).split("-")[1] - 1]}–${MONTHS[+end.split("-")[1] - 1]}`;
 const barColor = (pct) => (pct >= 100 ? "var(--red)" : pct >= 80 ? "var(--yellow)" : "var(--ac)");
 
-export default function Budgets({ store, back, onAdd, onOpenBudget, onOpenProject }) {
+export default function Budgets({ store, back, onAdd, onOpenBudget, onOpenProject, initialSeg }) {
   const { budgets = [], txns = [] } = store;
-  const [seg, setSeg] = useState("monthly");
+  const [seg, setSeg] = useState(initialSeg || "monthly");
   const cm = currentMonth();
   const isMonthly = seg === "monthly";
 

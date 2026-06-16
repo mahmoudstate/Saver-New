@@ -18,7 +18,9 @@ export const DASH_SECTIONS = [
   { id: "accounts", label: "Accounts & balance", icon: "wallet", bg: "var(--acDim)", color: "var(--ac)" },
   { id: "income", label: "Income & expenses", icon: "activity", bg: "var(--blueDim)", color: "var(--blue)" },
   { id: "bills", label: "Monthly bills", icon: "bills", bg: "var(--blueDim)", color: "var(--blue)" },
+  { id: "installments", label: "Installments", icon: "card", bg: "var(--orangeDim)", color: "var(--orange)" },
   { id: "budgets", label: "Monthly budgets", icon: "layers", bg: "var(--purpleDim)", color: "var(--purple)" },
+  { id: "projects", label: "Projects", icon: "sparkles", bg: "var(--purpleDim)", color: "var(--purple)" },
   { id: "goals", label: "Savings goals", icon: "target", bg: "var(--acDim)", color: "var(--ac)" },
 ];
 export const DASH_DEFAULT = { order: DASH_SECTIONS.map((s) => s.id), hidden: [] };

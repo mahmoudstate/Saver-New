@@ -9,9 +9,9 @@ function BrandChip({ name, color }) {
 }
 const guessCat = (t = "") => /phone|iphone|mobile|tablet|ipad/i.test(t) ? "phone" : /car|loan|auto|vehicle/i.test(t) ? "transport" : /laptop|pc|mac/i.test(t) ? "phone" : null;
 
-export default function Bills({ store, onAdd, onOpenSub, onOpenInst }) {
+export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg }) {
   const { bills = [], installments = [] } = store;
-  const [seg, setSeg] = useState("subs");
+  const [seg, setSeg] = useState(initialSeg || "subs");
   const cm = currentMonth();
   const day = new Date().getDate();
 

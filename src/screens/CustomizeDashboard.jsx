@@ -24,7 +24,9 @@ function SortRow({ id, hidden, onToggle }) {
 
 export default function CustomizeDashboard({ store, back }) {
   const init = store.dashboard?.order ? store.dashboard : DASH_DEFAULT;
-  const [order, setOrder] = useState(init.order.filter((id) => META[id]));
+  // keep saved order, then append any newer sections not yet present (e.g. installments/projects)
+  const mergedOrder = [...init.order.filter((id) => META[id]), ...DASH_SECTIONS.map((s) => s.id).filter((id) => !init.order.includes(id))];
+  const [order, setOrder] = useState(mergedOrder);
   const [hidden, setHidden] = useState(init.hidden || []);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 

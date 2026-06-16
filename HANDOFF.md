@@ -135,7 +135,10 @@ Clean React rebuild on the new design — **largely feature-complete**: 4 tabs +
 
 ### A · Pages — review one at a time
 **Core tabs**
-- ☐ A1. Home (greeting, balance swipe Total/Safe, account cards, this-month, Bills/Goals/Budgets cards, customize)
+- 🔄 A1. Home (greeting, balance swipe Total/Safe, account cards, this-month, Bills/Goals/Budgets cards, customize)
+  - Customize button: removed the right chevron, centered icon+label as a button. (done, verified light+dark)
+  - Navigation memory: sections opened from Home now render as an overlay over the still-mounted Home tab, so the in-screen Back restores Home at the same scroll/state; tapping the Home nav button remounts it fresh from the top. (App.jsx `.tabhost`/`.pushview` + `tabKey`)
+  - New Home cards: **Installments** (orange, → Bills tab · Installments seg) + **Projects** (purple, → Budgets · Projects seg), both gated on having data, both added to Customize Dashboard + dash order (existing saved layouts auto-merge the new sections). (done, verified light+dark)
 - ☐ A2. Activity (month summary, search/filter entry, grouped list, row states, empty)
 - ☐ A3. Bills · Subscriptions (hero, segment, rows, statuses, +)
 - ☐ A4. Bills · Installments (hero, segment, rows, progress, +)

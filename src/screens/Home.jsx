@@ -2,7 +2,10 @@
 import { useState, useRef, useMemo, Fragment } from "react";
 import Ico from "../ui/Ico.jsx";
 import { fmt, currentMonth, MONTHS, cardGradient } from "../lib/format.js";
-import { calcBankBalance, calcGoalSaved, calcFrozenForBank, totalBalance, totalSafe, totalFrozen, monthTxns, sumIncome, sumExpense } from "../lib/calc.js";
+import { calcBankBalance, calcGoalSaved, calcFrozenForBank, totalBalance, totalSafe, totalFrozen, monthTxns, sumIncome, sumExpense, projectSpent } from "../lib/calc.js";
+import { DASH_SECTIONS, DASH_DEFAULT } from "../lib/store.js";
+
+const KNOWN_SECTIONS = DASH_SECTIONS.map((s) => s.id);
 
 const Contactless = ({ s = 20 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" style={{ opacity: .9 }}><path d="M5 11a3 3 0 0 1 0 2M9 8.5a6.5 6.5 0 0 1 0 7M13 6a10 10 0 0 1 0 12" /></svg>;
 
@@ -34,8 +37,8 @@ export function BankCard({ bank, available, frozen, low, money, onClick, wide })
 
 const circ = (size = 42, r = 13, bg, color) => ({ width: size, height: size, borderRadius: r, background: bg, color, display: "flex", alignItems: "center", justifyContent: "center" });
 
-export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudgets, onOpenNotifications, onOpenAllAccounts, onOpenBreakdown, onCustomize }) {
-  const { banks, txns, savings, bills = [], budgets = [], username } = store;
+export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudgets, onOpenProjects, onOpenInstallments, onOpenNotifications, onOpenAllAccounts, onOpenBreakdown, onCustomize }) {
+  const { banks, txns, savings, bills = [], budgets = [], installments = [], username } = store;
   const [hide, setHide] = useState(false);
   const [page, setPage] = useState(0);
   const pagerRef = useRef(null);
@@ -55,8 +58,17 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
     const limit = mb.reduce((s, b) => s + (b.amount || 0), 0);
     const budCatIds = new Set(mb.flatMap((b) => b.cats || []));
     const spent = mt.filter((t) => t.type === "expense" && budCatIds.has(t.catId)).reduce((s, t) => s + t.amount, 0);
-    return { tb, ts, tf, inc, exp, net: inc - exp, goals, goalsSaved, billsDue: unpaid.reduce((s, b) => s + b.amount, 0), unpaid: unpaid.length, paid: mBills.length - unpaid.length, limit, spent };
-  }, [banks, txns, savings, bills, budgets, cm]);
+    // Installments: active plans (not fully paid / not archived), remaining + due-this-month
+    const paidOf = (i) => i.payments?.length ?? i.paidInstallments ?? 0;
+    const activeInst = installments.filter((i) => i.status !== "archived" && paidOf(i) < i.totalInstallments);
+    const instRemaining = activeInst.reduce((s, i) => s + Math.max(0, i.totalAmount - paidOf(i) * i.installmentAmount), 0);
+    const instDue = activeInst.filter((i) => !(i.payments || []).some((p) => p.month === cm)).reduce((s, i) => s + i.installmentAmount, 0);
+    // Projects: long-term budgets (kind === "project"), accumulate spend across months
+    const activeProj = budgets.filter((b) => b.kind === "project" && b.status !== "archived");
+    const projSpent = activeProj.reduce((s, p) => s + projectSpent(p, txns), 0);
+    const projLimit = activeProj.reduce((s, p) => s + (p.amount || 0), 0);
+    return { tb, ts, tf, inc, exp, net: inc - exp, goals, goalsSaved, billsDue: unpaid.reduce((s, b) => s + b.amount, 0), unpaid: unpaid.length, paid: mBills.length - unpaid.length, limit, spent, instCount: activeInst.length, instRemaining, instDue, projCount: activeProj.length, projSpent, projLimit };
+  }, [banks, txns, savings, bills, budgets, installments, cm]);
 
   const hh = new Date().getHours();
   const greet = hh < 12 ? "Good morning" : hh < 18 ? "Good afternoon" : "Good evening";
@@ -89,7 +101,10 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
       </div>
 
       {(() => {
-      const dash = store.dashboard?.order ? store.dashboard : { order: ["accounts", "income", "bills", "budgets", "goals"], hidden: [] };
+      const saved = store.dashboard?.order ? store.dashboard : DASH_DEFAULT;
+      // merge: keep saved order, then append any newer sections (e.g. installments/projects) not yet in it
+      const order = [...saved.order.filter((id) => KNOWN_SECTIONS.includes(id)), ...KNOWN_SECTIONS.filter((id) => !saved.order.includes(id))];
+      const dash = { order, hidden: saved.hidden || [] };
       const SEC = {};
       SEC.accounts = (<Fragment key="accounts">
       <div className="sectit"><div className="t">Accounts</div><div className="m" onClick={() => onOpenAllAccounts?.()}>All accounts</div></div>
@@ -128,6 +143,15 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
         </div>
       )}
       </Fragment>);
+      SEC.installments = (<Fragment key="installments">{d.instCount > 0 && (
+        <div className="tile" style={{ marginBottom: 13 }} onClick={() => onOpenInstallments?.()}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={circ(42, 13, "var(--orangeDim)", "var(--orange)")}><Ico name="card" size={20} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Installments · {d.instCount} active</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.instRemaining)} left</div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
+          {d.instDue > 0 && <div style={{ display: "flex", gap: 7, marginTop: 13 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--surface2)", padding: "5px 11px", borderRadius: 9, fontSize: 11.5, fontWeight: 700, color: "var(--muted)" }}><span style={{ width: 6, height: 6, borderRadius: 99, background: "var(--orange)" }} />{money(d.instDue)} due this month</span>
+          </div>}
+        </div>
+      )}
+      </Fragment>);
       SEC.goals = (<Fragment key="goals">{d.goals.length > 0 && (
         <div className="tile" style={{ marginBottom: 13 }} onClick={() => onOpenGoals?.()}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 13 }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={circ(42, 13, "var(--acDim)", "var(--ac)")}><Ico name="target" size={21} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Goals · {d.goals.length} active</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.goalsSaved)} saved</div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
@@ -148,13 +172,18 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
           <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)" }}><i style={{ display: "block", width: `${d.limit > 0 ? Math.min(100, (d.spent / d.limit) * 100) : 0}%`, height: "100%", borderRadius: 4, background: "var(--purple)" }} /></div>
         </div>
       )}</Fragment>);
+      SEC.projects = (<Fragment key="projects">{d.projCount > 0 && (
+        <div className="tile" style={{ marginBottom: 13 }} onClick={() => onOpenProjects?.()}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 13 }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={circ(42, 13, "var(--purpleDim)", "var(--purple)")}><Ico name="sparkles" size={20} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Projects · {d.projCount} active</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.projSpent)} {d.projLimit > 0 && <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 700 }}>of {fmt(d.projLimit)}</span>}</div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
+          {d.projLimit > 0 && <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)" }}><i style={{ display: "block", width: `${Math.min(100, (d.projSpent / d.projLimit) * 100)}%`, height: "100%", borderRadius: 4, background: "var(--purple)" }} /></div>}
+        </div>
+      )}</Fragment>);
       return dash.order.filter((id) => !(dash.hidden || []).includes(id)).map((id) => SEC[id]);
       })()}
 
-      <div className="icard" onClick={() => onCustomize?.()} style={{ cursor: "pointer", marginTop: 16, borderStyle: "dashed", background: "transparent" }}>
+      <div className="icard" onClick={() => onCustomize?.()} style={{ cursor: "pointer", marginTop: 16, borderStyle: "dashed", background: "transparent", justifyContent: "center", gap: 9 }}>
         <span className="circ" style={{ width: 36, height: 36, borderRadius: 11, background: "var(--surface2)", color: "var(--ac)" }}><Ico name="grip" size={18} /></span>
         <div className="nm" style={{ color: "var(--ac)" }}>Customize home</div>
-        <span style={{ marginLeft: "auto", color: "var(--faint)" }}><Ico name="chev" size={18} /></span>
       </div>
     </div>
   );
