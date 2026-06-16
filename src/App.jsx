@@ -91,7 +91,7 @@ export default function App() {
   else if (view?.type === "transfer") viewScreen = <Transfer store={store} fromBankId={view.fromBankId} onClose={back} />;
   else if (view?.type === "edit") viewScreen = <EditTxn store={store} txn={view.txn} onClose={back} />;
   else if (view?.type === "accounts") viewScreen = <Accounts store={store} back={back} onOpen={(b) => push({ type: "account", bank: b })} onAdd={() => push({ type: "editAccount", account: null })} />;
-  else if (view?.type === "editAccount") viewScreen = <AccountEditor store={store} account={view.account} onClose={back} />;
+  else if (view?.type === "editAccount") viewScreen = <AccountEditor store={store} account={view.account} onClose={back} onDeleted={() => popN(2)} />;
   else if (view?.type === "categories") viewScreen = <Categories store={store} back={back} onAdd={() => push({ type: "editCategory", category: null })} onEdit={(c) => push({ type: "editCategory", category: c })} />;
   else if (view?.type === "editCategory") viewScreen = <CategoryEditor store={store} category={view.category} onClose={back} />;
   else if (view?.type === "appearance") viewScreen = <Appearance store={store} back={back} />;

@@ -5,22 +5,31 @@ import Ico from "../ui/Ico.jsx";
 import AmountSheet from "../ui/AmountSheet.jsx";
 import { fmt, today, cardGradient } from "../lib/format.js";
 import { calcBankBalance } from "../lib/calc.js";
+import { loadKey, saveKey } from "../lib/store.js";
 
-const COLORS = ["#E5544E", "#2563EB", "#0E9F6E", "#D97706", "#7C3AED", "#0D9488", "#EC4899", "#3a3f66"];
+// First-run seed only — the palette is fully user-managed after that (add via the
+// wheel, remove via the × on each swatch). Nothing here is forced on the user.
+const SEED = ["#E5544E", "#2563EB", "#0E9F6E", "#D97706", "#7C3AED", "#0D9488", "#EC4899", "#3a3f66"];
 
-export default function AccountEditor({ store, account, onClose }) {
+export default function AccountEditor({ store, account, onClose, onDeleted }) {
   const editing = !!account;
   const [kind, setKind] = useState(account?.glyph === "banknote" ? "cash" : "bank");
   const [name, setName] = useState(account?.name || "");
-  const [color, setColor] = useState(account?.color || COLORS[0]);
+  const [color, setColor] = useState(account?.color || SEED[0]);
   const [opening, setOpening] = useState(0);
   const [alertOn, setAlertOn] = useState(account?.lowBalanceThreshold != null);
   const [threshold, setThreshold] = useState(account?.lowBalanceThreshold || 0);
   const [sheet, setSheet] = useState(null); // opening | threshold
+  // User-managed colour palette (persisted). Show the bank's current colour too so it's selectable.
+  const [palette, setPalette] = useState(() => {
+    const base = loadKey("et_bankColors", SEED);
+    return account?.color && !base.includes(account.color) ? [...base, account.color] : base;
+  });
 
   const canSave = name.trim().length > 0;
-  // presets only; if the chosen colour is a custom one, show just that single extra swatch
-  const swatches = COLORS.includes(color) ? COLORS : [...COLORS, color];
+  const persistPalette = (pl) => { setPalette(pl); saveKey("et_bankColors", pl); };
+  const addColor = (c) => { if (!c) return; setColor(c); if (!palette.includes(c)) persistPalette([...palette, c]); };
+  const removeColor = (c) => persistPalette(palette.filter((x) => x !== c));
 
   // toggling the alert on with no amount yet jumps straight to the keypad
   const toggleAlert = () => setAlertOn((v) => { const nv = !v; if (nv && !threshold) setSheet("threshold"); return nv; });
@@ -55,7 +64,8 @@ export default function AccountEditor({ store, account, onClose }) {
       onConfirm: () => {
         store.set("banks", (list) => list.map((b) => (b.id === account.id ? { ...b, archived: true } : b)));
         store.flash({ title: "Account removed", sub: account.name, color: "var(--red)", icon: "trash" });
-        onClose();
+        // go straight back to the accounts list (skip the now-deleted account's ledger)
+        (onDeleted || onClose)();
       },
     });
   };
@@ -83,12 +93,17 @@ export default function AccountEditor({ store, account, onClose }) {
 
       <div className="tile" style={{ margin: "13px 0", padding: 14 }}>
         <div className="fl" style={{ marginBottom: 11 }}>Colour</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 11 }}>
-          {swatches.map((c) => <span key={c} onClick={() => setColor(c)} style={{ width: 28, height: 28, borderRadius: "50%", background: c, cursor: "pointer", boxShadow: color === c ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "none" }} />)}
-          {/* colour wheel: pick any colour; it's remembered as a swatch */}
-          <label style={{ width: 28, height: 28, borderRadius: "50%", cursor: "pointer", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", background: "conic-gradient(#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)", boxShadow: !COLORS.includes(color) ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "inset 0 0 0 2px rgba(255,255,255,.5)" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 13 }}>
+          {palette.map((c) => (
+            <span key={c} style={{ position: "relative", width: 28, height: 28 }}>
+              <span onClick={() => setColor(c)} style={{ display: "block", width: 28, height: 28, borderRadius: "50%", background: c, cursor: "pointer", boxShadow: color === c ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "none" }} />
+              <span onClick={(e) => { e.stopPropagation(); removeColor(c); }} style={{ position: "absolute", top: -5, right: -5, width: 16, height: 16, borderRadius: "50%", background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)", fontSize: 11, fontWeight: 700, lineHeight: 1, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>×</span>
+            </span>
+          ))}
+          {/* colour wheel: add any colour to your palette */}
+          <label style={{ width: 28, height: 28, borderRadius: "50%", cursor: "pointer", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", background: "conic-gradient(#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)", boxShadow: "inset 0 0 0 2px rgba(255,255,255,.5)" }}>
             <Ico name="plus" size={13} color="#fff" />
-            <input type="color" value={color} onChange={(e) => setColor(e.target.value)} style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }} />
+            <input type="color" value={color} onChange={(e) => addColor(e.target.value)} style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }} />
           </label>
         </div>
       </div>

@@ -53,10 +53,19 @@ export default function EditTxn({ store, txn, onClose }) {
         {["expense", "income", "saving"].map((t) => <b key={t} className={txn.type === t || (txn.type.startsWith("goal") && t === "saving") ? "on" : ""} style={{ textTransform: "capitalize" }}>{t}</b>)}
       </div>
 
-      <div className="field" onClick={() => editable && setSheet("account")} style={{ cursor: editable ? "pointer" : "default", opacity: editable ? 1 : .7 }}>
-        <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: bank?.color || "var(--muted)", color: "#fff", fontWeight: 800, fontSize: 14 }}>{(bank?.name || "?").slice(0, 1).toUpperCase()}</span>
-        <div><div className="fl">Account</div><div className="fv">{bank?.name || "—"}</div></div>{editable && <span className="chev"><Ico name="chev" size={18} /></span>}
-      </div>
+      {(() => {
+        const isTransfer = txn.type === "transfer";
+        const nameOf = (id) => banks.find((b) => b.id === id)?.name;
+        const label = isTransfer
+          ? `${nameOf(txn.fromBankId) || txn.fromBankName || "Deleted account"} → ${nameOf(txn.toBankId) || txn.toBankName || "Deleted account"}`
+          : (bank?.name || txn.bankName || "Deleted account");
+        return (
+          <div className="field" onClick={() => editable && setSheet("account")} style={{ cursor: editable ? "pointer" : "default", opacity: editable ? 1 : .7 }}>
+            <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: bank?.color || "var(--surface2)", color: bank ? "#fff" : "var(--muted)", fontWeight: 800, fontSize: 14, flexShrink: 0 }}>{bank ? (bank.name || "?").slice(0, 1).toUpperCase() : <Ico name={isTransfer ? "transfer" : "wallet"} size={18} />}</span>
+            <div style={{ minWidth: 0 }}><div className="fl">{isTransfer ? "Transfer" : "Account"}</div><div className="fv" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</div></div>{editable && <span className="chev"><Ico name="chev" size={18} /></span>}
+          </div>
+        );
+      })()}
 
       {editable && (
         <div className="field" onClick={() => setSheet("category")} style={{ cursor: "pointer", marginTop: 12 }}>
