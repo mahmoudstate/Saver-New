@@ -56,7 +56,7 @@ export default function GoalDetail({ store, goalId, back, onReached }) {
     store.setConfirm({
       title: "Complete & archive goal?",
       message: saved > 0 ? `This closes "${goal.name}" and returns the remaining ${fmt(saved)} to your accounts.` : `This closes "${goal.name}". It moves to your archived goals.`,
-      color: "var(--ac)", confirmText: "Complete goal", icon: "check",
+      color: "var(--acText)", confirmText: "Complete goal", icon: "check",
       onConfirm: () => {
         if (saved > 0) store.addTxn({ type: "goal_return", amount: saved, date: today(), bankId: banks[0]?.id, goalId, goalName: goal.name, catName: "Goal archived", catIcon: "saving" });
         store.set("savings", (list) => list.map((s) => (s.id === goalId ? { ...s, status: "archived", spendingMode: false } : s)));
@@ -83,7 +83,7 @@ export default function GoalDetail({ store, goalId, back, onReached }) {
       </div>
 
       <div className="tile" style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 12, padding: 14, cursor: "pointer" }} onClick={toggleSpending}>
-        <span className="circ" style={{ width: 40, height: 40, borderRadius: 12, background: "var(--surface2)", color: "var(--ac)" }}><Ico name="wallet" size={20} /></span>
+        <span className="circ" style={{ width: 40, height: 40, borderRadius: 12, background: "var(--surface2)", color: "var(--acText)" }}><Ico name="wallet" size={20} /></span>
         <div style={{ flex: 1 }}><div style={{ fontWeight: 800, fontSize: 14 }}>Spending mode</div><div className="caption" style={{ marginTop: 2 }}>Use this goal as a source — appears in Accounts like a vault</div></div>
         <span className={`switch ${spending ? "on" : ""}`}><i /></span>
       </div>

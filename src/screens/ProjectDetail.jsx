@@ -23,7 +23,7 @@ export default function ProjectDetail({ store, projectId, back }) {
 
   const complete = () => store.setConfirm({
     title: "Mark project complete?", message: `This closes "${project.name}" and moves it to completed projects. Its transactions stay in your history.`,
-    color: "var(--ac)", confirmText: "Mark complete", icon: "check",
+    color: "var(--acText)", confirmText: "Mark complete", icon: "check",
     onConfirm: () => { store.set("budgets", (list) => list.map((b) => (b.id === projectId ? { ...b, status: "archived" } : b))); store.flash({ title: "Project completed", sub: project.name, color: "var(--success)" }); back(); },
   });
 

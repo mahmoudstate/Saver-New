@@ -30,8 +30,8 @@ export default function QuickActions({ store, back, onEdit }) {
 
       {active.length < 4 && (
         <div className="icard" onClick={() => onEdit?.(null)} style={{ cursor: "pointer", borderStyle: "dashed" }}>
-          <span className="circ" style={{ width: 44, height: 44, borderRadius: 14, background: "var(--surface2)", color: "var(--ac)" }}><Ico name="plus" size={22} /></span>
-          <div><div className="nm" style={{ color: "var(--ac)" }}>Add shortcut</div><div className="mt">{4 - active.length} slot{4 - active.length === 1 ? "" : "s"} left</div></div>
+          <span className="circ" style={{ width: 44, height: 44, borderRadius: 14, background: "var(--surface2)", color: "var(--acText)" }}><Ico name="plus" size={22} /></span>
+          <div><div className="nm" style={{ color: "var(--acText)" }}>Add shortcut</div><div className="mt">{4 - active.length} slot{4 - active.length === 1 ? "" : "s"} left</div></div>
         </div>
       )}
     </div>

@@ -40,7 +40,7 @@ export default function Breakdown({ store, back, onFilter }) {
           <b className={mode === "expense" ? "on" : ""} onClick={() => setMode("expense")}>Spending</b>
           <b className={mode === "income" ? "on" : ""} onClick={() => setMode("income")}>Income</b>
         </div>
-        <div onClick={onFilter} role="button" aria-label="filter" style={{ width: 48, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--acDim)", border: "1px solid var(--ac)", borderRadius: 13, color: "var(--ac)" }}><Funnel /></div>
+        <div onClick={onFilter} role="button" aria-label="filter" style={{ width: 48, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--acDim)", border: "1px solid var(--ac)", borderRadius: 13, color: "var(--acText)" }}><Funnel /></div>
       </div>
 
       {cats.length === 0 ? (

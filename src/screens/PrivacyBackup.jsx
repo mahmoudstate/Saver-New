@@ -26,8 +26,8 @@ export default function PrivacyBackup({ store, back }) {
         const data = JSON.parse(reader.result);
         store.setConfirm({
           title: "Restore this backup?", message: "This overwrites your current data with the file's contents.",
-          color: "var(--ac)", confirmText: "Restore", icon: "download",
-          onConfirm: () => { store.restore(data); store.flash({ title: "Backup restored", color: "var(--ac)", icon: "check" }); },
+          color: "var(--acText)", confirmText: "Restore", icon: "download",
+          onConfirm: () => { store.restore(data); store.flash({ title: "Backup restored", color: "var(--acText)", icon: "check" }); },
         });
       } catch { store.setAlert({ title: "Couldn't read file", message: "That doesn't look like a Saver backup.", color: "var(--red)" }); }
     };
@@ -60,7 +60,7 @@ export default function PrivacyBackup({ store, back }) {
       <Row icon="download" bg="var(--blueDim)" color="var(--blue)" nm="Restore from file" mt="Overwrites current data" right={<Ico name="chev" size={18} color="var(--faint)" />} onClick={() => fileRef.current?.click()} />
       <input ref={fileRef} type="file" accept="application/json,.json" onChange={onFile} style={{ display: "none" }} />
 
-      <div className="frozen" style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 8, background: "var(--acDim)", color: "var(--ac)", borderRadius: 14, padding: "12px 14px", fontWeight: 700, fontSize: 13 }}>
+      <div className="frozen" style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 8, background: "var(--acDim)", color: "var(--acText)", borderRadius: 14, padding: "12px 14px", fontWeight: 700, fontSize: 13 }}>
         <Ico name="shield" size={15} color="var(--ac)" />Encrypted · stays on your device
       </div>
     </div>

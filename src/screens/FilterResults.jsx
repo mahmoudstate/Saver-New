@@ -29,7 +29,7 @@ export default function FilterResults({ store, filter, back, onEditFilter, onEdi
 
       {chips.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-          {chips.filter(Boolean).map((c, i) => <span key={i} className="chip" style={{ background: "var(--acDim)", color: "var(--ac)", borderColor: "transparent" }}>{c}</span>)}
+          {chips.filter(Boolean).map((c, i) => <span key={i} className="chip" style={{ background: "var(--acDim)", color: "var(--acText)", borderColor: "transparent" }}>{c}</span>)}
           <span className="chip" onClick={onEditFilter} style={{ cursor: "pointer" }}>Edit</span>
         </div>
       )}

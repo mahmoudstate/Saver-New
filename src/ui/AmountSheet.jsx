@@ -39,7 +39,7 @@ export default function AmountSheet({ title, sub, confirmLabel = "Confirm", max,
         {banks && (
           <div className="hscroll" style={{ display: "flex", gap: 8, overflowX: "auto", margin: "6px 0 14px" }}>
             {banks.map((b) => (
-              <button key={b.id} onClick={() => setBankId(b.id)} className="chip" style={bankId === b.id ? { background: "var(--acDim)", color: "var(--ac)", borderColor: "transparent" } : {}}>
+              <button key={b.id} onClick={() => setBankId(b.id)} className="chip" style={bankId === b.id ? { background: "var(--acDim)", color: "var(--acText)", borderColor: "transparent" } : {}}>
                 <span style={{ width: 16, height: 16, borderRadius: 5, background: b.color || "var(--muted)", display: "inline-block" }} />{b.name}
               </button>
             ))}

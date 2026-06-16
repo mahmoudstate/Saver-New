@@ -114,7 +114,7 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
           const low = b.lowBalanceThreshold && avail <= b.lowBalanceThreshold && avail >= 0;
           return <BankCard key={b.id} bank={b} available={avail} frozen={frozen} low={low} money={money} onClick={() => onOpenBank?.(b)} />;
         })}
-        <div style={{ minWidth: 84, background: "var(--surface2)", border: "var(--cardBorder)", borderRadius: 22, padding: 14, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, color: "var(--ac)" }} onClick={() => onOpenAllAccounts?.()}><Ico name="layers" size={20} /><div style={{ fontSize: 11, fontWeight: 800, textAlign: "center" }}>All</div></div>
+        <div style={{ minWidth: 84, background: "var(--surface2)", border: "var(--cardBorder)", borderRadius: 22, padding: 14, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, color: "var(--acText)" }} onClick={() => onOpenAllAccounts?.()}><Ico name="layers" size={20} /><div style={{ fontSize: 11, fontWeight: 800, textAlign: "center" }}>All</div></div>
       </div>
 
       </Fragment>);
@@ -154,7 +154,7 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
       </Fragment>);
       SEC.goals = (<Fragment key="goals">{d.goals.length > 0 && (
         <div className="tile" style={{ marginBottom: 13 }} onClick={() => onOpenGoals?.()}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 13 }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={circ(42, 13, "var(--acDim)", "var(--ac)")}><Ico name="target" size={21} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Goals · {d.goals.length} active</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.goalsSaved)} saved</div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 13 }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={circ(42, 13, "var(--acDim)", "var(--acText)")}><Ico name="target" size={21} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Goals · {d.goals.length} active</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.goalsSaved)} saved</div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
           <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
             {d.goals.slice(0, 2).map((g) => (
               <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -182,8 +182,8 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
       })()}
 
       <div className="icard" onClick={() => onCustomize?.()} style={{ cursor: "pointer", marginTop: 16, borderStyle: "dashed", background: "transparent", justifyContent: "center", gap: 9 }}>
-        <span className="circ" style={{ width: 36, height: 36, borderRadius: 11, background: "var(--surface2)", color: "var(--ac)" }}><Ico name="grip" size={18} /></span>
-        <div className="nm" style={{ color: "var(--ac)" }}>Customize home</div>
+        <span className="circ" style={{ width: 36, height: 36, borderRadius: 11, background: "var(--surface2)", color: "var(--acText)" }}><Ico name="grip" size={18} /></span>
+        <div className="nm" style={{ color: "var(--acText)" }}>Customize home</div>
       </div>
     </div>
   );

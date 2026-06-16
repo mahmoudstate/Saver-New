@@ -25,7 +25,7 @@ export default function InstallmentEditor({ store, plan, onClose }) {
     const base = { itemType: name.trim(), company: name.trim(), name: name.trim(), totalInstallments: count, installmentAmount: monthly, totalAmount: total, dueDay: clampDay(dueDay), bankId, startDate: today() };
     if (editing) store.set("installments", (list) => list.map((i) => (i.id === plan.id ? { ...i, ...base } : i)));
     else store.set("installments", (list) => [...list, { id: Date.now().toString(), ...base, payments: [], paidInstallments: 0, status: "active" }]);
-    store.flash({ title: editing ? "Plan saved" : "Installment added", sub: `${name.trim()} · ${count}×${fmt(monthly)}`, color: "var(--ac)", icon: "check" });
+    store.flash({ title: editing ? "Plan saved" : "Installment added", sub: `${name.trim()} · ${count}×${fmt(monthly)}`, color: "var(--acText)", icon: "check" });
     onClose();
   };
 
@@ -39,7 +39,7 @@ export default function InstallmentEditor({ store, plan, onClose }) {
       </div>
 
       <label className="field">
-        <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: "var(--acDim)", color: "var(--ac)" }}><Ico name="card" size={20} /></span>
+        <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: "var(--acDim)", color: "var(--acText)" }}><Ico name="card" size={20} /></span>
         <div style={{ flex: 1 }}><div className="fl">Item</div>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. iPhone 15" style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700, marginTop: 2, width: "100%" }} />
         </div>

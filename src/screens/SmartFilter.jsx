@@ -5,7 +5,7 @@ import { fmt } from "../lib/format.js";
 import { PERIODS, SHOWS, applyFilter, summarize } from "../lib/filter.js";
 
 function Chip({ on, children, onClick }) {
-  return <span onClick={onClick} style={{ padding: "8px 14px", borderRadius: 11, cursor: "pointer", fontWeight: on ? 800 : 700, fontSize: 13, ...(on ? { background: "var(--acDim)", border: "1px solid var(--ac)", color: "var(--ac)" } : { background: "var(--surface)", border: "var(--cardBorder)", color: "var(--muted)" }) }}>{children}</span>;
+  return <span onClick={onClick} style={{ padding: "8px 14px", borderRadius: 11, cursor: "pointer", fontWeight: on ? 800 : 700, fontSize: 13, ...(on ? { background: "var(--acDim)", border: "1px solid var(--ac)", color: "var(--acText)" } : { background: "var(--surface)", border: "var(--cardBorder)", color: "var(--muted)" }) }}>{children}</span>;
 }
 const row = { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 18 };
 

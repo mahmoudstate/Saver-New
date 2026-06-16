@@ -3,7 +3,7 @@ import Ico from "./Ico.jsx";
 import { APP_VERSION } from "../lib/format.js";
 
 const ITEMS = [
-  { icon: "wallet", bg: "var(--acDim)", color: "var(--ac)", nm: "Total / Safe balance toggle", mt: "One tap to see what’s really spendable" },
+  { icon: "wallet", bg: "var(--acDim)", color: "var(--acText)", nm: "Total / Safe balance toggle", mt: "One tap to see what’s really spendable" },
   { icon: "target", bg: "var(--yellowDim)", color: "var(--yellow)", nm: "Goal vaults", mt: "Turn on spending mode & pay from a goal" },
   { icon: "note", bg: "var(--blueDim)", color: "var(--blue)", nm: "New Bills views", mt: "Timeline · Categories · History" },
 ];

@@ -25,8 +25,8 @@ export default function AllAccounts({ store, back, onOpenBank, onAdd }) {
           return <BankCard key={b.id} wide bank={b} available={avail} frozen={fr} low={low} money={fmt} onClick={() => onOpenBank?.(b)} />;
         })}
         <div className="icard" onClick={onAdd} style={{ cursor: "pointer", borderStyle: "dashed" }}>
-          <span className="circ" style={{ width: 44, height: 44, borderRadius: 14, background: "var(--surface2)", color: "var(--ac)" }}><Ico name="plus" size={22} /></span>
-          <div className="nm" style={{ color: "var(--ac)" }}>Add account</div>
+          <span className="circ" style={{ width: 44, height: 44, borderRadius: 14, background: "var(--surface2)", color: "var(--acText)" }}><Ico name="plus" size={22} /></span>
+          <div className="nm" style={{ color: "var(--acText)" }}>Add account</div>
         </div>
       </div>
     </div>

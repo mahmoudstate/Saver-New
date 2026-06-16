@@ -56,14 +56,14 @@ export default function InstallmentDetail({ store, instId, back }) {
   };
 
   const pay = () => {
-    if (done) { store.setAlert({ title: "All paid off", message: "Every installment on this plan is already paid.", color: "var(--ac)", icon: "check" }); return; }
+    if (done) { store.setAlert({ title: "All paid off", message: "Every installment on this plan is already paid.", color: "var(--acText)", icon: "check" }); return; }
     if (paidThisMonth) { store.setAlert({ title: "Already paid", message: `An installment is already recorded for ${MONTHS[+cm.split("-")[1] - 1]}.`, color: "var(--yellow)" }); return; }
     const num = paid + 1;
     const id = store.addTxn({ type: "expense", amount: inst.installmentAmount, date: today(), bankId: inst.bankId, bankName, catId: "installment", catName: "Installments", catIcon: "installment", catColor: color, note: `Installment ${num}/${total}: ${label}` });
     if (id === false) return; // blocked (insufficient balance) — alert already shown
     const newPayments = [...payments, { month: cm, date: today(), txnId: id, num }];
     const status = persist(newPayments);
-    if (status === "completed") store.setAlert({ title: "Paid off!", message: `Nice — "${label}" is fully paid. That's one less thing.`, color: "var(--ac)", icon: "check" });
+    if (status === "completed") store.setAlert({ title: "Paid off!", message: `Nice — "${label}" is fully paid. That's one less thing.`, color: "var(--acText)", icon: "check" });
     else store.flash({ title: `Payment ${num} of ${total} logged`, sub: `${fmt(inst.installmentAmount)} · ${label}`, color: "var(--success)" });
   };
 

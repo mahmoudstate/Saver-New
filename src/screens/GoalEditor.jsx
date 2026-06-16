@@ -22,7 +22,7 @@ export default function GoalEditor({ store, goal, onClose }) {
     if (!canSave) return;
     if (editing) store.set("savings", (list) => list.map((s) => (s.id === goal.id ? { ...s, name: name.trim(), goal: target, color, spendingMode: spending } : s)));
     else store.set("savings", (list) => [...list, { id: Date.now().toString(), name: name.trim(), goal: target, status: "active", spendingMode: spending, color }]);
-    store.flash({ title: editing ? "Goal saved" : "Goal created", sub: name.trim(), color: "var(--ac)", icon: "check" });
+    store.flash({ title: editing ? "Goal saved" : "Goal created", sub: name.trim(), color: "var(--acText)", icon: "check" });
     onClose();
   };
 

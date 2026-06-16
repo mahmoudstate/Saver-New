@@ -29,7 +29,7 @@ export default function QuickActionEditor({ store, action, onClose }) {
       if (arr.length >= 4) return arr;
       return [...arr, { id: Date.now().toString(), catId, amount, bankId }];
     });
-    store.flash({ title: editing ? "Shortcut saved" : "Shortcut added", sub: cat?.name, color: "var(--ac)", icon: "check" });
+    store.flash({ title: editing ? "Shortcut saved" : "Shortcut added", sub: cat?.name, color: "var(--acText)", icon: "check" });
     onClose();
   };
 

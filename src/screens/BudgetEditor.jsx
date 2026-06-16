@@ -48,7 +48,7 @@ export default function BudgetEditor({ store, budget, onClose }) {
         {expCats.map((c) => {
           const on = cats.includes(c.id);
           return (
-            <button key={c.id} onClick={() => toggle(c.id)} className="chip" style={on ? { background: "var(--acDim)", color: "var(--ac)", borderColor: "transparent" } : {}}>
+            <button key={c.id} onClick={() => toggle(c.id)} className="chip" style={on ? { background: "var(--acDim)", color: "var(--acText)", borderColor: "transparent" } : {}}>
               <CatTile cat={catKeyOf(c)} name={c.name} size={20} style={{ borderRadius: 7 }} />{c.name}
             </button>
           );

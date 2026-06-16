@@ -24,7 +24,7 @@ export default function Transfer({ store, fromBankId: initialFrom, onClose }) {
     if (!canSave) return;
     const id = store.addTxn({ type: "transfer", amount, date: today(), fromBankId: fromId, toBankId: toId, bankName: from?.name, note });
     if (id === false) return;
-    store.flash({ title: `${fmt(amount)} moved`, sub: `${from?.name} → ${to?.name}`, color: "var(--ac)", icon: "check" });
+    store.flash({ title: `${fmt(amount)} moved`, sub: `${from?.name} → ${to?.name}`, color: "var(--acText)", icon: "check" });
     onClose();
   };
 

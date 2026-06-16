@@ -64,7 +64,7 @@ export default function Activity({ store, onFilter, onEdit, onAdd }) {
 
       <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
         <div onClick={onFilter} style={{ flex: 1, display: "flex", alignItems: "center", gap: 9, background: "var(--surface)", border: "var(--cardBorder)", borderRadius: 13, padding: "11px 13px", color: "var(--faint)" }}><Ico name="search" size={17} /><span style={{ fontSize: 13.5, fontWeight: 600 }}>Search transactions…</span></div>
-        <div onClick={onFilter} role="button" aria-label="filter" style={{ width: 48, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--acDim)", border: "1px solid var(--ac)", borderRadius: 13, color: "var(--ac)" }}><Funnel /></div>
+        <div onClick={onFilter} role="button" aria-label="filter" style={{ width: 48, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--acDim)", border: "1px solid var(--ac)", borderRadius: 13, color: "var(--acText)" }}><Funnel /></div>
       </div>
 
       {groups.length === 0 && <EmptyState title="Nothing here… yet!" message="Pop in your first one and watch your balance, savings and spending spring to life." cta="Add my first" onCta={() => onAdd?.()} />}

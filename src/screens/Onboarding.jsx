@@ -3,7 +3,7 @@ import Ico from "../ui/Ico.jsx";
 import iconUrl from "../../icon.png";
 
 const ROWS = [
-  { icon: "wallet", bg: "var(--acDim)", color: "var(--ac)", nm: "See everything at a glance", mt: "Switch between Total and Safe to spend" },
+  { icon: "wallet", bg: "var(--acDim)", color: "var(--acText)", nm: "See everything at a glance", mt: "Switch between Total and Safe to spend" },
   { icon: "target", bg: "var(--yellowDim)", color: "var(--yellow)", nm: "Reach your goals", mt: "Freeze money — or spend from a goal vault" },
   { icon: "shield", bg: "var(--blueDim)", color: "var(--blue)", nm: "Private & offline", mt: "Your data never leaves the device" },
 ];
