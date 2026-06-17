@@ -5,21 +5,21 @@ import Ico from "../ui/Ico.jsx";
 import AmountSheet from "../ui/AmountSheet.jsx";
 import { fmt, today, cardGradient } from "../lib/format.js";
 import { calcBankBalance } from "../lib/calc.js";
-import ColorSheet, { PRESETS } from "../ui/ColorSheet.jsx";
+import ColorSheet, { loadColors } from "../ui/ColorSheet.jsx";
 
 export default function AccountEditor({ store, account, onClose, onDeleted }) {
   const editing = !!account;
   const [kind, setKind] = useState(account?.glyph === "banknote" ? "cash" : "bank");
   const [name, setName] = useState(account?.name || "");
-  const [color, setColor] = useState(account?.color || PRESETS[0]);
+  const [color, setColor] = useState(account?.color || loadColors()[0]);
   const [opening, setOpening] = useState(0);
   const [alertOn, setAlertOn] = useState(account?.lowBalanceThreshold != null);
   const [threshold, setThreshold] = useState(account?.lowBalanceThreshold || 0);
   const [sheet, setSheet] = useState(null); // opening | threshold | palette
 
   const canSave = name.trim().length > 0;
-  // outside quick row: current colour first, then presets, capped at 4 + the opener
-  const outside = [...new Set([color, ...PRESETS])].slice(0, 4);
+  // outside quick row: current colour first, then your saved colours, capped at 4 + the opener
+  const outside = [...new Set([color, ...loadColors()])].slice(0, 4);
 
   const toggleAlert = () => setAlertOn((v) => { const nv = !v; if (nv && !threshold) setSheet("threshold"); return nv; });
 
