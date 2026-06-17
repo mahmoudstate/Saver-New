@@ -139,18 +139,27 @@ Clean React rebuild on the new design — **largely feature-complete**: 4 tabs +
   - Customize button: removed the right chevron, centered icon+label as a button. (done, verified light+dark)
   - Navigation memory: sections opened from Home now render as an overlay over the still-mounted Home tab, so the in-screen Back restores Home at the same scroll/state; tapping the Home nav button remounts it fresh from the top. (App.jsx `.tabhost`/`.pushview` + `tabKey`)
   - New Home cards: **Installments** (orange, → Bills tab · Installments seg) + **Projects** (purple, → Budgets · Projects seg), both gated on having data, both added to Customize Dashboard + dash order (existing saved layouts auto-merge the new sections). (done, verified light+dark)
-- ☐ A2. Activity (month summary, search/filter entry, grouped list, row states, empty)
+  - Uniform 13px gap below every section card (Budgets was missing its `marginBottom`). (done)
+  - Bank-card carousel: **full-bleed to the screen edge** (negative margins on the `.hscroll`, first card aligned at 20px) + tightened the card drop-shadow (negative spread) so each card reads as separate instead of one merged shadow band. (done, verified)
+  - **Toast** now slides down from the TOP (below the safe-area) as a clean card, instead of popping from the bottom near the nav. (`saver-ui.css .app .toast` + `toastIn` keyframe)
+  - **Customize** button restyled as a centered accent pill (`.customize-cta`, acDim bg + grip-in-badge). (done)
+  - NOTE: accent-text contrast was fixed app-wide this session — see B2 (new `--acText` token).
+- ☐ A2. Activity (month summary, search/filter entry, grouped list, row states, empty)  ← **NEXT (cursor here)**
 - ☐ A3. Bills · Subscriptions (hero, segment, rows, statuses, +)
 - ☐ A4. Bills · Installments (hero, segment, rows, progress, +)
 - ☐ A5. Profile (header, Your money rows, App rows, version footer)
 
 **Detail screens**
-- ☐ A6. Account ledger (bank-gradient hero, Move, month ledger)
+- 🔄 A6. Account ledger (bank-gradient hero, Move, month ledger)
+  - Ledger now reads the bank fresh from the store (by id), so an edited colour/name shows immediately. (done)
 - ☐ A7. Subscription detail (brand hero+logo, chips, history, record payment, edit)
 - ☐ A8. Installment detail (ring, schedule, pay/undo)
 - ☐ A9. Goals list + A10. Goal detail (progress, add/return, spending-mode, frozen breakdown, contributions, archive)
 - ☐ A11. Budgets/Projects list + A12. Budget detail + A13. Project detail
-- ☐ A14. Accounts list
+- 🔄 A14. Accounts list / All accounts
+  - **All accounts**: bank cards now in a **2-up grid** (BankCard `grid` mode) instead of one full-width per row. (done)
+  - **Delete account** (in the editor): soft-delete — blocked while the account holds money (clear "Empty it first" dialog), else confirms and sets `archived:true`. Archived banks are filtered from every banks list/picker app-wide (`banks.filter(b=>!b.archived)`) but the record stays so historical txns/totals don't break. After delete it returns to the accounts list (popN(2)). (done, verified)
+  - Reorder accounts: still TODO.
 
 **Add / input**
 - ☐ A15. Add (Expense/Income/Saving — keypad, pickers, vault source)
@@ -159,7 +168,8 @@ Clean React rebuild on the new design — **largely feature-complete**: 4 tabs +
 - ☐ A18. Edit / delete transaction
 
 **Editors & setup**
-- ☐ A19. Account editor · A20. Category editor + list · A21. Goal editor · A22. Budget editor
+- 🔄 A19. Account editor · A20. Category editor + list · A21. Goal editor · A22. Budget editor · A23. Subscription editor
+  - **Colour picker rebuilt as a shared component** (this session). `ui/ColorSheet.jsx` = the picker sheet: a **colour wheel** (drag the dot: angle=hue, distance=vividness) + a brightness slider + Add; **your colours** above (tap to use, × to remove) with NO fixed presets (seeded with 6 calm removable starters, persisted shared key `et_customColors`). `ui/ColorField.jsx` = the form row used by every editor (label + up to **6** of your colours + a + that opens the sheet). Wired into Account/Category/Goal/Subscription editors (each lost its local `COLORS` array). Account editor hero is a live colour preview; low-balance alert has an explicit "Alert me below" amount field. (done, verified) — Budget/Installment editors have no colour choice.
 - ☐ A23. Subscription editor · A24. Installment editor · A25. Quick Actions setup
 - ☐ A26. Customize Dashboard (drag + hide)
 
@@ -171,7 +181,8 @@ Clean React rebuild on the new design — **largely feature-complete**: 4 tabs +
 
 ### B · General / cross-cutting — after the pages
 - ☐ B1. Typography (DM Sans Latin · IBM Plex Sans Arabic; sizes/weights/line-heights consistent)
-- ☐ B2. Colour & accents (calm palette, semantic in/out/warn/info, dark+light parity per element)
+- 🔄 B2. Colour & accents (calm palette, semantic in/out/warn/info, dark+light parity per element)
+  - Fixed: bright mint accent used as TEXT was invisible on white in light theme. Added `--acText` token (light = darkened accent that passes AA; dark = `--ac`) and swapped all accent text/icon usages to it app-wide. Fills/bars/buttons keep `--ac`. (done)
 - ☐ B3. Hero / cover consistency (unified 252px, gradient, orbs)
 - ☐ B4. Buttons (sizes, primary/secondary/ghost/danger, pressed/disabled states)
 - ☐ B5. Fields & chips (uniform size, consistent label↔value, single-line chips)
@@ -193,5 +204,23 @@ Clean React rebuild on the new design — **largely feature-complete**: 4 tabs +
 ### C · Sign-off
 - ☐ C1. Final functional test with the **real backup** (calc vs real data)
 - ☐ C2. Mahmoud final approval → merge to `main` / deploy
+
+---
+
+## 8. Session state / how to resume (updated this session)
+
+**Where we are:** Working through §7 page-by-page. **A1 · Home is essentially done** (awaiting Mahmoud's final ✅). **Current cursor → A2 · Activity** (next to review).
+
+**Done this session (all pushed):** A1 Home polish (customize pill, push-nav back-stack, Installments/Projects cards, uniform gaps, full-bleed + tightened bank-card shadow, top toast) · app-wide accent-text contrast fix (`--acText`) · Accounts area (2-up All-accounts grid, soft-delete account, fresh-bank ledger) · **shared colour picker** (`ui/ColorSheet.jsx` wheel + `ui/ColorField.jsx` row, used in Account/Category/Goal/Subscription editors).
+
+**Navigation:** `App.jsx` uses a real **back-stack** (`stack` array; `push`/`back`/`popN`/`replace`). Detail screens render as an overlay (`.pushview`) over the still-mounted tab (`.tabhost`); Back returns to the previous screen, bottom-nav tap resets the tab fresh (`tabKey`). NOTE: `back` must stay arg-less (it's wired to onClick) — use `popN(n)` for multi-level pops.
+
+**New shared components:** `ui/ColorSheet.jsx`, `ui/ColorField.jsx` (colour); reuse these for any future colour picker. Soft-deleted banks carry `archived:true` — keep filtering them from any new banks list.
+
+**Git / deploy workflow (IMPORTANT — repo is NOT this folder):** This working folder is a file-transfer copy, not a git repo. To push: a clone lives at `/tmp/saver-push` on branch `claude/file-transfer-k1kui7` (remote `https://github.com/mahmoudstate/saver-test.git`). Flow each time: copy changed files from here into `/tmp/saver-push`, `git add -A && commit && push`. GitHub auth (PAT) is saved in the macOS keychain (osxkeychain helper) so push is non-interactive. If `/tmp/saver-push` is gone (reboot), re-clone the branch and re-copy. Latest pushed commit: `70aaef8`.
+
+**Build/verify locally:** `npm run build` → serve `dist` on :8099 → puppeteer screenshot seeding `demo.json` into localStorage (theme via `et_theme`). Verify both light+dark.
+
+**Rules to honour:** logic LOCKED · no emoji · **never change app visual style unprompted — ask first** (memory: no-style-changes) · keep replies short.
 
 > **Current cursor:** start at **A1 · Home**. Mahmoud will paste Home notes; Claude addresses them, then asks to confirm Home before moving to A2.
