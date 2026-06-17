@@ -8,7 +8,7 @@ import Ico from "./Ico.jsx";
 import { loadKey, saveKey } from "../lib/store.js";
 
 const KEY = "et_customColors";              // shared across all sections
-const SEED = ["#0E9F6E", "#2563EB", "#D97706", "#E5544E"]; // first-run only; all removable
+const SEED = ["#0E9F6E", "#2563EB", "#7C3AED", "#D97706", "#E5544E", "#EC4899"]; // 6 calm starters; all removable
 
 // Saved colours, seeding a few removable ones on first run so it's never empty.
 export function loadColors() {

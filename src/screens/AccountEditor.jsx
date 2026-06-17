@@ -5,7 +5,8 @@ import Ico from "../ui/Ico.jsx";
 import AmountSheet from "../ui/AmountSheet.jsx";
 import { fmt, today, cardGradient } from "../lib/format.js";
 import { calcBankBalance } from "../lib/calc.js";
-import ColorSheet, { loadColors } from "../ui/ColorSheet.jsx";
+import ColorField from "../ui/ColorField.jsx";
+import { loadColors } from "../ui/ColorSheet.jsx";
 
 export default function AccountEditor({ store, account, onClose, onDeleted }) {
   const editing = !!account;
@@ -18,8 +19,6 @@ export default function AccountEditor({ store, account, onClose, onDeleted }) {
   const [sheet, setSheet] = useState(null); // opening | threshold | palette
 
   const canSave = name.trim().length > 0;
-  // outside quick row: current colour first, then your saved colours, capped at 4 + the opener
-  const outside = [...new Set([color, ...loadColors()])].slice(0, 4);
 
   const toggleAlert = () => setAlertOn((v) => { const nv = !v; if (nv && !threshold) setSheet("threshold"); return nv; });
 
@@ -79,16 +78,7 @@ export default function AccountEditor({ store, account, onClose, onDeleted }) {
         </div><span className="chev"><Ico name="pencil" size={17} /></span>
       </label>
 
-      {/* outside: label, then up to 4 swatches + a + that opens the palette (left-aligned) */}
-      <div className="tile" style={{ margin: "13px 0", display: "flex", alignItems: "center", gap: 14, padding: 14 }}>
-        <div className="fl">Colour</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
-          {outside.map((c) => (
-            <span key={c} onClick={() => setColor(c)} style={{ width: 26, height: 26, borderRadius: "50%", background: c, cursor: "pointer", boxShadow: color === c ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "none" }} />
-          ))}
-          <span onClick={() => setSheet("palette")} style={{ width: 26, height: 26, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--muted)", cursor: "pointer" }}><Ico name="plus" size={15} /></span>
-        </div>
-      </div>
+      <ColorField value={color} onChange={setColor} style={{ margin: "13px 0" }} />
 
       <div className="field">
         <div style={{ flex: 1 }}><div className="fl">Low-balance alert</div><div className="fv">{alertOn ? "On" : "Off"}</div></div>
@@ -105,7 +95,6 @@ export default function AccountEditor({ store, account, onClose, onDeleted }) {
 
       {editing && <div className="btn btn-full" style={{ marginTop: 12, background: "transparent", color: "var(--red)", border: "1px solid color-mix(in srgb, var(--red) 40%, transparent)" }} onClick={del}><Ico name="trash" size={17} />Delete account</div>}
 
-      {sheet === "palette" && <ColorSheet value={color} onChange={setColor} onClose={() => setSheet(null)} />}
       {sheet === "opening" && <AmountSheet title="Opening balance" confirmLabel="Set" onConfirm={(v) => { setOpening(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "threshold" && <AmountSheet title="Low-balance alert" sub="Warn me below this" confirmLabel="Set" onConfirm={(v) => { setThreshold(v); setSheet(null); }} onClose={() => setSheet(null)} />}
     </div>

@@ -5,15 +5,16 @@ import CatTile from "../ui/CatTile.jsx";
 import AmountSheet from "../ui/AmountSheet.jsx";
 import { resolveCat } from "../ui/cats.js";
 import { fmt } from "../lib/format.js";
+import ColorField from "../ui/ColorField.jsx";
+import { loadColors } from "../ui/ColorSheet.jsx";
 
-const COLORS = ["#16BFA6", "#FBBF24", "#A78BFA", "#3B82F6", "#0E9F6E", "#EC4899"];
 const goalCat = (g) => resolveCat({ catGlyph: g?.glyph, catName: g?.name }) || "goal";
 
 export default function GoalEditor({ store, goal, onClose }) {
   const editing = !!goal;
   const [name, setName] = useState(goal?.name || "");
   const [target, setTarget] = useState(goal?.goal || 0);
-  const [color, setColor] = useState(goal?.color || COLORS[0]);
+  const [color, setColor] = useState(goal?.color || loadColors()[0]);
   const [spending, setSpending] = useState(!!goal?.spendingMode);
   const [sheet, setSheet] = useState(null);
   const canSave = name.trim().length > 0 && target > 0;
@@ -42,12 +43,7 @@ export default function GoalEditor({ store, goal, onClose }) {
         </div><span className="chev"><Ico name="pencil" size={17} /></span>
       </label>
 
-      <div className="tile" style={{ margin: "13px 0", display: "flex", alignItems: "center", gap: 12, padding: 14 }}>
-        <div className="fl">Colour</div>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 11 }}>
-          {COLORS.map((c) => <span key={c} onClick={() => setColor(c)} style={{ width: 26, height: 26, borderRadius: "50%", background: c, cursor: "pointer", boxShadow: color === c ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "none" }} />)}
-        </div>
-      </div>
+      <ColorField value={color} onChange={setColor} style={{ margin: "13px 0" }} />
 
       <div className="field">
         <div style={{ flex: 1 }}><div className="fl">Spending goal</div><div className="fv" style={{ color: "var(--muted)", fontWeight: 600, fontSize: 12.5 }}>Spend from this pot</div></div>

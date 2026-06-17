@@ -3,16 +3,17 @@ import { useState } from "react";
 import Ico from "../ui/Ico.jsx";
 import CatTile from "../ui/CatTile.jsx";
 import { CATS } from "../ui/cats.js";
+import ColorField from "../ui/ColorField.jsx";
+import { loadColors } from "../ui/ColorSheet.jsx";
 
 const GLYPHS = ["food", "coffee", "shopping", "transport", "bill", "phone", "home", "travel", "salary", "income", "goal", "transfer"];
-const COLORS = ["#B07A4A", "#F59E0B", "#3B82F6", "#8B5CF6", "#E5544E", "#0E9F6E", "#16BFA6", "#EC4899"];
 
 export default function CategoryEditor({ store, category, kind: initialKind, onClose }) {
   const editing = !!category;
   const [kind, setKind] = useState(category?._kind || initialKind || "expense");
   const [name, setName] = useState(category?.name || "");
   const [glyph, setGlyph] = useState(category?.glyph || GLYPHS[0]);
-  const [color, setColor] = useState(category?.color || COLORS[0]);
+  const [color, setColor] = useState(category?.color || loadColors()[0]);
   const canSave = name.trim().length > 0;
   const listKey = kind === "income" ? "incCats" : "expCats";
 
@@ -57,12 +58,7 @@ export default function CategoryEditor({ store, category, kind: initialKind, onC
         ))}
       </div>
 
-      <div className="tile" style={{ display: "flex", alignItems: "center", gap: 12, padding: 14 }}>
-        <div className="fl">Colour</div>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 11 }}>
-          {COLORS.map((c) => <span key={c} onClick={() => setColor(c)} style={{ width: 26, height: 26, borderRadius: "50%", background: c, cursor: "pointer", boxShadow: color === c ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "none" }} />)}
-        </div>
-      </div>
+      <ColorField value={color} onChange={setColor} />
 
       <div className="cta"><div className="btn btn-primary btn-full" style={{ opacity: canSave ? 1 : .5 }} onClick={save}><Ico name="check" size={18} />{editing ? "Save category" : "Add category"}</div></div>
     </div>

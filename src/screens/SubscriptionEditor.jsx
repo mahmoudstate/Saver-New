@@ -4,8 +4,8 @@ import Ico from "../ui/Ico.jsx";
 import AmountSheet from "../ui/AmountSheet.jsx";
 import PickerSheet from "../ui/PickerSheet.jsx";
 import { fmt } from "../lib/format.js";
-
-const COLORS = ["#E50914", "#1DB954", "#E60000", "#2563EB", "#7C3AED", "#0E9F6E", "#F59E0B"];
+import ColorField from "../ui/ColorField.jsx";
+import { loadColors } from "../ui/ColorSheet.jsx";
 
 export default function SubscriptionEditor({ store, bill, onClose }) {
   const { banks = [] } = store;
@@ -14,7 +14,7 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
   const [amount, setAmount] = useState(bill?.amount || 0);
   const [dueDay, setDueDay] = useState(bill?.dueDay || 1);
   const [bankId, setBankId] = useState(bill?.bankId || banks[0]?.id || null);
-  const [color, setColor] = useState(bill?.color || COLORS[0]);
+  const [color, setColor] = useState(bill?.color || loadColors()[0]);
   const [sheet, setSheet] = useState(null);
   const bank = banks.find((b) => b.id === bankId);
   const canSave = name.trim() && amount > 0;
@@ -55,10 +55,7 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
         <div><div className="fl">Pays from</div><div className="fv">{bank?.name || "Pick"}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
       </div>
 
-      <div className="tile" style={{ margin: "13px 0", display: "flex", alignItems: "center", gap: 12, padding: 14 }}>
-        <div className="fl">Colour</div>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 11 }}>{COLORS.map((c) => <span key={c} onClick={() => setColor(c)} style={{ width: 26, height: 26, borderRadius: "50%", background: c, cursor: "pointer", boxShadow: color === c ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "none" }} />)}</div>
-      </div>
+      <ColorField value={color} onChange={setColor} style={{ margin: "13px 0" }} />
 
       <div className="cta"><div className="btn btn-primary btn-full" style={{ opacity: canSave ? 1 : .5 }} onClick={save}><Ico name="check" size={18} />{editing ? "Save subscription" : "Add subscription"}</div></div>
 
