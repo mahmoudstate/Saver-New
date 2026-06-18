@@ -108,8 +108,9 @@ BK=./demo.json [TAB=activity] node shot.cjs http://localhost:8099 out.png
 - [x] **Functional test (logic)**: 17/17 locked-math invariants pass (total=Σbank, safe=bal−frozen, expense/income/saving/goal_return/transfer/clamp); 0 console errors across all screens. **Still TODO: final test with the real backup, then user deploys.**
 
 ### Still open (next session)
-- Installment grouped wizard + back-fill (down payment / already-paid); smart number entry quick-picks.
-- Reorder accounts/cards within sections (53). Bills view-selector (Timeline/Categories/History) + month/status filters.
+- ~~Installment grouped wizard + back-fill; smart number entry quick-picks~~ — **DONE this session** (see §8).
+- ~~Bills view-selector~~ — **DONE** (Active grouped-by-category / History; Active / Completed for installments).
+- Reorder accounts/cards within sections (53). (Subscription drag-reorder was built then removed for a cleaner UI per Mahmoud — `SegToggle` + category grouping replaced it.)
 - Guide/Manual + Help/FAQ content (deferred). Friendly message copy catalog. Design QA pass (uniform fields/chips).
 - Final functional test with the **real backup**, then deploy.
 
@@ -144,10 +145,28 @@ Clean React rebuild on the new design — **largely feature-complete**: 4 tabs +
   - **Toast** now slides down from the TOP (below the safe-area) as a clean card, instead of popping from the bottom near the nav. (`saver-ui.css .app .toast` + `toastIn` keyframe)
   - **Customize** button restyled as a centered accent pill (`.customize-cta`, acDim bg + grip-in-badge). (done)
   - NOTE: accent-text contrast was fixed app-wide this session — see B2 (new `--acText` token).
-- ☐ A2. Activity (month summary, search/filter entry, grouped list, row states, empty)  ← **NEXT (cursor here)**
+  - **Budgets card is now expandable**: the right **`>` chevron stays for navigation** (tap header → Budgets screen) and a **bottom disclosure** — *"Show all N"* / *"Show less"* in accent text, divider above, app's own `chev` icon rotated 90° — toggles the inline breakdown. **Collapsed shows the total bar; expanded shows the per-item rows ONLY (no total bar)** — Mahmoud noted the same-coloured total bar above the rows read like another budget; the header keeps the aggregate `{spent} of {limit}`. Each budget row shows name + **percentage**, a purple bar (red if over), and a numbers line **"£X spent · £Y left (or £Z over) · of £total"**. Tapping a budget row opens its detail (`onOpenBudget` → budget detail). (`budgetsOpen` state + `d.budgetsList` via `budgetSpentMonth`.) (done, verified light+dark) — NOTE: first pass used a top down-arrow that clashed with the style + dropped the nav chevron; replaced per Mahmoud with this disclosure pattern.
+  - **Goals card got the same expand pattern** (`goalsOpen`), now **structurally identical to Budgets**: header shows `{saved} of {totalTarget}` + nav `>` chevron, a single accent **total bar when collapsed only** (the old 2-goal preview rows were removed per Mahmoud), and the bottom *"Show all N"* / *"Show less"* disclosure. Open = every goal with name + **percentage** + accent bar + **"£X saved · £Y left (or Reached) · of £target"**. Tapping a goal row opens its detail (`onOpenGoal`). (`d.goalsTarget` = Σ goal targets.) (done, verified light+dark)
+  - **More Home tidy-ups:** removed the redundant **"All accounts"** link from the Accounts section header (the trailing "All" tile already covers it); removed the **"{n} accounts"** sub-line under Total balance and **vertically centred the balance swipe block** in the 252px hero so the freed space reads balanced (swipe pages = flex column, `justify-content:center`, `minHeight:124`). (done, verified)
+  - **Income/Expenses card redesigned:** dropped the separate "Net this month" row (Mahmoud found it disconnected/unprofessional); **Net is now a coloured pill in the header** (`Net +£X`, green / `redDim` when negative) next to the month label, body stays the two Income/Spent columns. Shorter + cleaner. (done, verified)
+  - **Bills, Installments & Projects cards now expandable too** (`billsOpen`/`instOpen`/`projOpen`), same pattern as Goals/Budgets via a shared `Disclosure` helper + nav `>` chevron. Collapsed = header + a summary **progress bar** (Bills = paid-count ratio, blue; Installments = paid/total amount, orange; Projects = spent/limit, purple). Expanded rows: **Installments** name + `paid/total` count + orange bar + "£paid · £left · of £total" (→ `onOpenInst`); **Projects** like Budgets (→ `onOpenProject`); **Bills** use the app's **subscription-row anatomy** — colour brand tile + name + "note · monthly · day N" sub + amount + **Paid/Due** status, with a **light `var(--line)` divider between rows** (per Mahmoud), unpaid sorted first (→ `onOpenBill`). New `d.instList`/`d.billsList`/`d.projList`; App wires `onOpenInst`/`onOpenBill`/`onOpenProject`. (done, verified light)
+  - **All section cards unified to one collapsed height (~146px)** for a consistent look: each = header + summary bar/row + disclosure; Income gets `minHeight:146` + centred content (it has no disclosure). (done, verified — measured 144–146 across all)
+  - **Home scroll memory across tab switches:** tapping the Bills/Installments Home cards switches to that tab (Home unmounts); the **first** Home-nav tap afterwards **restores Home's previous scroll position**, a **second** tap resets to the top. `homeScroll` ref in App (fed by Home `onScrollChange`, restored via `useLayoutEffect` on mount) + special-cased `navTab("home")`. (done, verified 520→Bills→Home=520→Home=0)
+- 🔄 A2. Activity (month summary, search/filter entry, grouped list, row states, empty)  ← **cursor here**
+  - **Date button now functional**: the top-right month chip opens a new `screens/DatePicker.jsx` (our style — hero + segmented **Month / Specific days**). Month = year ‹›  + 12-month grid (current month tinted). Specific days = a calendar with prev/next month + tap a start day then an end day for a range (endpoints = accent, middle = acDim) + "All time" to clear. Picking filters the Activity list **and** the hero summary to that range; the chip shows the chosen label. (App.jsx holds `activityDate`.) (done, verified light+dark, month + range + empty)
+  - **Filter now defers dates to the top picker**: opening the funnel from Activity passes the active range and **hides the "When" period chips**, replacing them with a read-only "Dates · {label} · Set on Activity" chip; Show/Categories/Accounts stay. Results respect the range (`lib/filter.js` now honours explicit `from`/`to` over the named period). (done, verified)
+  - **Search is live**: the search box is a real input that filters the list as you type (matches note/category/bank/goal/type/amount) with a × to clear. Funnel is now a separate button. (done, verified — "salary" → 1 row)
+  - **Row subtitle**: stopped repeating the category after the bank; now shows **bank · {weekday, day month year}** in the same light `.mt` font. (done, verified)
+  - **History redesign (Mahmoud's call):** the green hero + Spent/Income/Net totals were **removed** — Activity is now a history page with a compact header (title + date button) so the flat list takes the whole screen. **Day-group headers dropped → flat list, newest first**, each card carries its own dated subtitle (cleaner when search/date filters scatter results). Under the date button a light line summarises the view: *"Showing Jun 2026 · 7 transactions"* / *"All time"* → *"7 transactions"*. The date button itself goes accent when a filter is active. (done, verified light+dark) — NOTE: this makes Activity an **exception to golden-rule #5** (unified 252px hero); Mahmoud approved.
+  - Smart-filter "what am I filtered on": FilterResults already lists the active filters as chips (date + show + cats + accounts) with an Edit chip.
 - ☐ A3. Bills · Subscriptions (hero, segment, rows, statuses, +)
 - ☐ A4. Bills · Installments (hero, segment, rows, progress, +)
-- ☐ A5. Profile (header, Your money rows, App rows, version footer)
+- 🔄 A5. Profile (header, Your money rows, App rows, version footer)
+  - **Hero icon = gear** (was the search lens) → opens a NEW **Edit profile** screen (`screens/ProfileEdit.jsx`, App view `editProfile`): edit **name**, **upload a photo** (centre-cropped + downscaled to 256px JPEG, stored in new `et_avatar` scalar; falls back to the initial; Add/Remove photo), **Currency** picker (sheet, code+name, no emoji — first place currency is selectable), **Plan** card (Free plan · Saver One, display-only), **About** (version + Powered by Mahmoud). Hero avatar shows the photo if set. (done, verified light+dark)
+  - **Renames:** "Accounts" → **"Bank accounts"**; "Categories & groups" → **"Categories"** (the word "group/groups" dropped everywhere visible).
+  - **New "Your money" rows:** **Savings goals** (→ goals) + **Budgets & projects** (→ budgets), next to Bank accounts / Categories / Quick actions.
+  - Appearance row value now shows the theme label (System / Light / Dark).
+  - Suggested-but-NOT-built (awaiting Mahmoud): clear/reset-all-data action, "member since" (needs a stored created-date), mock upgrade/plans screen.
 
 **Detail screens**
 - 🔄 A6. Account ledger (bank-gradient hero, Move, month ledger)
@@ -162,20 +181,33 @@ Clean React rebuild on the new design — **largely feature-complete**: 4 tabs +
   - Reorder accounts: still TODO.
 
 **Add / input**
-- ☐ A15. Add (Expense/Income/Saving — keypad, pickers, vault source)
+- 🔄 A15. Add (Expense/Income/Saving — keypad, pickers, vault source)
+  - **Fixed: the center FAB did nothing** — App wired it to an undefined `setView`; now `push({type:"add"})` (also fixed the Quick-Add "Set up" link). Tapping + opens New expense again. (done, verified)
+  - `Add` now accepts an `initial` prefill ({type, amount, bankId, expCatId}) + an `onSaved` callback (used by Quick Add — see A17). (done)
+  - **Field order + available badge:** the fields now read **Category (or To-goal) first, then Account** (was Account first). The Account row shows the **safe-to-spend** for the chosen bank as a small accent pill next to the name (*"£163.35 available"*, turns `pill-red` at ≤0) — same `safeToSpend = bankBalance − frozenForBank` the store uses for the block check. The **account picker sheet** also shows each bank's available as a sub-line under its name. Both hidden for Income (To-account); the field pill also hidden for goal-vault sources. (done, verified expense + saving)
 - ☐ A16. Transfer
-- ☐ A17. Quick Add sheet (long-press +)
+- 🔄 A17. Quick Add sheet (long-press +)
+  - **Shortcuts now open the Add screen pre-filled instead of logging instantly** — so the amount/bank can be tweaked before saving (was committing the spend on tap). (done, verified)
+  - **Each shortcut remembers its last-used amount + bank**: after saving from a shortcut, App updates that quick action's `amount`/`bankId` to what was actually used, so the next open pre-fills the last values. (done, verified — £50/HSBC → saved £75/Revolut → reopens £75/Revolut)
 - ☐ A18. Edit / delete transaction
 
 **Editors & setup**
 - 🔄 A19. Account editor · A20. Category editor + list · A21. Goal editor · A22. Budget editor · A23. Subscription editor
   - **Colour picker rebuilt as a shared component** (this session). `ui/ColorSheet.jsx` = the picker sheet: a **colour wheel** (drag the dot: angle=hue, distance=vividness) + a brightness slider + Add; **your colours** above (tap to use, × to remove) with NO fixed presets (seeded with 6 calm removable starters, persisted shared key `et_customColors`). `ui/ColorField.jsx` = the form row used by every editor (label + up to **6** of your colours + a + that opens the sheet). Wired into Account/Category/Goal/Subscription editors (each lost its local `COLORS` array). Account editor hero is a live colour preview; low-balance alert has an explicit "Alert me below" amount field. (done, verified) — Budget/Installment editors have no colour choice.
+  - **Colour picker polish (this session):** ColorSheet wheel now **opens ON the current colour** (`hexToHsv`) instead of a fixed blue, and the dot tracks tap/drag. ColorField's 6 swatches are now in **stable order** so the **select ring moves to the swatch you tap** (was prepending the picked colour to the front, which felt like the colour jumped to the ring); if the current colour isn't among the 6 it's surfaced in the last slot only.
+  - **A20 Category editor — icons reworked (this session):**
+    - **Icons split by type:** an **Expense category shows expense icons, an Income category shows income icons** (header reads "Expense icon" / "Income icon"; switching the segment swaps the set and resets the glyph if it doesn't belong). Lists live in `CategoryEditor.jsx` (`EXPENSE_ICONS` 46, `INCOME_ICONS` 15, plus curated `QUICK_EXP`/`QUICK_INC` of 11 shown inline).
+    - **"All" sheet:** inline shows ~11 curated glyphs + a dashed **All** tile that opens a bottom sheet with every icon for that type (so the grid never floods the screen). Titled "Expense icons" / "Income icons".
+    - **Icon library expanded 13 → 62 glyphs** in `ui/cats.js` (each `[colour, innerSVG]`). Added groceries, health, fitness, pet, education, entertainment, gift, fuel, beauty, kids, gaming, utilities, savings, clothing, subscription, insurance, charity, repairs, taxes, business, freelance, investment, refund, rental, sales, bonus, **car, parking, ticket, hotel, electricity, water, wifi, electronics, furniture, laundry, garden, pharmacy, sports, books, movie, music, drinks, jewelry, bank, creditcard, crypto, interest, tips, pension**. All keys validated against CATS (no missing keys).
+    - **Colour-change bug fixed** in `ui/CatTile.jsx`: a known glyph used to force its hard-coded CATS colour and ignore the picked colour — now an explicit `color` prop **always wins** (falls back to glyph colour, then txn colour). So the category's chosen colour shows on the tile + in the list. NOTE: CatTile is also used by Bills/Budgets with `color` — re-verify those tint as intended if touched.
+  - Remove the "group" subtitle from the Categories list (`screens/Categories.jsx`).
 - ☐ A23. Subscription editor · A24. Installment editor · A25. Quick Actions setup
 - ☐ A26. Customize Dashboard (drag + hide)
 
 **System / settings**
 - ☐ A27. Smart Filter + A28. Filter Results
-- ☐ A29. Appearance (theme + accents) · A30. Privacy & Backup
+- 🔄 A29. Appearance (theme + accents) · A30. Privacy & Backup
+  - **Theme now has 3 options: System / Light / Dark, and System is the DEFAULT** (`SCALARS.theme = "system"`). `theme:"system"` follows `prefers-color-scheme` and live-updates when the OS flips (matchMedia listener in `store.js`'s data-theme effect); Light/Dark force it. Existing saved themes are unaffected. (done, verified — System resolved to dark on an OS-dark preview)
 - ☐ A31. Notifications · A32. Onboarding · A33. What’s New · A34. Empty state · A35. Goal celebration
 - ☐ A36. Guide / Manual (currently a deferred empty scaffold — confirm when content lands)
 
@@ -183,6 +215,7 @@ Clean React rebuild on the new design — **largely feature-complete**: 4 tabs +
 - ☐ B1. Typography (DM Sans Latin · IBM Plex Sans Arabic; sizes/weights/line-heights consistent)
 - 🔄 B2. Colour & accents (calm palette, semantic in/out/warn/info, dark+light parity per element)
   - Fixed: bright mint accent used as TEXT was invisible on white in light theme. Added `--acText` token (light = darkened accent that passes AA; dark = `--ac`) and swapped all accent text/icon usages to it app-wide. Fills/bars/buttons keep `--ac`. (done)
+  - Fixed (this session): `CatTile` ignored a picked category colour when the glyph was a known CATS icon — explicit `color` now wins. See A20.
 - ☐ B3. Hero / cover consistency (unified 252px, gradient, orbs)
 - ☐ B4. Buttons (sizes, primary/secondary/ghost/danger, pressed/disabled states)
 - ☐ B5. Fields & chips (uniform size, consistent label↔value, single-line chips)
@@ -209,18 +242,33 @@ Clean React rebuild on the new design — **largely feature-complete**: 4 tabs +
 
 ## 8. Session state / how to resume (updated this session)
 
-**Where we are:** Working through §7 page-by-page. **A1 · Home is essentially done** (awaiting Mahmoud's final ✅). **Current cursor → A2 · Activity** (next to review).
+**Where we are:** Working through §7 page-by-page. **Bills (Subscriptions + Installments) fully reworked this session** — editors, detail lifecycle actions, list views, and a design-polish pass. A1 · Home done; A5 · Profile + A20 · Category editor reworked in the prior session. Resume by confirming the Bills/Installments work with Mahmoud, then continue the §7 list (A2 · Activity onward).
 
-**Done this session (all pushed):** A1 Home polish (customize pill, push-nav back-stack, Installments/Projects cards, uniform gaps, full-bleed + tightened bank-card shadow, top toast) · app-wide accent-text contrast fix (`--acText`) · Accounts area (2-up All-accounts grid, soft-delete account, fresh-bank ledger) · **shared colour picker** (`ui/ColorSheet.jsx` wheel + `ui/ColorField.jsx` row, used in Account/Category/Goal/Subscription editors).
+**Done THIS session (PUSHED — commit `ccf0836`; built clean, verified in preview light+dark, 0 console errors):**
+- **Service logos:** `lib/services.js` (88 services + 47 Simple-Icons-style brand glyphs, ported verbatim from old app) + `ui/ServiceLogo.jsx` (offline glyph→monogram). `ui/ServicePicker.jsx` = inline popular logos + "All" sheet (search, grouped by category) + Custom (own icon+colour).
+- **A3 Subscription editor (`screens/SubscriptionEditor.jsx`) redesigned** into sections **Service / Category / Plan / Appearance**: brand picker, bill **Category type** grid (`BILL_TYPES`, glyphs mapped to CATS via `TYPE_GLYPH`), **Reminder** field, **keypad** billing day, smaller hero logo, gradient hero, icon+colour grouped under Appearance.
+- **A7 Subscription detail (`SubscriptionDetail.jsx`):** wired the dead **Record-payment** button (real expense txn + payment); **Stop/Resume** (keeps history) + **Delete** (keeps past txns) moved into a kebab **MenuSheet**; bottom = primary action only; ServiceLogo in hero + history.
+- **A3/A4 Bills list (`Bills.jsx`):** Subs **Active (grouped by category, headers) / History (by month)**; Installments **Active / Completed**; main switch + sub-views use the animated **SegToggle**. Removed the sort-chip clutter.
+- **Installment editor (`InstallmentEditor.jsx`):** 3-step grouped wizard (showcase 49–51) — provider, colour, **icon picker** (`ui/IconField.jsx`), down-payment + already-paid **back-fill** (verbatim locked logic, deduct toggles default **on**), bidirectional **total↔monthly**, **keypad** (`ui/NumberSheet.jsx`) for months/day/paid/remind.
+- **A8 Installment detail (`InstallmentDetail.jsx`):** edit pencil, **deposit shown on ring card**, **pay-N-ahead** (keypad), Stop/Delete in kebab MenuSheet, Active/Completed split via list.
+- **New shared UI:** `ui/NumberSheet.jsx` (keypad+quick-picks), `ui/IconField.jsx`, `ui/ServicePicker.jsx`, `ui/ServiceLogo.jsx`, `ui/MenuSheet.jsx`, `ui/SegToggle.jsx` (animated, CSS `.segx`/`.seg-thumb`), `ui/Ico.jsx` (`more` kebab mark).
+- Data: bills gained `domain`/`glyph`/`typeId`/`reminderDays`/`stoppedMonth`; installments gained `glyph`/`reminderDays`/`downPayment`/`stopped`.
+
+**Done PRIOR session (also pushed in `ccf0836`):**
+- **A5 Profile:** gear → **Edit profile** (`screens/ProfileEdit.jsx`: name, photo→`et_avatar`, currency, plan, about) · renamed Accounts→Bank accounts, Categories&groups→Categories · added Savings goals + Budgets & projects rows.
+- **Theme:** added **System** option, made it the default (`store.js` `theme:"system"` + matchMedia live-resolve).
+- **A20 Category editor:** icons split by type · inline + "All" sheet · library 13→62 glyphs in `ui/cats.js` · removed "group" subtitle. **Colour fixes:** `CatTile` honours picked colour · `ColorSheet` opens on current colour · `ColorField` stable swatch ring. Plus `screens/DatePicker.jsx` (Activity date picker).
+
+**Done EARLIER (all pushed):** A1 Home polish (customize pill, push-nav back-stack, Installments/Projects cards, uniform gaps, full-bleed + tightened bank-card shadow, top toast) · app-wide accent-text contrast fix (`--acText`) · Accounts area (2-up All-accounts grid, soft-delete account, fresh-bank ledger) · **shared colour picker** (`ui/ColorSheet.jsx` + `ui/ColorField.jsx`).
 
 **Navigation:** `App.jsx` uses a real **back-stack** (`stack` array; `push`/`back`/`popN`/`replace`). Detail screens render as an overlay (`.pushview`) over the still-mounted tab (`.tabhost`); Back returns to the previous screen, bottom-nav tap resets the tab fresh (`tabKey`). NOTE: `back` must stay arg-less (it's wired to onClick) — use `popN(n)` for multi-level pops.
 
-**New shared components:** `ui/ColorSheet.jsx`, `ui/ColorField.jsx` (colour); reuse these for any future colour picker. Soft-deleted banks carry `archived:true` — keep filtering them from any new banks list.
+**New shared components:** `ui/ColorSheet.jsx`, `ui/ColorField.jsx` (colour); `ui/NumberSheet.jsx` (number keypad), `ui/IconField.jsx` (icon picker), `ui/ServicePicker.jsx` + `ui/ServiceLogo.jsx` (brand logos), `ui/MenuSheet.jsx` (kebab actions), `ui/SegToggle.jsx` (animated segmented control) — reuse these. Soft-deleted banks carry `archived:true`; stopped bills carry `stoppedMonth`, stopped installments carry `stopped:true` — keep filtering them from active lists.
 
-**Git / deploy workflow (IMPORTANT — repo is NOT this folder):** This working folder is a file-transfer copy, not a git repo. To push: a clone lives at `/tmp/saver-push` on branch `claude/file-transfer-k1kui7` (remote `https://github.com/mahmoudstate/saver-test.git`). Flow each time: copy changed files from here into `/tmp/saver-push`, `git add -A && commit && push`. GitHub auth (PAT) is saved in the macOS keychain (osxkeychain helper) so push is non-interactive. If `/tmp/saver-push` is gone (reboot), re-clone the branch and re-copy. Latest pushed commit: `70aaef8`.
+**Git / deploy workflow (IMPORTANT — repo is NOT this folder):** This working folder is a file-transfer copy, not a git repo. To push: a clone lives at `/tmp/saver-push` on branch `claude/file-transfer-k1kui7` (remote `https://github.com/mahmoudstate/saver-test.git`). Flow each time: `rsync -a --exclude=node_modules <thisfolder>/src/ /tmp/saver-push/src/`, then `git add -A && commit && push`. GitHub auth (PAT) is saved in the macOS keychain (osxkeychain helper) so push is non-interactive. `/tmp/saver-push` has **no node_modules** (can't build there — rely on the working-copy build). If it's gone (reboot), re-clone the branch and re-copy. **Latest pushed commit: `ccf0836`** (everything through this session is pushed).
 
 **Build/verify locally:** `npm run build` → serve `dist` on :8099 → puppeteer screenshot seeding `demo.json` into localStorage (theme via `et_theme`). Verify both light+dark.
 
 **Rules to honour:** logic LOCKED · no emoji · **never change app visual style unprompted — ask first** (memory: no-style-changes) · keep replies short.
 
-> **Current cursor:** start at **A1 · Home**. Mahmoud will paste Home notes; Claude addresses them, then asks to confirm Home before moving to A2.
+> **Current cursor:** **Bills section (Subscriptions + Installments) fully reworked + pushed (`ccf0836`)** — editors, detail lifecycle (record/stop/delete via kebab), service logos, category grouping, animated toggles, installment wizard + pay-ahead. Ask Mahmoud to confirm, then resume the §7 list (A2 · Activity onward). Open polish noted by Claude: no "pause" glyph for the Stop menu item (uses `back` arrow); legacy demo bills lack `domain`/`typeId` so they show a monogram + land under "Other" (new ones from the picker are fine); Bills sort preference isn't persisted (dropped the sort UI). Nothing is ✅ until Mahmoud says so.
