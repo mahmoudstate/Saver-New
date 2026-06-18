@@ -6,7 +6,12 @@ import ColorSheet, { loadColors } from "./ColorSheet.jsx";
 
 export default function ColorField({ value, onChange, style }) {
   const [open, setOpen] = useState(false);
-  const outside = [...new Set([value, ...loadColors()])].slice(0, 6); // fixed at 6 + the opener
+  // Stable order: show your saved colours in place so the SELECT ring moves to the
+  // swatch you tap — instead of the tapped colour jumping to the front. If the current
+  // colour isn't among them, surface it in the last slot (earlier swatches stay put).
+  const saved = loadColors();
+  let outside = saved.slice(0, 6);
+  if (value && !outside.includes(value)) outside = [...saved.slice(0, 5), value];
 
   return (
     <>

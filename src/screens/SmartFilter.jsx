@@ -9,16 +9,21 @@ function Chip({ on, children, onClick }) {
 }
 const row = { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 18 };
 
-export default function SmartFilter({ store, initial, onApply, back }) {
+export default function SmartFilter({ store, initial, dateFilter, hidePeriod, onApply, back }) {
   const { txns = [], banks = [], expCats = [], incCats = [] } = store;
   const cats = [...expCats, ...incCats];
+  // When a date range is already chosen on Activity (or carried by an existing
+  // filter), lock it in and hide the period chips — the date is set up-front.
+  const lockedRange = dateFilter && dateFilter.mode !== "all" ? { from: dateFilter.from, to: dateFilter.to, label: dateFilter.label }
+    : (initial && (initial.from || initial.to)) ? { from: initial.from, to: initial.to, label: initial.dateLabel } : null;
+  const noPeriod = hidePeriod || !!lockedRange;
   const [period, setPeriod] = useState(initial?.period || "month");
   const [shows, setShows] = useState(initial?.shows || []);
   const [catSel, setCatSel] = useState(initial?.cats || []);
   const [accSel, setAccSel] = useState(initial?.accounts || []);
 
   const toggle = (arr, set, id) => set(arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]);
-  const filter = { period, shows, cats: catSel, accounts: accSel };
+  const filter = { period: noPeriod ? "all" : period, shows, cats: catSel, accounts: accSel, ...(lockedRange ? { from: lockedRange.from, to: lockedRange.to, dateLabel: lockedRange.label } : {}) };
   const { count, total } = summarize(applyFilter(txns, filter));
 
   return (
@@ -28,8 +33,13 @@ export default function SmartFilter({ store, initial, onApply, back }) {
         <div className="lbl">Build your view</div><div className="big" style={{ fontSize: 28 }}>Smart filter</div><div className="sub">Any period · category · account</div>
       </div>
 
-      <div className="over">When</div>
-      <div style={row}>{PERIODS.map((p) => <Chip key={p.id} on={period === p.id} onClick={() => setPeriod(p.id)}>{p.label}</Chip>)}</div>
+      {noPeriod ? (lockedRange?.label && <>
+        <div className="over">Dates</div>
+        <div style={row}><span style={{ padding: "8px 14px", borderRadius: 11, fontWeight: 800, fontSize: 13, background: "var(--acDim)", border: "1px solid var(--ac)", color: "var(--acText)", display: "inline-flex", alignItems: "center", gap: 6 }}><Ico name="cal" size={13} />{lockedRange.label}</span><span className="caption" style={{ alignSelf: "center" }}>Set on Activity</span></div>
+      </>) : <>
+        <div className="over">When</div>
+        <div style={row}>{PERIODS.map((p) => <Chip key={p.id} on={period === p.id} onClick={() => setPeriod(p.id)}>{p.label}</Chip>)}</div>
+      </>}
 
       <div className="over">Show</div>
       <div style={{ ...row, marginBottom: 7 }}><Chip on={shows.length === 0} onClick={() => setShows([])}>All</Chip>{SHOWS.map((s) => <Chip key={s.id} on={shows.includes(s.id)} onClick={() => toggle(shows, setShows, s.id)}>{s.label}</Chip>)}</div>

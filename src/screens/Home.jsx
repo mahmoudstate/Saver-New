@@ -1,8 +1,8 @@
 // Saver — Home: PORTED 1:1 from showcase screen 01 (same classes/markup), data injected.
-import { useState, useRef, useMemo, Fragment } from "react";
+import { useState, useRef, useMemo, useLayoutEffect, Fragment } from "react";
 import Ico from "../ui/Ico.jsx";
 import { fmt, currentMonth, MONTHS, cardGradient } from "../lib/format.js";
-import { calcBankBalance, calcGoalSaved, calcFrozenForBank, totalBalance, totalSafe, totalFrozen, monthTxns, sumIncome, sumExpense, projectSpent } from "../lib/calc.js";
+import { calcBankBalance, calcGoalSaved, calcFrozenForBank, totalBalance, totalSafe, totalFrozen, monthTxns, sumIncome, sumExpense, projectSpent, budgetSpentMonth } from "../lib/calc.js";
 import { DASH_SECTIONS, DASH_DEFAULT } from "../lib/store.js";
 
 const KNOWN_SECTIONS = DASH_SECTIONS.map((s) => s.id);
@@ -36,11 +36,20 @@ export function BankCard({ bank, available, frozen, low, money, onClick, wide, g
 }
 
 const circ = (size = 42, r = 13, bg, color) => ({ width: size, height: size, borderRadius: r, background: bg, color, display: "flex", alignItems: "center", justifyContent: "center" });
+const ordinal = (n) => { if (!n) return ""; const s = ["th", "st", "nd", "rd"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
 
-export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudgets, onOpenProjects, onOpenInstallments, onOpenNotifications, onOpenAllAccounts, onOpenBreakdown, onCustomize }) {
+export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenGoal, onOpenBudgets, onOpenBudget, onOpenProjects, onOpenProject, onOpenInstallments, onOpenInst, onOpenBill, onOpenNotifications, onOpenAllAccounts, onOpenBreakdown, onCustomize, initialScroll = 0, onScrollChange }) {
   const { banks, txns, savings, bills = [], budgets = [], installments = [], username } = store;
+  const scrollRef = useRef(null);
+  // restore the scroll position from when Home was last left (tab-switch memory)
+  useLayoutEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = initialScroll; }, []);
   const [hide, setHide] = useState(false);
   const [page, setPage] = useState(0);
+  const [budgetsOpen, setBudgetsOpen] = useState(false); // Home budgets card: expand to per-budget rows
+  const [goalsOpen, setGoalsOpen] = useState(false); // Home goals card: expand to per-goal rows
+  const [instOpen, setInstOpen] = useState(false); // installments card expand
+  const [billsOpen, setBillsOpen] = useState(false); // bills card expand
+  const [projOpen, setProjOpen] = useState(false); // projects card expand
   const pagerRef = useRef(null);
   const cm = currentMonth();
   const mName = MONTHS[+cm.split("-")[1] - 1];
@@ -67,16 +76,28 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
     const activeProj = budgets.filter((b) => b.kind === "project" && b.status !== "archived");
     const projSpent = activeProj.reduce((s, p) => s + projectSpent(p, txns), 0);
     const projLimit = activeProj.reduce((s, p) => s + (p.amount || 0), 0);
-    return { tb, ts, tf, inc, exp, net: inc - exp, goals, goalsSaved, billsDue: unpaid.reduce((s, b) => s + b.amount, 0), unpaid: unpaid.length, paid: mBills.length - unpaid.length, limit, spent, instCount: activeInst.length, instRemaining, instDue, projCount: activeProj.length, projSpent, projLimit };
+    const budgetsList = mb.map((b) => ({ id: b.id, name: b.name, amount: b.amount || 0, spent: budgetSpentMonth(b, txns, cm) }));
+    const goalsTarget = goals.reduce((a, g) => a + (g.goal || 0), 0);
+    const instList = activeInst.map((i) => { const paidCount = paidOf(i), paid = paidCount * i.installmentAmount; return { id: i.id, name: i.name || i.company || i.itemType || "Plan", paidCount, total: i.totalInstallments, paid, remaining: Math.max(0, i.totalAmount - paid), totalAmount: i.totalAmount }; });
+    const billsList = mBills.map((b) => ({ id: b.id, name: b.name, amount: b.amount, paid: billPaid(b), dueDay: b.dueDay, color: b.color, note: b.note })).sort((a, b) => (a.paid === b.paid ? 0 : a.paid ? 1 : -1));
+    const projList = activeProj.map((p) => ({ id: p.id, name: p.name, amount: p.amount || 0, spent: projectSpent(p, txns) }));
+    return { tb, ts, tf, inc, exp, net: inc - exp, goals, goalsSaved, goalsTarget, billsDue: unpaid.reduce((s, b) => s + b.amount, 0), unpaid: unpaid.length, paid: mBills.length - unpaid.length, limit, spent, budgetsList, instCount: activeInst.length, instRemaining, instDue, instList, billsList, projCount: activeProj.length, projSpent, projLimit, projList };
   }, [banks, txns, savings, bills, budgets, installments, cm]);
 
   const hh = new Date().getHours();
   const greet = hh < 12 ? "Good morning" : hh < 18 ? "Good afternoon" : "Good evening";
   const money = (v) => (hide ? "••••" : fmt(v));
   const onScroll = () => { const el = pagerRef.current; if (el) setPage(Math.round(el.scrollLeft / el.clientWidth)); };
+  // shared "Show all N / Show less" disclosure footer used by every expandable section card
+  const Disclosure = ({ open, n, set, label }) => (
+    <div onClick={() => set((o) => !o)} role="button" aria-label={label} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 13, paddingTop: 12, borderTop: "1px solid var(--line)", cursor: "pointer", color: "var(--acText)", fontSize: 12.5, fontWeight: 800 }}>
+      {open ? "Show less" : `Show all ${n}`}
+      <Ico name="chev" size={14} color="var(--acText)" style={{ transform: open ? "rotate(-90deg)" : "rotate(90deg)", transition: "transform .2s" }} />
+    </div>
+  );
 
   return (
-    <div className="content padnav">
+    <div className="content padnav" ref={scrollRef} onScroll={(e) => onScrollChange?.(e.currentTarget.scrollTop)}>
       <div className="hero">
         <div className="toprow">
           <div><div style={{ fontSize: 11, letterSpacing: ".05em", textTransform: "uppercase", opacity: .72, fontWeight: 700 }}>{greet}</div><div style={{ fontSize: 15, fontWeight: 800, marginTop: 1 }}>{username || "there"}</div></div>
@@ -85,11 +106,10 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
           <div className="hib" onClick={() => onOpenNotifications?.()}><Ico name="bell" size={20} /></div>
         </div>
         <div className="hscroll" ref={pagerRef} onScroll={onScroll} style={{ overflow: "hidden", marginTop: 2, display: "flex", overflowX: "auto", scrollSnapType: "x mandatory" }}>
-          <div style={{ minWidth: "100%", scrollSnapAlign: "start" }}>
+          <div style={{ minWidth: "100%", scrollSnapAlign: "start", display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 124 }}>
             <div className="lbl">Total balance</div><div className="big tnum">{money(d.tb)}</div>
-            <div className="sub">{banks.filter((b) => !b.archived).length} account{banks.filter((b) => !b.archived).length === 1 ? "" : "s"}</div>
           </div>
-          <div style={{ minWidth: "100%", scrollSnapAlign: "start" }}>
+          <div style={{ minWidth: "100%", scrollSnapAlign: "start", display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 124 }}>
             <div className="lbl">Safe to spend</div><div className="big tnum">{money(d.ts)}</div>
             <div className="sub">{d.tf > 0 ? `${money(d.tf)} frozen in goals` : "Nothing frozen"}</div>
           </div>
@@ -107,7 +127,7 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
       const dash = { order, hidden: saved.hidden || [] };
       const SEC = {};
       SEC.accounts = (<Fragment key="accounts">
-      <div className="sectit"><div className="t">Accounts</div><div className="m" onClick={() => onOpenAllAccounts?.()}>All accounts</div></div>
+      <div className="sectit"><div className="t">Accounts</div></div>
       <div className="hscroll" style={{ display: "flex", gap: 13, overflowX: "auto", marginBottom: 4, paddingBottom: 30, paddingTop: 4, marginLeft: -20, marginRight: -20, paddingLeft: 20, paddingRight: 20 }}>
         {banks.filter((b) => !b.archived).map((b) => {
           const bal = calcBankBalance(b.id, txns), frozen = Math.max(0, calcFrozenForBank(b.id, savings, txns)), avail = bal - frozen;
@@ -119,63 +139,167 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenBudg
 
       </Fragment>);
       SEC.income = (<Fragment key="income">
-      <div className="tile" style={{ marginBottom: 13, cursor: "pointer" }} onClick={() => onOpenBreakdown?.()}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>{mName} · this month</div><Ico name="chev" size={16} color="var(--faint)" /></div>
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 11 }}><span style={circ(38, 12, "rgba(16,185,129,.15)", "var(--success)")}><Ico name="arrowUp" size={18} stroke={2.5} /></span><div><div style={{ fontSize: 11.5, color: "var(--muted)", fontWeight: 700 }}>Income</div><div className="tnum" style={{ fontSize: 19, fontWeight: 800, color: "var(--success)" }}>{hide ? "••••" : "+" + fmt(d.inc)}</div></div></div>
-          <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", margin: "2px 16px" }} />
-          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 11 }}><span style={circ(38, 12, "rgba(229,84,78,.15)", "var(--red)")}><Ico name="arrowDown" size={18} stroke={2.5} /></span><div><div style={{ fontSize: 11.5, color: "var(--muted)", fontWeight: 700 }}>Spent</div><div className="tnum" style={{ fontSize: 19, fontWeight: 800, color: "var(--red)" }}>{hide ? "••••" : "−" + fmt(d.exp)}</div></div></div>
+      <div className="tile" style={{ marginBottom: 13, cursor: "pointer", minHeight: 146, display: "flex", flexDirection: "column", justifyContent: "center" }} onClick={() => onOpenBreakdown?.()}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+          <div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>{mName} · this month</div>
+          <div style={{ flex: 1 }} />
+          <span className="tnum" style={{ fontSize: 11.5, fontWeight: 800, padding: "4px 10px", borderRadius: 999, background: d.net < 0 ? "var(--redDim)" : "color-mix(in srgb,var(--success) 14%,transparent)", color: d.net < 0 ? "var(--red)" : "var(--success)" }}>Net {hide ? "••••" : (d.net < 0 ? "−" : "+") + fmt(Math.abs(d.net))}</span>
+          <Ico name="chev" size={16} color="var(--faint)" />
         </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, paddingTop: 13, borderTop: "1px solid var(--line)" }}>
-          <span style={{ fontSize: 12, color: "var(--muted)", fontWeight: 700 }}>Net this month</span>
-          <span className="tnum" style={{ fontSize: 15, fontWeight: 800, color: d.net < 0 ? "var(--red)" : "var(--success)" }}>{hide ? "••••" : (d.net < 0 ? "−" : "+") + fmt(Math.abs(d.net))}</span>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10 }}><span style={circ(34, 11, "rgba(16,185,129,.15)", "var(--success)")}><Ico name="arrowUp" size={16} stroke={2.5} /></span><div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700 }}>Income</div><div className="tnum" style={{ fontSize: 17.5, fontWeight: 800, color: "var(--success)" }}>{hide ? "••••" : "+" + fmt(d.inc)}</div></div></div>
+          <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", margin: "2px 14px" }} />
+          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10 }}><span style={circ(34, 11, "rgba(229,84,78,.15)", "var(--red)")}><Ico name="arrowDown" size={16} stroke={2.5} /></span><div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700 }}>Spent</div><div className="tnum" style={{ fontSize: 17.5, fontWeight: 800, color: "var(--red)" }}>{hide ? "••••" : "−" + fmt(d.exp)}</div></div></div>
         </div>
       </div>
 
       </Fragment>);
       SEC.bills = (<Fragment key="bills">{bills.length > 0 && (
-        <div className="tile" style={{ marginBottom: 13 }} onClick={() => onTab?.("bills")}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={circ(42, 13, "var(--blueDim)", "var(--blue)")}><Ico name="bills" size={21} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Bills · {mName}</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.billsDue)} due</div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
-          <div style={{ display: "flex", gap: 7, marginTop: 13 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--surface2)", padding: "5px 11px", borderRadius: 9, fontSize: 11.5, fontWeight: 700, color: "var(--muted)" }}><span style={{ width: 6, height: 6, borderRadius: 99, background: "var(--yellow)" }} />{d.unpaid} due</span>
-            <span style={{ background: "var(--surface2)", padding: "5px 11px", borderRadius: 9, fontSize: 11.5, fontWeight: 700, color: "var(--muted)" }}>{d.paid} paid</span>
-          </div>
+        <div className="tile" style={{ marginBottom: 13 }}>
+          <div onClick={() => onTab?.("bills")} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}><div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}><span style={circ(42, 13, "var(--blueDim)", "var(--blue)")}><Ico name="bills" size={21} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Bills · {mName}</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.billsDue)} <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 700 }}>due</span></div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
+          {billsOpen ? (
+            <div style={{ marginTop: 6 }}>
+              {d.billsList.map((b, i) => (
+                <div key={b.id} onClick={() => onOpenBill?.(b)} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 12, padding: "13px 0", borderBottom: i < d.billsList.length - 1 ? "1px solid var(--line)" : "none" }}>
+                  <span className="circ" style={{ width: 40, height: 40, borderRadius: 12, background: b.color || "var(--blue)", color: "#fff", fontWeight: 800, fontSize: 14, flexShrink: 0 }}>{(b.name || "?").trim().slice(0, 1).toUpperCase()}</span>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</div>
+                    <div style={{ fontSize: 11.5, color: "var(--muted)", fontWeight: 600, marginTop: 1 }}>{b.note ? b.note + " · " : ""}monthly{b.dueDay ? " · day " + b.dueDay : ""}</div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div className="tnum" style={{ fontSize: 14.5, fontWeight: 800 }}>{money(b.amount)}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, marginTop: 2, color: b.paid ? "var(--success)" : "var(--yellow)" }}>{b.paid ? "Paid" : "Due"}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)", marginTop: 13 }}><i style={{ display: "block", width: `${(d.paid + d.unpaid) > 0 ? Math.round((d.paid / (d.paid + d.unpaid)) * 100) : 0}%`, height: "100%", borderRadius: 4, background: "var(--blue)" }} /></div>
+          )}
+          <Disclosure open={billsOpen} n={d.billsList.length} set={setBillsOpen} label="toggle bills" />
         </div>
       )}
       </Fragment>);
-      SEC.installments = (<Fragment key="installments">{d.instCount > 0 && (
-        <div className="tile" style={{ marginBottom: 13 }} onClick={() => onOpenInstallments?.()}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={circ(42, 13, "var(--orangeDim)", "var(--orange)")}><Ico name="card" size={20} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Installments · {d.instCount} active</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.instRemaining)} left</div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
-          {d.instDue > 0 && <div style={{ display: "flex", gap: 7, marginTop: 13 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--surface2)", padding: "5px 11px", borderRadius: 9, fontSize: 11.5, fontWeight: 700, color: "var(--muted)" }}><span style={{ width: 6, height: 6, borderRadius: 99, background: "var(--orange)" }} />{money(d.instDue)} due this month</span>
-          </div>}
+      SEC.installments = (<Fragment key="installments">{d.instCount > 0 && (() => {
+        const paid = d.instList.reduce((s, i) => s + i.paid, 0), total = d.instList.reduce((s, i) => s + i.totalAmount, 0);
+        return (
+        <div className="tile" style={{ marginBottom: 13 }}>
+          <div onClick={() => onOpenInstallments?.()} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}><div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}><span style={circ(42, 13, "var(--orangeDim)", "var(--orange)")}><Ico name="card" size={20} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Installments · {d.instCount} active</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.instRemaining)} <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 700 }}>left</span></div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
+          {instOpen ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 15, marginTop: 14 }}>
+              {d.instList.map((i) => {
+                const pct = i.totalAmount > 0 ? Math.round((i.paid / i.totalAmount) * 100) : 0;
+                return (
+                  <div key={i.id} onClick={() => onOpenInst?.(i)} style={{ cursor: "pointer", display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{i.name}</span>
+                      <span className="tnum" style={{ fontSize: 12, fontWeight: 800, color: "var(--orange)", flexShrink: 0 }}>{i.paidCount}/{i.total}</span>
+                    </div>
+                    <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)" }}><i style={{ display: "block", width: `${Math.min(100, pct)}%`, height: "100%", borderRadius: 4, background: "var(--orange)" }} /></div>
+                    <div className="tnum" style={{ fontSize: 11.5, fontWeight: 600, color: "var(--muted)" }}>{money(i.paid)} paid · {money(i.remaining)} left · of {fmt(i.totalAmount)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)", marginTop: 13 }}><i style={{ display: "block", width: `${total > 0 ? Math.min(100, (paid / total) * 100) : 0}%`, height: "100%", borderRadius: 4, background: "var(--orange)" }} /></div>
+          )}
+          <Disclosure open={instOpen} n={d.instList.length} set={setInstOpen} label="toggle installments" />
         </div>
-      )}
+        );
+      })()}
       </Fragment>);
       SEC.goals = (<Fragment key="goals">{d.goals.length > 0 && (
-        <div className="tile" style={{ marginBottom: 13 }} onClick={() => onOpenGoals?.()}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 13 }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={circ(42, 13, "var(--acDim)", "var(--acText)")}><Ico name="target" size={21} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Goals · {d.goals.length} active</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.goalsSaved)} saved</div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-            {d.goals.slice(0, 2).map((g) => (
-              <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 11.5, fontWeight: 700, width: 74, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name}</span>
-                <div style={{ flex: 1, height: 6, borderRadius: 4, background: "var(--surface2)" }}><i style={{ display: "block", width: `${g.goal > 0 ? Math.min(100, (g.saved / g.goal) * 100) : 0}%`, height: "100%", borderRadius: 4, background: "var(--ac)" }} /></div>
-              </div>
-            ))}
+        <div className="tile" style={{ marginBottom: 13 }}>
+          <div onClick={() => onOpenGoals?.()} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}><span style={circ(42, 13, "var(--acDim)", "var(--acText)")}><Ico name="target" size={21} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Goals · {d.goals.length} active</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.goalsSaved)} {d.goalsTarget > 0 && <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 700 }}>of {fmt(d.goalsTarget)}</span>}</div></div></div>
+            <Ico name="chev" size={18} color="var(--faint)" />
+          </div>
+          {goalsOpen ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 15, marginTop: 14 }}>
+              {d.goals.map((g) => {
+                const pct = g.goal > 0 ? Math.round((g.saved / g.goal) * 100) : 0;
+                const reached = g.saved >= g.goal;
+                return (
+                  <div key={g.id} onClick={() => onOpenGoal?.(g)} style={{ cursor: "pointer", display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name}</span>
+                      <span className="tnum" style={{ fontSize: 12.5, fontWeight: 800, color: "var(--acText)", flexShrink: 0 }}>{Math.min(100, pct)}%</span>
+                    </div>
+                    <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)" }}><i style={{ display: "block", width: `${Math.min(100, pct)}%`, height: "100%", borderRadius: 4, background: "var(--ac)" }} /></div>
+                    <div className="tnum" style={{ fontSize: 11.5, fontWeight: 600, color: "var(--muted)" }}>{money(g.saved)} saved · {reached ? <span style={{ color: "var(--acText)", fontWeight: 700 }}>Reached</span> : `${money(g.goal - g.saved)} left`} · of {fmt(g.goal)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)", marginTop: 13 }}><i style={{ display: "block", width: `${d.goalsTarget > 0 ? Math.min(100, (d.goalsSaved / d.goalsTarget) * 100) : 0}%`, height: "100%", borderRadius: 4, background: "var(--ac)" }} /></div>
+          )}
+          <div onClick={() => setGoalsOpen((o) => !o)} role="button" aria-label="toggle goals" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 14, paddingTop: 13, borderTop: "1px solid var(--line)", cursor: "pointer", color: "var(--acText)", fontSize: 12.5, fontWeight: 800 }}>
+            {goalsOpen ? "Show less" : `Show all ${d.goals.length}`}
+            <Ico name="chev" size={14} color="var(--acText)" style={{ transform: goalsOpen ? "rotate(-90deg)" : "rotate(90deg)", transition: "transform .2s" }} />
           </div>
         </div>
       )}
       </Fragment>);
       SEC.budgets = (<Fragment key="budgets">{d.limit > 0 && (
-        <div className="tile" style={{ marginBottom: 13 }} onClick={() => onOpenBudgets?.()}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 13 }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={circ(42, 13, "var(--purpleDim)", "var(--purple)")}><Ico name="layers" size={20} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Budgets · {mName}</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.spent)} <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 700 }}>of {fmt(d.limit)}</span></div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
-          <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)" }}><i style={{ display: "block", width: `${d.limit > 0 ? Math.min(100, (d.spent / d.limit) * 100) : 0}%`, height: "100%", borderRadius: 4, background: "var(--purple)" }} /></div>
+        <div className="tile" style={{ marginBottom: 13 }}>
+          <div onClick={() => onOpenBudgets?.()} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}><span style={circ(42, 13, "var(--purpleDim)", "var(--purple)")}><Ico name="layers" size={20} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Budgets · {mName}</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.spent)} <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 700 }}>of {fmt(d.limit)}</span></div></div></div>
+            <Ico name="chev" size={18} color="var(--faint)" />
+          </div>
+          {budgetsOpen ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 15, marginTop: 14 }}>
+              {d.budgetsList.map((b) => {
+                const pct = b.amount > 0 ? Math.round((b.spent / b.amount) * 100) : 0;
+                const left = b.amount - b.spent, over = left < 0;
+                return (
+                  <div key={b.id} onClick={() => onOpenBudget?.(b)} style={{ cursor: "pointer", display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</span>
+                      <span className="tnum" style={{ fontSize: 12.5, fontWeight: 800, color: over ? "var(--red)" : "var(--purple)", flexShrink: 0 }}>{pct}%</span>
+                    </div>
+                    <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)" }}><i style={{ display: "block", width: `${Math.min(100, pct)}%`, height: "100%", borderRadius: 4, background: over ? "var(--red)" : "var(--purple)" }} /></div>
+                    <div className="tnum" style={{ fontSize: 11.5, fontWeight: 600, color: "var(--muted)" }}>{money(b.spent)} spent · <span style={{ color: over ? "var(--red)" : "inherit", fontWeight: over ? 700 : 600 }}>{over ? `${money(-left)} over` : `${money(left)} left`}</span> · of {fmt(b.amount)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)", marginTop: 13 }}><i style={{ display: "block", width: `${d.limit > 0 ? Math.min(100, (d.spent / d.limit) * 100) : 0}%`, height: "100%", borderRadius: 4, background: "var(--purple)" }} /></div>
+          )}
+          <div onClick={() => setBudgetsOpen((o) => !o)} role="button" aria-label="toggle budgets" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 14, paddingTop: 13, borderTop: "1px solid var(--line)", cursor: "pointer", color: "var(--acText)", fontSize: 12.5, fontWeight: 800 }}>
+            {budgetsOpen ? "Show less" : `Show all ${d.budgetsList.length}`}
+            <Ico name="chev" size={14} color="var(--acText)" style={{ transform: budgetsOpen ? "rotate(-90deg)" : "rotate(90deg)", transition: "transform .2s" }} />
+          </div>
         </div>
       )}</Fragment>);
       SEC.projects = (<Fragment key="projects">{d.projCount > 0 && (
-        <div className="tile" style={{ marginBottom: 13 }} onClick={() => onOpenProjects?.()}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 13 }}><div style={{ display: "flex", alignItems: "center", gap: 12 }}><span style={circ(42, 13, "var(--purpleDim)", "var(--purple)")}><Ico name="sparkles" size={20} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Projects · {d.projCount} active</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.projSpent)} {d.projLimit > 0 && <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 700 }}>of {fmt(d.projLimit)}</span>}</div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
-          {d.projLimit > 0 && <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)" }}><i style={{ display: "block", width: `${Math.min(100, (d.projSpent / d.projLimit) * 100)}%`, height: "100%", borderRadius: 4, background: "var(--purple)" }} /></div>}
+        <div className="tile" style={{ marginBottom: 13 }}>
+          <div onClick={() => onOpenProjects?.()} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}><div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}><span style={circ(42, 13, "var(--purpleDim)", "var(--purple)")}><Ico name="sparkles" size={20} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Projects · {d.projCount} active</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.projSpent)} {d.projLimit > 0 && <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 700 }}>of {fmt(d.projLimit)}</span>}</div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
+          {projOpen ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 15, marginTop: 14 }}>
+              {d.projList.map((p) => {
+                const pct = p.amount > 0 ? Math.round((p.spent / p.amount) * 100) : 0;
+                const left = p.amount - p.spent, over = left < 0;
+                return (
+                  <div key={p.id} onClick={() => onOpenProject?.(p)} style={{ cursor: "pointer", display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+                      {p.amount > 0 && <span className="tnum" style={{ fontSize: 12.5, fontWeight: 800, color: over ? "var(--red)" : "var(--purple)", flexShrink: 0 }}>{pct}%</span>}
+                    </div>
+                    {p.amount > 0 && <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)" }}><i style={{ display: "block", width: `${Math.min(100, pct)}%`, height: "100%", borderRadius: 4, background: over ? "var(--red)" : "var(--purple)" }} /></div>}
+                    <div className="tnum" style={{ fontSize: 11.5, fontWeight: 600, color: "var(--muted)" }}>{money(p.spent)} spent{p.amount > 0 ? ` · ${over ? `${money(-left)} over` : `${money(left)} left`} · of ${fmt(p.amount)}` : ""}</div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            d.projLimit > 0
+              ? <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)", marginTop: 13 }}><i style={{ display: "block", width: `${Math.min(100, (d.projSpent / d.projLimit) * 100)}%`, height: "100%", borderRadius: 4, background: "var(--purple)" }} /></div>
+              : <div style={{ height: 6, marginTop: 13 }} />
+          )}
+          <Disclosure open={projOpen} n={d.projList.length} set={setProjOpen} label="toggle projects" />
         </div>
       )}</Fragment>);
       return dash.order.filter((id) => !(dash.hidden || []).includes(id)).map((id) => SEC[id]);

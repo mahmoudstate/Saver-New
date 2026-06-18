@@ -28,11 +28,25 @@ function hsvToHex(h, s, v) {
   return `#${to(r)}${to(g)}${to(b)}`;
 }
 
+// Parse a hex colour back to HSV so the wheel's dot opens ON the current colour
+// (not a fixed default) and the picker feels like it's tracking your choice.
+function hexToHsv(hex) {
+  try {
+    const c = hex.replace("#", "");
+    const r = parseInt(c.slice(0, 2), 16) / 255, g = parseInt(c.slice(2, 4), 16) / 255, b = parseInt(c.slice(4, 6), 16) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+    let h = 0;
+    if (d) { h = (max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4) * 60; if (h < 0) h += 360; }
+    return { h, s: max === 0 ? 0 : d / max, v: max };
+  } catch { return { h: 210, s: 0.7, v: 0.9 }; }
+}
+
 export default function ColorSheet({ value, onChange, onClose }) {
   const [saved, setSaved] = useState(loadColors);
-  const [hue, setHue] = useState(210);
-  const [sat, setSat] = useState(0.7);
-  const [val, setVal] = useState(0.9);
+  const init = hexToHsv(value || "#5FE3C0");
+  const [hue, setHue] = useState(init.h);
+  const [sat, setSat] = useState(init.s);
+  const [val, setVal] = useState(init.v);
   const wheelRef = useRef(null);
   const dragging = useRef(false);
   const draft = hsvToHex(hue, sat, val);

@@ -13,7 +13,8 @@ export default function FilterResults({ store, filter, back, onEditFilter, onEdi
   const { count, total, avg } = summarize(list);
 
   const chips = [];
-  if (filter.period && filter.period !== "all") chips.push(PERIODS.find((p) => p.id === filter.period)?.label);
+  if (filter.dateLabel) chips.push(filter.dateLabel);
+  else if (filter.period && filter.period !== "all") chips.push(PERIODS.find((p) => p.id === filter.period)?.label);
   (filter.shows || []).forEach((s) => chips.push(SHOWS.find((x) => x.id === s)?.label));
   (filter.cats || []).forEach((c) => chips.push(catName(c)));
   (filter.accounts || []).forEach((a) => chips.push(bankName(a)));

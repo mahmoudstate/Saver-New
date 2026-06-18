@@ -18,13 +18,14 @@ export default function Appearance({ store, back }) {
       </div>
 
       <div className="over">Theme</div>
-      <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-        {[["light", "sun", "var(--yellow)", "Light"], ["dark", "moon", "var(--ac)", "Dark"]].map(([t, ico, col, label]) => (
-          <div key={t} className="card" onClick={() => store.set("theme", t)} style={{ flex: 1, padding: 16, textAlign: "center", boxShadow: "none", cursor: "pointer", border: `2px solid ${theme === t ? "var(--ac)" : "var(--border)"}` }}>
-            <Ico name={ico} size={22} color={col} style={{ margin: "0 auto" }} /><div style={{ fontWeight: 800, fontSize: 14, marginTop: 8 }}>{label}</div>
+      <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
+        {[["system", "device", "var(--blue)", "System"], ["light", "sun", "var(--yellow)", "Light"], ["dark", "moon", "var(--ac)", "Dark"]].map(([t, ico, col, label]) => (
+          <div key={t} className="card" onClick={() => store.set("theme", t)} style={{ flex: 1, padding: "16px 8px", textAlign: "center", boxShadow: "none", cursor: "pointer", border: `2px solid ${theme === t ? "var(--ac)" : "var(--border)"}` }}>
+            <Ico name={ico} size={22} color={col} style={{ margin: "0 auto" }} /><div style={{ fontWeight: 800, fontSize: 13.5, marginTop: 8 }}>{label}</div>
           </div>
         ))}
       </div>
+      <div className="caption" style={{ marginBottom: 20 }}>{theme === "system" ? "Follows your phone’s light / dark setting." : `Always ${theme}.`}</div>
 
       <div className="over">Accent colour</div>
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "space-between", padding: "0 4px" }}>

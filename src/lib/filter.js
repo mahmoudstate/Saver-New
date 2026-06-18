@@ -25,6 +25,18 @@ const inPeriod = (date, period) => {
 const isBill = (t) => t.catId === "bill" || t.catIcon === "zap" || /subscription/i.test(t.catName || "");
 const isInstallment = (t) => t.catId === "installment" || t.catIcon === "installment" || t.catIcon === "wallet-cards";
 
+// explicit from/to (YYYY-MM-DD) override the named period — used when the date
+// is chosen up-front on Activity, so the filter sheet only narrows within it.
+const inDates = (date, f) => {
+  if (f.from || f.to) {
+    if (!date) return false;
+    if (f.from && date < f.from) return false;
+    if (f.to && date > f.to) return false;
+    return true;
+  }
+  return inPeriod(date, f.period);
+};
+
 const showMatch = (t, shows) => {
   if (!shows || shows.length === 0) return true;
   return shows.some((s) => {
@@ -37,7 +49,7 @@ const showMatch = (t, shows) => {
 
 export function applyFilter(txns, f) {
   return txns.filter((t) =>
-    inPeriod(t.date, f.period) &&
+    inDates(t.date, f) &&
     showMatch(t, f.shows) &&
     (!f.cats?.length || f.cats.includes(t.catId)) &&
     (!f.accounts?.length || f.accounts.includes(t.bankId) || f.accounts.includes(t.toBankId) || f.accounts.includes(t.fromBankId))

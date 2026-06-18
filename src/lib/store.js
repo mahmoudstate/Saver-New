@@ -12,6 +12,7 @@ export const KEYS = {
   username: "et_username", lastBackup: "et_lastBackup", bills: "et_bills",
   budgets: "et_budgets", quickActions: "et_quick_actions", seenWelcome: "et_seenWelcome",
   theme: "et_theme", installments: "et_installments", accent: "et_accent", dashboard: "et_dashboard",
+  avatar: "et_avatar",
 };
 
 export const DASH_SECTIONS = [
@@ -38,7 +39,7 @@ const ENTITIES = {
   txns: [], banks: [], expCats: [], incCats: [], groups: [], savings: [],
   bills: [], budgets: [], installments: [], quickActions: [],
 };
-const SCALARS = { currency: "EGP", username: "", theme: "dark", accent: "mint", dashboard: DASH_DEFAULT, seenWelcome: false };
+const SCALARS = { currency: "EGP", username: "", avatar: "", theme: "system", accent: "mint", dashboard: DASH_DEFAULT, seenWelcome: false };
 
 // Single store hook: loads everything, exposes data + persisted setters + locked actions.
 export function useStore() {
@@ -67,7 +68,18 @@ export function useStore() {
 
   // keep currency formatter + theme attribute in sync
   useEffect(() => { setCurrency(data.currency); }, [data.currency]);
-  useEffect(() => { document.documentElement.setAttribute("data-theme", data.theme === "dark" ? "dark" : "light"); }, [data.theme]);
+  // Theme: "light"/"dark" force it; "system" follows the OS and live-updates with it.
+  useEffect(() => {
+    const apply = (t) => document.documentElement.setAttribute("data-theme", t === "dark" ? "dark" : "light");
+    if (data.theme === "system") {
+      const mq = window.matchMedia("(prefers-color-scheme: dark)");
+      apply(mq.matches ? "dark" : "light");
+      const on = (e) => apply(e.matches ? "dark" : "light");
+      mq.addEventListener ? mq.addEventListener("change", on) : mq.addListener(on);
+      return () => { mq.removeEventListener ? mq.removeEventListener("change", on) : mq.removeListener(on); };
+    }
+    apply(data.theme);
+  }, [data.theme]);
   useEffect(() => { const [ac, ac2] = ACCENTS[data.accent] || ACCENTS.mint; const s = document.documentElement.style; s.setProperty("--ac", ac); s.setProperty("--ac2", ac2); }, [data.accent]);
 
   const set = useCallback((key, valOrFn) => {

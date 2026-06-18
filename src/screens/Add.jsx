@@ -8,20 +8,23 @@ import AmountSheet from "../ui/AmountSheet.jsx";
 import PickerSheet from "../ui/PickerSheet.jsx";
 import { resolveCat } from "../ui/cats.js";
 import { fmt, today } from "../lib/format.js";
-import { calcGoalSaved } from "../lib/calc.js";
+import { calcGoalSaved, calcBankBalance, calcFrozenForBank } from "../lib/calc.js";
 
 const catKeyOf = (c) => (c ? resolveCat({ catId: c.id, catGlyph: c.glyph, catName: c.name }) : null);
 
-export default function Add({ store, onClose }) {
-  const { banks = [], expCats = [], incCats = [], savings = [] } = store;
+export default function Add({ store, initial, onSaved, onClose }) {
+  const { banks = [], expCats = [], incCats = [], savings = [], txns = [] } = store;
   const goals = savings.filter((s) => s.status !== "archived");
+  // amount you can still spend from a bank (balance − money frozen for goals)
+  const safeOf = (id) => calcBankBalance(id, txns) - Math.max(0, calcFrozenForBank(id, savings, txns));
 
-  const [type, setType] = useState("expense");
-  const [amount, setAmount] = useState(0);
-  const [bankId, setBankId] = useState(banks[0]?.id || null);
+  // `initial` pre-fills the form (e.g. opened from a Quick Add shortcut).
+  const [type, setType] = useState(initial?.type || "expense");
+  const [amount, setAmount] = useState(+initial?.amount || 0);
+  const [bankId, setBankId] = useState(initial?.bankId || banks[0]?.id || null);
   const [srcGoal, setSrcGoal] = useState(null); // expense paid from a goal vault (spending mode)
   const vaults = goals.filter((g) => g.spendingMode);
-  const [expCatId, setExpCatId] = useState(expCats[0]?.id || null);
+  const [expCatId, setExpCatId] = useState(initial?.expCatId || expCats[0]?.id || null);
   const [incCatId, setIncCatId] = useState(incCats[0]?.id || null);
   const [goalId, setGoalId] = useState(goals[0]?.id || null);
   const [note, setNote] = useState("");
@@ -35,6 +38,8 @@ export default function Add({ store, onClose }) {
 
   const vaultGoal = srcGoal ? goals.find((g) => g.id === srcGoal) : null;
   const bank = banks.find((b) => b.id === bankId);
+  const avail = bankId ? safeOf(bankId) : 0;
+  const showAvail = type !== "income" && !vaultGoal && !!bank; // only when spending/saving from a real bank
   const cat = type === "income" ? incCats.find((c) => c.id === incCatId) : expCats.find((c) => c.id === expCatId);
   const goal = goals.find((g) => g.id === goalId);
   const sourceOk = type === "expense" && srcGoal ? true : !!bankId;
@@ -52,6 +57,7 @@ export default function Add({ store, onClose }) {
     else txn = { type, amount, date: today(), bankId, bankName: bank?.name, catId: cat.id, catName: cat.name, catGlyph: cat.glyph, catColor: cat.color, note };
     const id = store.addTxn(txn);
     if (id === false) return; // blocked (alert shown by store)
+    if (!srcGoal) onSaved?.({ amount, bankId }); // remember last amount/bank (Quick Add shortcut)
     const label = type === "saving" ? `to ${goal?.name}` : type === "income" ? `to ${bank?.name}` : srcGoal ? `from ${vaultGoal?.name} vault` : `${cat?.name}`;
     store.flash({ title: `${meta.sign}${fmt(amount)} ${type === "income" ? "in" : type === "saving" ? "saved" : "spent"}`, sub: label, color: type === "income" ? "var(--success)" : type === "saving" ? "var(--ac)" : "var(--muted)", icon: "check" });
     onClose();
@@ -70,24 +76,31 @@ export default function Add({ store, onClose }) {
         {["expense", "income", "saving"].map((t) => <b key={t} className={type === t ? "on" : ""} onClick={() => setType(t)} style={{ textTransform: "capitalize" }}>{t}</b>)}
       </div>
 
-      <div className="field" onClick={() => setSheet("account")} style={{ cursor: "pointer" }}>
-        {vaultGoal
-          ? <CatTile cat="goal" name={vaultGoal.name} size={42} />
-          : <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: bank?.color || "var(--muted)", color: "#fff", fontWeight: 800, fontSize: 14 }}>{(bank?.name || "?").slice(0, 1).toUpperCase()}</span>}
-        <div><div className="fl">{vaultGoal ? "From vault" : meta.accLabel}</div><div className="fv">{vaultGoal ? vaultGoal.name : (bank?.name || "Pick an account")}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
-      </div>
-
       {type === "saving" ? (
-        <div className="field" onClick={() => setSheet("goal")} style={{ cursor: "pointer", marginTop: 12 }}>
+        <div className="field" onClick={() => setSheet("goal")} style={{ cursor: "pointer" }}>
           <CatTile cat={goal ? catKeyOf({ name: goal.name, glyph: goal.glyph }) || "goal" : "goal"} name={goal?.name} size={42} />
           <div><div className="fl">To goal</div><div className="fv">{goal?.name || "Pick a goal"}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
         </div>
       ) : (
-        <div className="field" onClick={() => setSheet("category")} style={{ cursor: "pointer", marginTop: 12 }}>
+        <div className="field" onClick={() => setSheet("category")} style={{ cursor: "pointer" }}>
           <CatTile cat={catKeyOf(cat)} name={cat?.name} size={42} />
           <div><div className="fl">Category</div><div className="fv">{cat?.name || "Pick a category"}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
         </div>
       )}
+
+      <div className="field" onClick={() => setSheet("account")} style={{ cursor: "pointer", marginTop: 12 }}>
+        {vaultGoal
+          ? <CatTile cat="goal" name={vaultGoal.name} size={42} />
+          : <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: bank?.color || "var(--muted)", color: "#fff", fontWeight: 800, fontSize: 14 }}>{(bank?.name || "?").slice(0, 1).toUpperCase()}</span>}
+        <div style={{ minWidth: 0 }}>
+          <div className="fl">{vaultGoal ? "From vault" : meta.accLabel}</div>
+          <div className="fv" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            {vaultGoal ? vaultGoal.name : (bank?.name || "Pick an account")}
+            {showAvail && <span className={`pill${avail <= 0 ? " pill-red" : ""}`} style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px" }}>{fmt(Math.max(0, avail))} available</span>}
+          </div>
+        </div>
+        <span className="chev"><Ico name="chev" size={18} /></span>
+      </div>
 
       <label className="field note" style={{ marginTop: 12 }}>
         <Ico name="note" size={19} color="var(--faint)" style={{ marginRight: 2 }} />
@@ -98,7 +111,7 @@ export default function Add({ store, onClose }) {
 
       {sheet === "amount" && <AmountSheet title="Enter amount" sub={meta.title} confirmLabel="Set amount" onConfirm={(v) => { setAmount(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "account" && <PickerSheet title={meta.accLabel} selectedId={srcGoal ? "vault:" + srcGoal : bankId} onPick={(id) => { if (id.startsWith?.("vault:")) setSrcGoal(id.slice(6)); else { setBankId(id); setSrcGoal(null); } }} onClose={() => setSheet(null)} options={[
-        ...banks.filter((b) => !b.archived).map((b) => ({ id: b.id, label: b.name, bankColor: b.color })),
+        ...banks.filter((b) => !b.archived).map((b) => ({ id: b.id, label: b.name, bankColor: b.color, sub: type !== "income" ? `${fmt(Math.max(0, safeOf(b.id)))} available` : undefined })),
         ...(type === "expense" ? vaults.map((g) => ({ id: "vault:" + g.id, label: g.name, sub: "Goal vault · spend from here", catKey: "goal" })) : []),
       ]} />}
       {sheet === "category" && <PickerSheet title="Category" selectedId={type === "income" ? incCatId : expCatId} onPick={type === "income" ? setIncCatId : setExpCatId} onClose={() => setSheet(null)} options={(type === "income" ? incCats : expCats).map((c) => ({ id: c.id, label: c.name, sub: c.group, catKey: catKeyOf(c) }))} />}

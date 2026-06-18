@@ -6,16 +6,59 @@ import { CATS } from "../ui/cats.js";
 import ColorField from "../ui/ColorField.jsx";
 import { loadColors } from "../ui/ColorSheet.jsx";
 
-const GLYPHS = ["food", "coffee", "shopping", "transport", "bill", "phone", "home", "travel", "salary", "income", "goal", "transfer"];
+// Icons are split by type: expense icons show for an expense category, income icons for income.
+const EXPENSE_ICONS = ["food", "coffee", "drinks", "groceries", "shopping", "clothing", "jewelry", "beauty", "transport", "car", "fuel", "parking", "ticket", "travel", "hotel", "bill", "utilities", "electricity", "water", "wifi", "phone", "electronics", "home", "furniture", "repairs", "garden", "laundry", "health", "pharmacy", "fitness", "sports", "education", "books", "entertainment", "movie", "music", "gaming", "kids", "pet", "subscription", "insurance", "creditcard", "bank", "taxes", "charity", "gift"];
+const INCOME_ICONS = ["salary", "business", "freelance", "income", "investment", "crypto", "interest", "savings", "refund", "sales", "rental", "pension", "bonus", "tips", "gift"];
+// Curated set shown inline (first 11); the rest live behind "Show all".
+const QUICK_EXP = ["food", "groceries", "shopping", "transport", "car", "bill", "home", "health", "entertainment", "subscription", "gift"];
+const QUICK_INC = ["salary", "business", "freelance", "investment", "savings", "rental", "refund", "sales", "bonus", "tips", "income"];
+const iconsFor = (k) => (k === "income" ? INCOME_ICONS : EXPENSE_ICONS);
+const quickFor = (k) => (k === "income" ? QUICK_INC : QUICK_EXP);
+
+// One icon cell — renders the glyph in the chosen colour when selected.
+function Glyph({ g, selected, color, onPick }) {
+  return (
+    <span onClick={() => onPick(g)} className="circ" style={{ aspectRatio: "1", borderRadius: 14, background: "var(--catTile)", border: selected ? "1.5px solid var(--ac)" : "1px solid var(--catTileBorder)", cursor: "pointer" }}>
+      <svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke={selected ? color : CATS[g][0]} strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{ __html: CATS[g][1] }} />
+    </span>
+  );
+}
+
+// Bottom sheet with every icon for this type (app-styled, same as ColorSheet).
+function IconSheet({ icons, kind, glyph, color, onPick, onClose }) {
+  return (
+    <>
+      <div className="dim" onClick={onClose} />
+      <div className="sheet">
+        <div className="grab" />
+        <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: -.3 }}>{kind === "income" ? "Income icons" : "Expense icons"}</div>
+        <div style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, margin: "3px 0 16px" }}>Tap an icon to use it.</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 10, maxHeight: "46vh", overflowY: "auto", paddingBottom: 4 }}>
+          {icons.map((g) => <Glyph key={g} g={g} selected={glyph === g} color={color} onPick={(x) => { onPick(x); onClose(); }} />)}
+        </div>
+        <div style={{ marginTop: 16 }}><div className="btn btn-secondary btn-full" onClick={onClose}>Done</div></div>
+      </div>
+    </>
+  );
+}
 
 export default function CategoryEditor({ store, category, kind: initialKind, onClose }) {
   const editing = !!category;
-  const [kind, setKind] = useState(category?._kind || initialKind || "expense");
+  const initKind = category?._kind || initialKind || "expense";
+  const [kind, setKind] = useState(initKind);
   const [name, setName] = useState(category?.name || "");
-  const [glyph, setGlyph] = useState(category?.glyph || GLYPHS[0]);
+  const [glyph, setGlyph] = useState(category?.glyph || quickFor(initKind)[0]);
   const [color, setColor] = useState(category?.color || loadColors()[0]);
+  const [iconsOpen, setIconsOpen] = useState(false);
   const canSave = name.trim().length > 0;
   const listKey = kind === "income" ? "incCats" : "expCats";
+
+  // Switching type swaps the icon set; if the current glyph isn't in the new set, pick that set's first.
+  const changeKind = (k) => { setKind(k); if (!iconsFor(k).includes(glyph)) setGlyph(quickFor(k)[0]); };
+
+  const quick = quickFor(kind);
+  // Show the curated set, plus the current glyph if it's not in it (so an edited category keeps its icon visible).
+  const inline = quick.includes(glyph) ? quick : [glyph, ...quick.slice(0, quick.length - 1)];
 
   const save = () => {
     if (!canSave) return;
@@ -37,8 +80,8 @@ export default function CategoryEditor({ store, category, kind: initialKind, onC
 
       {!editing && (
         <div className="seg" style={{ marginBottom: 16 }}>
-          <b className={kind === "expense" ? "on" : ""} onClick={() => setKind("expense")}>Expense</b>
-          <b className={kind === "income" ? "on" : ""} onClick={() => setKind("income")}>Income</b>
+          <b className={kind === "expense" ? "on" : ""} onClick={() => changeKind("expense")}>Expense</b>
+          <b className={kind === "income" ? "on" : ""} onClick={() => changeKind("income")}>Income</b>
         </div>
       )}
 
@@ -49,18 +92,19 @@ export default function CategoryEditor({ store, category, kind: initialKind, onC
         </div><span className="chev"><Ico name="pencil" size={17} /></span>
       </label>
 
-      <div className="over">Icon</div>
+      <div className="over">{kind === "income" ? "Income icon" : "Expense icon"}</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 10, marginBottom: 18 }}>
-        {GLYPHS.map((g) => (
-          <span key={g} onClick={() => setGlyph(g)} className="circ" style={{ aspectRatio: "1", borderRadius: 14, background: "var(--catTile)", border: glyph === g ? "1.5px solid var(--ac)" : "1px solid var(--catTileBorder)", cursor: "pointer", color: CATS[g][0] }}>
-            <svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke={glyph === g ? "var(--ac)" : CATS[g][0]} strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{ __html: CATS[g][1] }} />
-          </span>
-        ))}
+        {inline.map((g) => <Glyph key={g} g={g} selected={glyph === g} color={color} onPick={setGlyph} />)}
+        <span onClick={() => setIconsOpen(true)} className="circ" style={{ aspectRatio: "1", borderRadius: 14, background: "var(--surface2)", border: "1px dashed var(--border)", cursor: "pointer", flexDirection: "column", gap: 1, color: "var(--muted)" }}>
+          <Ico name="layers" size={17} /><span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: ".02em" }}>All</span>
+        </span>
       </div>
 
       <ColorField value={color} onChange={setColor} />
 
       <div className="cta"><div className="btn btn-primary btn-full" style={{ opacity: canSave ? 1 : .5 }} onClick={save}><Ico name="check" size={18} />{editing ? "Save category" : "Add category"}</div></div>
+
+      {iconsOpen && <IconSheet icons={iconsFor(kind)} kind={kind} glyph={glyph} color={color} onPick={setGlyph} onClose={() => setIconsOpen(false)} />}
     </div>
   );
 }

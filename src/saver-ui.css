@@ -154,6 +154,11 @@ header.lead{padding:48px 0 6px}
 .seg{display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-pill);padding:5px;gap:5px}
 .seg b{flex:1;text-align:center;font-size:13px;font-weight:700;padding:10px 0;border-radius:var(--r-pill);color:var(--muted);cursor:pointer;transition:color var(--t-micro)}
 .seg b.on{background:var(--surface);color:var(--acText);box-shadow:var(--cardShadow)}
+/* Animated segmented control — a sliding thumb instead of per-button background swap */
+.segx{position:relative;display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-pill);padding:5px}
+.segx .seg-thumb{position:absolute;top:5px;bottom:5px;left:5px;border-radius:var(--r-pill);background:var(--surface);box-shadow:var(--cardShadow);transition:transform .3s cubic-bezier(.3,.8,.3,1);will-change:transform;z-index:0}
+.segx b{position:relative;z-index:1;flex:1;text-align:center;font-size:13px;font-weight:700;padding:10px 0;color:var(--muted);cursor:pointer;transition:color var(--t-base);user-select:none}
+.segx b.on{color:var(--acText)}
 
 /* ---------- 10. PROGRESS / RING ---------- */
 .pbar{height:8px;border-radius:var(--r-pill);background:var(--track);overflow:hidden}

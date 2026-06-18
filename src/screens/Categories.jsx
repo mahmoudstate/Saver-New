@@ -13,7 +13,7 @@ export default function Categories({ store, back, onEdit, onAdd }) {
       {list.map((c) => (
         <div className="icard" key={c.id} onClick={() => onEdit?.({ ...c, _kind: kind })} style={{ cursor: "pointer" }}>
           <CatTile cat={catKeyOf(c)} name={c.name} color={c.color} size={42} />
-          <div><div className="nm">{c.name}</div>{c.group && <div className="mt">{c.group}</div>}</div>
+          <div><div className="nm">{c.name}</div></div>
           <span className="amtb"><Ico name="chev" size={18} color="var(--faint)" /></span>
         </div>
       ))}
