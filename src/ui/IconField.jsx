@@ -17,7 +17,7 @@ function Glyph({ g, selected, color, onPick }) {
   );
 }
 
-function IconSheet({ icons, glyph, color, onPick, onClose }) {
+export function IconSheet({ icons = ALL_ICONS, glyph, color, onPick, onClose }) {
   return (
     <>
       <div className="dim" onClick={onClose} />

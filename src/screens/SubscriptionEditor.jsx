@@ -8,10 +8,9 @@ import NumberSheet from "../ui/NumberSheet.jsx";
 import PickerSheet from "../ui/PickerSheet.jsx";
 import ServicePicker from "../ui/ServicePicker.jsx";
 import ServiceLogo from "../ui/ServiceLogo.jsx";
-import IconField from "../ui/IconField.jsx";
-import ColorField from "../ui/ColorField.jsx";
-import { loadColors } from "../ui/ColorSheet.jsx";
-import { fmt, currentMonth, cardGradient } from "../lib/format.js";
+import { IconSheet } from "../ui/IconField.jsx";
+import ColorSheet, { loadColors } from "../ui/ColorSheet.jsx";
+import { fmt, currentMonth } from "../lib/format.js";
 import { SERVICE_CAT_TO_TYPE, BILL_TYPES } from "../lib/services.js";
 
 const clampDay = (d) => Math.min(28, Math.max(1, d || 1));
@@ -57,18 +56,22 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
 
   return (
     <div className="content padnav">
-      <div className="hero" style={{ background: cardGradient(color), color: "#fff" }}>
-        <div className="toprow"><div className="ttl">{editing ? "Edit subscription" : "New subscription"}</div><div className="grow" /><div className="hib" style={{ background: "rgba(255,255,255,.2)", color: "#fff" }} onClick={onClose}><Ico name="close" size={20} /></div></div>
-        <div style={{ display: "flex", alignItems: "center", gap: 13, marginTop: 4 }}>
-          <span style={{ background: "#fff", borderRadius: 14, padding: 3, display: "inline-flex", boxShadow: "0 6px 16px rgba(0,0,0,.18)" }}><Brand domain={custom ? "" : domain} glyph={custom ? glyph : ""} name={name} color={color} size={38} /></span>
-          <div style={{ minWidth: 0 }}><div className="lbl" style={{ color: "rgba(255,255,255,.82)" }}>Monthly · {store.currency}</div><div style={{ color: "#fff", fontWeight: 800, fontSize: 17, letterSpacing: -.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name.trim() || "Name the service"}</div></div>
+      <div className="hero">
+        <div className="toprow"><div className="ttl">{editing ? "Edit subscription" : "New subscription"}</div><div className="grow" /><div className="hib" onClick={onClose}><Ico name="close" size={20} /></div></div>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 6 }}>
+          <Brand domain={custom ? "" : domain} glyph={custom ? glyph : ""} name={name} color={color} size={52} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: 19, letterSpacing: -.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name.trim() || "Name the service"}</div>
+            <div className="lbl" style={{ marginTop: 2 }}>Monthly · {store.currency}</div>
+          </div>
         </div>
-        <div className="big tnum" onClick={() => setSheet("amount")} style={{ cursor: "pointer", color: "#fff", marginTop: 10 }}><span style={{ opacity: amount > 0 ? 1 : .6 }}>{fmt(amount)}</span></div>
+        <div className="big tnum" onClick={() => setSheet("amount")} style={{ cursor: "pointer", marginTop: 12 }}><span style={{ opacity: amount > 0 ? 1 : .55 }}>{fmt(amount)}</span></div>
       </div>
 
-      {/* ── Service ── */}
+      {/* ── Service & identity ── */}
       <div className="over">Service</div>
       <ServicePicker activeDomain={custom ? "" : domain} onPick={pickService} onCustom={goCustom} />
+
       <label className="field" style={{ marginTop: 6 }}>
         <Brand domain={custom ? "" : domain} glyph={custom ? glyph : ""} name={name} color={color} size={42} />
         <div style={{ flex: 1 }}><div className="fl">Name</div>
@@ -76,8 +79,20 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
         </div>
       </label>
 
+      {custom && (
+        <div className="field" onClick={() => setSheet("icon")} style={{ cursor: "pointer", marginTop: 10 }}>
+          <CatTile cat={glyph} name={name} color={color} size={42} />
+          <div style={{ flex: 1 }}><div className="fl">Icon</div><div className="fv">Tap to change</div></div><span className="chev"><Ico name="chev" size={18} /></span>
+        </div>
+      )}
+
+      <div className="field" onClick={() => setSheet("color")} style={{ cursor: "pointer", marginTop: 10 }}>
+        <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: color }} />
+        <div style={{ flex: 1 }}><div className="fl">Colour</div><div className="fv">Tap to change</div></div><span className="chev"><Ico name="chev" size={18} /></span>
+      </div>
+
       {/* ── Category ── */}
-      <div className="over" style={{ marginTop: 18 }}>Category</div>
+      <div className="over" style={{ marginTop: 20 }}>Category</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
         {BILL_TYPES.map((t) => {
           const on = typeId === t.id;
@@ -91,7 +106,7 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
       </div>
 
       {/* ── Plan ── */}
-      <div className="over" style={{ marginTop: 18 }}>Plan</div>
+      <div className="over" style={{ marginTop: 20 }}>Plan</div>
       <div className="field" onClick={() => setSheet("amount")} style={{ cursor: "pointer" }}>
         <div style={{ flex: 1 }}><div className="fl">Monthly amount</div><div className="fv tnum">{amount > 0 ? fmt(amount) : "Set"}</div></div><span className="chev"><Ico name="pencil" size={17} /></span>
       </div>
@@ -106,13 +121,10 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
         <div><div className="fl">Pays from</div><div className="fv">{bank?.name || "Pick"}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
       </div>
 
-      {/* ── Appearance ── */}
-      <div className="over" style={{ marginTop: 18 }}>Appearance</div>
-      {custom && <IconField glyph={glyph} color={color} onPick={setGlyph} label="Icon" />}
-      <ColorField value={color} onChange={setColor} />
-
       <div className="cta"><div className="btn btn-primary btn-full" style={{ opacity: canSave ? 1 : .5 }} onClick={save}><Ico name="check" size={18} />{editing ? "Save subscription" : "Add subscription"}</div></div>
 
+      {sheet === "icon" && <IconSheet glyph={glyph} color={color} onPick={setGlyph} onClose={() => setSheet(null)} />}
+      {sheet === "color" && <ColorSheet value={color} onChange={setColor} onClose={() => setSheet(null)} />}
       {sheet === "amount" && <AmountSheet title="Monthly amount" confirmLabel="Set" onConfirm={(v) => { setAmount(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "day" && <NumberSheet title="Billing day of month" value={clampDay(dueDay)} picks={[1, 5, 10, 15, 25]} min={1} max={28} onConfirm={(v) => { setDueDay(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "remind" && <NumberSheet title="Remind me before" sub="Days earlier (0 = off)" value={reminderDays} picks={[0, 1, 2, 3, 7]} min={0} max={7} onConfirm={(v) => { setReminderDays(v); setSheet(null); }} onClose={() => setSheet(null)} />}
