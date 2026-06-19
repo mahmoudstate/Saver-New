@@ -7,7 +7,7 @@ import ServiceLogo from "../ui/ServiceLogo.jsx";
 import CatTile from "../ui/CatTile.jsx";
 import SegToggle from "../ui/SegToggle.jsx";
 import { fmt, currentMonth, MONTHS } from "../lib/format.js";
-import { getBillType } from "../lib/services.js";
+import { getBillType, BILL_TYPES } from "../lib/services.js";
 
 const monthLabel = (m) => `${MONTHS[+m.split("-")[1] - 1]} ${m.split("-")[0]}`;
 const guessCat = (t = "") => /phone|iphone|mobile|tablet|ipad/i.test(t) ? "phone" : /car|loan|auto|vehicle/i.test(t) ? "transport" : /laptop|pc|mac/i.test(t) ? "phone" : null;
@@ -29,7 +29,8 @@ function SubCard({ bill, onOpen }) {
 }
 
 export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg }) {
-  const { bills = [], installments = [] } = store;
+  const { bills = [], installments = [], billTypes = [] } = store;
+  const resolveType = (id) => BILL_TYPES.find((t) => t.id === id) || billTypes.find((t) => t.id === id) || getBillType(id);
   const [seg, setSeg] = useState(initialSeg || "subs");
   const [subView, setSubView] = useState("active"); // active | history
   const [instView, setInstView] = useState("active"); // active | done
@@ -61,7 +62,7 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
   // Active = grouped by category. Within a group: unpaid first (soonest due), paid sink.
   const catGroups = useMemo(() => {
     const by = {};
-    subs.rows.forEach((b) => { const t = getBillType(b.typeId); (by[t.id] = by[t.id] || { type: t, items: [] }).items.push(b); });
+    subs.rows.forEach((b) => { const t = resolveType(b.typeId); (by[t.id] = by[t.id] || { type: t, items: [] }).items.push(b); });
     Object.values(by).forEach((g) => g.items.sort((a, b) => { const pa = a.isPaid ? 1 : 0, pb = b.isPaid ? 1 : 0; if (pa !== pb) return pa - pb; return (a.dueIn ?? 99) - (b.dueIn ?? 99); }));
     return Object.values(by).sort((a, b) => b.items.reduce((s, x) => s + x.amount, 0) - a.items.reduce((s, x) => s + x.amount, 0));
   }, [subs.rows]);

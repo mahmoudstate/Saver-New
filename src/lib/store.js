@@ -12,7 +12,7 @@ export const KEYS = {
   username: "et_username", lastBackup: "et_lastBackup", bills: "et_bills",
   budgets: "et_budgets", quickActions: "et_quick_actions", seenWelcome: "et_seenWelcome",
   theme: "et_theme", installments: "et_installments", accent: "et_accent", dashboard: "et_dashboard",
-  avatar: "et_avatar",
+  avatar: "et_avatar", billTypes: "et_billTypes",
 };
 
 export const DASH_SECTIONS = [
@@ -37,7 +37,7 @@ export const saveKey = (key, val) => { try { localStorage.setItem(key, JSON.stri
 
 const ENTITIES = {
   txns: [], banks: [], expCats: [], incCats: [], groups: [], savings: [],
-  bills: [], budgets: [], installments: [], quickActions: [],
+  bills: [], budgets: [], installments: [], quickActions: [], billTypes: [],
 };
 const SCALARS = { currency: "EGP", username: "", avatar: "", theme: "system", accent: "mint", dashboard: DASH_DEFAULT, seenWelcome: false };
 

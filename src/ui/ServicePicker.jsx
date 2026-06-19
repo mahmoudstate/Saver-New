@@ -61,26 +61,26 @@ function ServiceSheet({ activeDomain, onPick, onCustom, onClose }) {
   );
 }
 
-// Inline strip used inside the editor: popular logos + All tile. `onPick(svc)`,
-// `onCustom()`. `activeDomain` highlights the chosen brand.
-export default function ServicePicker({ activeDomain, onPick, onCustom }) {
+// Inline strip used inside the editor: an even row of popular logos + All + Custom.
+// `onPick(svc)`, `onCustom()`, `customActive` highlights the Custom tile.
+export default function ServicePicker({ activeDomain, customActive, onPick, onCustom }) {
   const [open, setOpen] = useState(false);
+  const Tile = ({ children, onClick, dashed, active, label }) => (
+    <div onClick={onClick} style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 5, cursor: "pointer", width: 52 }}>
+      <span className="circ" style={{ position: "relative", width: 50, height: 50, borderRadius: 15, background: dashed ? "var(--surface2)" : "transparent", border: dashed ? "1px dashed var(--border)" : "none", color: "var(--muted)", boxShadow: active ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "none" }}>{children}</span>
+      {label && <span style={{ fontSize: 9.5, fontWeight: 700, color: active ? "var(--acText)" : "var(--muted)" }}>{label}</span>}
+    </div>
+  );
   return (
     <>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 10, marginBottom: 4 }}>
-        {popular.slice(0, 4).map((s) => (
-          <div key={s.id} onClick={() => onPick(s)} style={{ display: "flex", justifyContent: "center", cursor: "pointer" }}>
-            <div style={{ position: "relative" }}>
-              <ServiceLogo domain={s.domain} name={s.name} color={s.color} size={46} />
-              {activeDomain === s.domain && <span className="circ" style={{ position: "absolute", right: -3, bottom: -3, width: 18, height: 18, borderRadius: "50%", background: "var(--ac)", color: "var(--onacc)", border: "2px solid var(--surface)" }}><Ico name="check" size={10} /></span>}
-            </div>
-          </div>
+      <div className="hscroll" style={{ display: "flex", gap: 12, alignItems: "flex-start", overflowX: "auto", paddingBottom: 2 }}>
+        {popular.map((s) => (
+          <Tile key={s.id} onClick={() => onPick(s)} active={activeDomain === s.domain}>
+            <ServiceLogo domain={s.domain} name={s.name} color={s.color} size={50} />
+          </Tile>
         ))}
-        <div onClick={() => setOpen(true)} style={{ display: "flex", justifyContent: "center", cursor: "pointer" }}>
-          <span className="circ" style={{ width: 46, height: 46, borderRadius: 14, background: "var(--surface2)", border: "1px dashed var(--border)", color: "var(--muted)", flexDirection: "column", gap: 1 }}>
-            <Ico name="layers" size={17} /><span style={{ fontSize: 8.5, fontWeight: 800 }}>All</span>
-          </span>
-        </div>
+        <Tile onClick={() => setOpen(true)} dashed label="All"><Ico name="layers" size={18} /></Tile>
+        <Tile onClick={() => onCustom()} dashed active={customActive} label="Custom"><Ico name="pencil" size={17} /></Tile>
       </div>
       {open && <ServiceSheet activeDomain={activeDomain} onPick={onPick} onCustom={onCustom} onClose={() => setOpen(false)} />}
     </>
