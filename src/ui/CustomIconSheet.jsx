@@ -33,12 +33,18 @@ export default function CustomIconSheet({ title = "Custom icon", withName = fals
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
           <CatTile cat={glyph} name={name} color={color} size={48} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            {withName
-              ? <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Category name" style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 17, fontWeight: 800, letterSpacing: -.3, width: "100%" }} />
-              : <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: -.3 }}>{title}</div>}
-            <div className="caption" style={{ marginTop: 2 }}>Pick an icon and a colour.</div>
+            <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: -.3 }}>{title}</div>
+            <div className="caption" style={{ marginTop: 2 }}>{withName ? "Name it, then pick an icon and colour." : "Pick an icon and a colour."}</div>
           </div>
         </div>
+
+        {withName && (
+          <label className="field" style={{ marginBottom: 14 }}>
+            <div style={{ flex: 1 }}><div className="fl">Name</div>
+              <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Gym, Insurance…" style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700, marginTop: 2, width: "100%" }} />
+            </div>
+          </label>
+        )}
 
         <div className="over" style={{ marginTop: 0 }}>Colour</div>
         <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 9, marginBottom: 16 }}>

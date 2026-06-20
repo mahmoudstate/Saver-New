@@ -8,6 +8,8 @@ import { useState } from "react";
 import Ico from "../ui/Ico.jsx";
 import AmountSheet from "../ui/AmountSheet.jsx";
 import NumberSheet from "../ui/NumberSheet.jsx";
+import DayGridSheet from "../ui/DayGridSheet.jsx";
+import OptionSheet from "../ui/OptionSheet.jsx";
 import PickerSheet from "../ui/PickerSheet.jsx";
 import ColorField from "../ui/ColorField.jsx";
 import IconField from "../ui/IconField.jsx";
@@ -184,8 +186,8 @@ export default function InstallmentEditor({ store, plan, onClose }) {
       {sheet === "total" && <AmountSheet title="Total amount" sub="Splits across the months" confirmLabel="Set" onConfirm={(v) => { setTotalVal(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "dp" && <AmountSheet title="Down payment" sub="Upfront amount before the monthly plan" confirmLabel="Set" onConfirm={(v) => { setDownPayment(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "paid" && <NumberSheet title="Months already paid" sub={`Out of ${count}`} value={paidInit} picks={[0, 1, 2, 3, 6]} min={0} max={count} onConfirm={(v) => { setPaidInit(v); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "due" && <NumberSheet title="Due day of month" value={clampDay(dueDay)} picks={[1, 5, 10, 15, 25]} min={1} max={28} onConfirm={(v) => { setDueDay(v); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "remind" && <NumberSheet title="Remind me before" sub="Days earlier (0 = off)" value={reminderDays} picks={[0, 1, 2, 3, 7]} min={0} max={7} onConfirm={(v) => { setReminderDays(v); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "due" && <DayGridSheet title="Due day" sub="Which day each month it's due." value={clampDay(dueDay)} onConfirm={(v) => { setDueDay(v); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "remind" && <OptionSheet title="Remind me" sub="Before it's due" value={reminderDays} onPick={(v) => { setReminderDays(v); setSheet(null); }} onClose={() => setSheet(null)} options={[{ value: 0, label: "Off" }, { value: 1, label: "1 day before" }, { value: 2, label: "2 days before" }, { value: 3, label: "3 days before" }, { value: 7, label: "1 week before" }]} />}
       {sheet === "account" && <PickerSheet title="Pay from" selectedId={bankId} onPick={setBankId} onClose={() => setSheet(null)} options={liveBanks.map((b) => ({ id: b.id, label: b.name, bankColor: b.color }))} />}
     </div>
   );

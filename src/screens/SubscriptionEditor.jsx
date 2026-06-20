@@ -5,7 +5,8 @@ import { useState } from "react";
 import Ico from "../ui/Ico.jsx";
 import CatTile from "../ui/CatTile.jsx";
 import AmountSheet from "../ui/AmountSheet.jsx";
-import NumberSheet from "../ui/NumberSheet.jsx";
+import DayGridSheet from "../ui/DayGridSheet.jsx";
+import OptionSheet from "../ui/OptionSheet.jsx";
 import PickerSheet from "../ui/PickerSheet.jsx";
 import ServicePicker from "../ui/ServicePicker.jsx";
 import ServiceLogo from "../ui/ServiceLogo.jsx";
@@ -76,7 +77,7 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
 
       {/* ── Custom icon (above companies) ── */}
       <div className="over">Make your own</div>
-      <div className="field" onClick={() => setSheet("custom")} style={{ cursor: "pointer", border: custom ? "1.5px solid var(--ac)" : undefined }}>
+      <div className="field" onClick={() => { if (domain) setName(""); setSheet("custom"); }} style={{ cursor: "pointer", border: custom ? "1.5px solid var(--ac)" : undefined }}>
         <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: custom ? color : "var(--acDim)", color: custom ? "#fff" : "var(--acText)" }}>{custom ? <CatTile cat={glyph} color={color} size={42} /> : <Ico name="pencil" size={19} />}</span>
         <div style={{ flex: 1 }}><div className="fl">Custom icon</div><div className="fv">{custom ? "Your icon & colour" : "Build your own icon & colour"}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
       </div>
@@ -142,8 +143,8 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
       {sheet === "custom" && <CustomIconSheet title="Custom icon" glyph={glyph || "subscription"} color={color} onDone={({ glyph, color }) => { setGlyph(glyph); setColor(color); setDomain(""); setCustom(true); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "newcat" && <CustomIconSheet title="New category" withName glyph="subscription" doneLabel="Add category" onDone={({ glyph, color, name }) => { const id = "custom_" + Date.now(); store.set("billTypes", (list) => [...list, { id, name, glyph, color }]); setTypeId(id); setSheet(null); }} onClose={() => setSheet("cat")} />}
       {sheet === "amount" && <AmountSheet title="Monthly amount" confirmLabel="Set" onConfirm={(v) => { setAmount(v); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "day" && <NumberSheet title="Billing day of month" value={clampDay(dueDay)} picks={[1, 5, 10, 15, 25]} min={1} max={28} onConfirm={(v) => { setDueDay(v); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "remind" && <NumberSheet title="Remind me before" sub="Pick a preset or type the days" value={reminderDays} picks={[{ value: 0, label: "Off" }, { value: 1, label: "1 day" }, { value: 2, label: "2 days" }, { value: 7, label: "1 week" }]} min={0} max={7} onConfirm={(v) => { setReminderDays(v); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "day" && <DayGridSheet title="Billing day" sub="Which day each month it's charged." value={clampDay(dueDay)} onConfirm={(v) => { setDueDay(v); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "remind" && <OptionSheet title="Remind me" sub="Before it's due" value={reminderDays} onPick={(v) => { setReminderDays(v); setSheet(null); }} onClose={() => setSheet(null)} options={[{ value: 0, label: "Off" }, { value: 1, label: "1 day before" }, { value: 2, label: "2 days before" }, { value: 3, label: "3 days before" }, { value: 7, label: "1 week before" }]} />}
       {sheet === "account" && <PickerSheet title="Pays from" selectedId={bankId} onPick={setBankId} onClose={() => setSheet(null)} options={banks.filter((b) => !b.archived).map((b) => ({ id: b.id, label: b.name, bankColor: b.color }))} />}
     </div>
   );
