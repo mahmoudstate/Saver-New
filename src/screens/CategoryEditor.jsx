@@ -17,6 +17,7 @@ const quickFor = (k) => (k === "income" ? QUICK_INC : QUICK_EXP);
 
 // One icon cell — renders the glyph in the chosen colour when selected.
 function Glyph({ g, selected, color, onPick }) {
+  if (!CATS[g]) return null; // defensive: never crash on an unknown/legacy glyph key
   return (
     <span onClick={() => onPick(g)} className="circ" style={{ aspectRatio: "1", borderRadius: 14, background: "var(--catTile)", border: selected ? "1.5px solid var(--ac)" : "1px solid var(--catTileBorder)", cursor: "pointer" }}>
       <svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke={selected ? color : CATS[g][0]} strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round" dangerouslySetInnerHTML={{ __html: CATS[g][1] }} />
@@ -47,7 +48,9 @@ export default function CategoryEditor({ store, category, kind: initialKind, onC
   const initKind = category?._kind || initialKind || "expense";
   const [kind, setKind] = useState(initKind);
   const [name, setName] = useState(category?.name || "");
-  const [glyph, setGlyph] = useState(category?.glyph || quickFor(initKind)[0]);
+  // Old backups may store a legacy glyph (lucide name / emoji) that isn't in our icon
+  // set — fall back to a valid default so the editor renders instead of blank-crashing.
+  const [glyph, setGlyph] = useState(category?.glyph && CATS[category.glyph] ? category.glyph : quickFor(initKind)[0]);
   const [color, setColor] = useState(category?.color || loadColors()[0]);
   const [iconsOpen, setIconsOpen] = useState(false);
   const canSave = name.trim().length > 0;
