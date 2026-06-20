@@ -13,9 +13,8 @@ npm-debug.log*
 .vscode/
 .idea/
 
-# local screenshot tooling
+# Local dev-only tooling & data (not part of the app)
 shot.cjs
+demo.json
+out.png
 *.shot.png
-shot.cjs
-*.png
-dist/
