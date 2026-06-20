@@ -35,7 +35,7 @@ export const prevMonthOf = (m) => { const [y, mo] = m.split("-"); const d = new 
 
 // colour helpers for brand cards
 export const _lum = (hex) => { try { const c = hex.replace("#", ""); const r = parseInt(c.slice(0, 2), 16) / 255, g = parseInt(c.slice(2, 4), 16) / 255, b = parseInt(c.slice(4, 6), 16) / 255; return 0.2126 * r + 0.7152 * g + 0.0722 * b; } catch { return 0.5; } };
-export const darken = (hex, f = 0.5) => { try { const c = hex.replace("#", ""); const x = (i) => Math.round(parseInt(c.slice(i, i + 2), 16) * (1 - f)).toString(16).padStart(2, "0"); return `#${x(0)}${x(2)}${x(4)}`; } catch { return hex; } };
+export const darken = (hex, f = 0.5) => { try { let c = String(hex).replace("#", ""); if (c.length === 3) c = c.split("").map((ch) => ch + ch).join(""); if (c.length !== 6) return hex; const x = (i) => Math.round(parseInt(c.slice(i, i + 2), 16) * (1 - f)).toString(16).padStart(2, "0"); return `#${x(0)}${x(2)}${x(4)}`; } catch { return hex; } };
 export const cardGradient = (hex) => `linear-gradient(140deg, ${hex}, ${darken(hex, 0.52)})`;
 
 export const vibrate = (p) => { if (typeof window !== "undefined" && window.navigator?.vibrate) try { window.navigator.vibrate(p); } catch (e) {} };

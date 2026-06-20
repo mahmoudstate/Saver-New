@@ -45,8 +45,9 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
   const allTypes = [...BILL_TYPES, ...billTypes];
   const typeGlyph = (t) => TYPE_GLYPH[t.id] || t.glyph || "subscription";
 
-  // Picking a brand: name + brand colour (locked) + auto category; clears custom.
-  const pickService = (svc) => { setName((n) => n.trim() || svc.name); setColor(svc.color); setDomain(svc.domain); setGlyph(""); setTypeId(SERVICE_CAT_TO_TYPE[svc.category] || "other"); setCustom(false); };
+  const selType = allTypes.find((t) => t.id === typeId) || allTypes.find((t) => t.id === "other");
+  // Picking a brand: set name to the brand + brand colour (locked) + auto category.
+  const pickService = (svc) => { setName(svc.name); setColor(svc.color); setDomain(svc.domain); setGlyph(""); setTypeId(SERVICE_CAT_TO_TYPE[svc.category] || "other"); setCustom(false); };
 
   const save = () => {
     if (!canSave) return;
@@ -62,8 +63,8 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
       <div className="hero" style={{ background: cardGradient(color), color: "#fff" }}>
         <div className="toprow"><div className="ttl">{editing ? "Edit subscription" : "New subscription"}</div><div className="grow" /><div className="hib" style={{ background: "rgba(255,255,255,.2)", color: "#fff" }} onClick={onClose}><Ico name="close" size={20} /></div></div>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 4 }}>
-          <span style={{ display: "inline-flex", padding: 5, borderRadius: 16, background: "rgba(255,255,255,.16)", border: "1px solid rgba(255,255,255,.42)", boxShadow: "0 6px 16px rgba(0,0,0,.16)" }}>
-            <Brand domain={custom ? "" : domain} glyph={custom ? glyph : ""} name={name} color={color} size={42} />
+          <span style={{ display: "inline-flex", borderRadius: 15, boxShadow: "0 0 0 1px rgba(255,255,255,.55), 0 8px 18px rgba(0,0,0,.22)" }}>
+            <Brand domain={custom ? "" : domain} glyph={custom ? glyph : ""} name={name} color={color} size={48} />
           </span>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 800, fontSize: 19, letterSpacing: -.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name.trim() || "Name the service"}</div>
@@ -73,11 +74,18 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
         <div className="big tnum" onClick={() => setSheet("amount")} style={{ cursor: "pointer", color: "#fff", marginTop: 12 }}><span style={{ opacity: amount > 0 ? 1 : .6 }}>{fmt(amount)}</span></div>
       </div>
 
-      {/* ── Service ── */}
-      <div className="over">Service</div>
-      <ServicePicker activeDomain={custom ? "" : domain} customActive={custom} onPick={pickService} onCustom={() => setSheet("custom")} />
+      {/* ── Custom icon (above companies) ── */}
+      <div className="over">Make your own</div>
+      <div className="field" onClick={() => setSheet("custom")} style={{ cursor: "pointer", border: custom ? "1.5px solid var(--ac)" : undefined }}>
+        <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: custom ? color : "var(--acDim)", color: custom ? "#fff" : "var(--acText)" }}>{custom ? <CatTile cat={glyph} color={color} size={42} /> : <Ico name="pencil" size={19} />}</span>
+        <div style={{ flex: 1 }}><div className="fl">Custom icon</div><div className="fv">{custom ? "Your icon & colour" : "Build your own icon & colour"}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
+      </div>
 
-      <label className="field" style={{ marginTop: 10 }}>
+      {/* ── Companies ── */}
+      <div className="over" style={{ marginTop: 18 }}>Or pick a service</div>
+      <ServicePicker activeDomain={custom ? "" : domain} onPick={pickService} onCustom={() => setSheet("custom")} />
+
+      <label className="field" style={{ marginTop: 12 }}>
         <Brand domain={custom ? "" : domain} glyph={custom ? glyph : ""} name={name} color={color} size={42} />
         <div style={{ flex: 1 }}><div className="fl">Name</div>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Netflix" style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700, marginTop: 2, width: "100%" }} />
@@ -100,31 +108,42 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
         <div><div className="fl">Pays from</div><div className="fv">{bank?.name || "Pick"}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
       </div>
 
-      {/* ── Category (last) ── */}
+      {/* ── Category (last) — a row that opens the picker ── */}
       <div className="over" style={{ marginTop: 20 }}>Category</div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
-        {allTypes.map((t) => {
-          const on = typeId === t.id;
-          return (
-            <div key={t.id} onClick={() => setTypeId(t.id)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, padding: "12px 4px", borderRadius: 14, border: on ? "1.5px solid var(--ac)" : "1px solid var(--line)", background: on ? "var(--acDim)" : "var(--surface)", cursor: "pointer" }}>
-              <CatTile cat={typeGlyph(t)} color={t.color} size={32} />
-              <span style={{ fontSize: 10.5, fontWeight: 700, textAlign: "center", lineHeight: 1.15, color: on ? "var(--acText)" : "var(--text)" }}>{t.name}</span>
-            </div>
-          );
-        })}
-        <div onClick={() => setSheet("newcat")} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 7, padding: "12px 4px", borderRadius: 14, border: "1px dashed var(--border)", background: "var(--surface2)", cursor: "pointer", color: "var(--muted)" }}>
-          <span className="circ" style={{ width: 32, height: 32, borderRadius: 11, background: "var(--surface)", border: "1px solid var(--line)" }}><Ico name="plus" size={17} /></span>
-          <span style={{ fontSize: 10.5, fontWeight: 700 }}>New</span>
-        </div>
+      <div className="field" onClick={() => setSheet("cat")} style={{ cursor: "pointer" }}>
+        <CatTile cat={typeGlyph(selType)} color={selType.color} size={42} />
+        <div style={{ flex: 1 }}><div className="fl">Category</div><div className="fv">{selType.name}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
       </div>
 
       <div className="cta"><div className="btn btn-primary btn-full" style={{ opacity: canSave ? 1 : .5 }} onClick={save}><Ico name="check" size={18} />{editing ? "Save subscription" : "Add subscription"}</div></div>
 
+      {sheet === "cat" && (
+        <>
+          <div className="dim" onClick={() => setSheet(null)} />
+          <div className="sheet" role="dialog" aria-label="Category">
+            <div className="grab" />
+            <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: -.3, marginBottom: 12 }}>Category</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "52vh", overflowY: "auto", paddingBottom: 4 }}>
+              {allTypes.map((t) => (
+                <div key={t.id} className="icard" onClick={() => { setTypeId(t.id); setSheet(null); }} style={{ cursor: "pointer", border: typeId === t.id ? "1.5px solid var(--ac)" : undefined }}>
+                  <CatTile cat={typeGlyph(t)} color={t.color} size={40} />
+                  <div className="nm" style={{ flex: 1 }}>{t.name}</div>
+                  {typeId === t.id && <span style={{ color: "var(--ac)" }}><Ico name="check" size={18} /></span>}
+                </div>
+              ))}
+              <div className="icard" onClick={() => setSheet("newcat")} style={{ cursor: "pointer", border: "1px dashed var(--border)" }}>
+                <span className="circ" style={{ width: 40, height: 40, borderRadius: 12, background: "var(--acDim)", color: "var(--acText)" }}><Ico name="plus" size={19} /></span>
+                <div style={{ flex: 1 }}><div className="nm">New category</div><div className="mt">Name it, pick an icon &amp; colour</div></div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
       {sheet === "custom" && <CustomIconSheet title="Custom icon" glyph={glyph || "subscription"} color={color} onDone={({ glyph, color }) => { setGlyph(glyph); setColor(color); setDomain(""); setCustom(true); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "newcat" && <CustomIconSheet title="New category" withName glyph="subscription" doneLabel="Add category" onDone={({ glyph, color, name }) => { const id = "custom_" + Date.now(); store.set("billTypes", (list) => [...list, { id, name, glyph, color }]); setTypeId(id); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "newcat" && <CustomIconSheet title="New category" withName glyph="subscription" doneLabel="Add category" onDone={({ glyph, color, name }) => { const id = "custom_" + Date.now(); store.set("billTypes", (list) => [...list, { id, name, glyph, color }]); setTypeId(id); setSheet(null); }} onClose={() => setSheet("cat")} />}
       {sheet === "amount" && <AmountSheet title="Monthly amount" confirmLabel="Set" onConfirm={(v) => { setAmount(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "day" && <NumberSheet title="Billing day of month" value={clampDay(dueDay)} picks={[1, 5, 10, 15, 25]} min={1} max={28} onConfirm={(v) => { setDueDay(v); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "remind" && <NumberSheet title="Remind me before" sub="Days earlier (0 = off)" value={reminderDays} picks={[0, 1, 2, 3, 7]} min={0} max={7} onConfirm={(v) => { setReminderDays(v); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "remind" && <NumberSheet title="Remind me before" sub="Pick a preset or type the days" value={reminderDays} picks={[{ value: 0, label: "Off" }, { value: 1, label: "1 day" }, { value: 2, label: "2 days" }, { value: 7, label: "1 week" }]} min={0} max={7} onConfirm={(v) => { setReminderDays(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "account" && <PickerSheet title="Pays from" selectedId={bankId} onPick={setBankId} onClose={() => setSheet(null)} options={banks.filter((b) => !b.archived).map((b) => ({ id: b.id, label: b.name, bankColor: b.color }))} />}
     </div>
   );
