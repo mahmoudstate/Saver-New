@@ -31,6 +31,7 @@ import FilterResults from "./screens/FilterResults.jsx";
 import Appearance from "./screens/Appearance.jsx";
 import PrivacyBackup from "./screens/PrivacyBackup.jsx";
 import Manual from "./screens/Manual.jsx";
+import About from "./screens/About.jsx";
 import QuickActions from "./screens/QuickActions.jsx";
 import QuickActionEditor from "./screens/QuickActionEditor.jsx";
 import QuickAddSheet from "./ui/QuickAddSheet.jsx";
@@ -93,7 +94,7 @@ export default function App() {
   if (tab === "home") tabScreen = <Home store={store} onTab={openTab} onOpenBank={(bank) => push({ type: "account", bank })} onOpenGoals={() => push({ type: "goals" })} onOpenGoal={(g) => push({ type: "goal", goalId: g.id })} onOpenBudgets={() => { setBudgetsSeg("monthly"); push({ type: "budgets" }); }} onOpenBudget={(b) => push({ type: "budget", budgetId: b.id })} onOpenProjects={() => { setBudgetsSeg("projects"); push({ type: "budgets" }); }} onOpenProject={(p) => push({ type: "project", projectId: p.id })} onOpenInstallments={() => { setBillsSeg("inst"); setTab("bills"); }} onOpenInst={(i) => push({ type: "inst", instId: i.id })} onOpenBill={(b) => push({ type: "sub", bill: b })} onOpenNotifications={() => push({ type: "notifications" })} onOpenAllAccounts={() => push({ type: "allAccounts" })} onOpenBreakdown={() => push({ type: "breakdown" })} onCustomize={() => push({ type: "customize" })} initialScroll={homeScroll.current} onScrollChange={(v) => { homeScroll.current = v; }} />;
   else if (tab === "activity") tabScreen = <Activity store={store} dateFilter={activityDate} onPickDate={() => push({ type: "datePicker" })} onFilter={() => push({ type: "filter", hidePeriod: true, dateFilter: activityDate })} onEdit={(t) => push({ type: "edit", txn: t })} onAdd={() => push({ type: "add" })} />;
   else if (tab === "bills") tabScreen = <Bills store={store} initialSeg={billsSeg} onAdd={(seg) => push(seg === "inst" ? { type: "editInst", plan: null } : { type: "editSub", bill: null })} onOpenSub={(bill) => push({ type: "sub", bill })} onOpenInst={(i) => push({ type: "inst", instId: i.id })} />;
-  else if (tab === "profile") tabScreen = <Profile store={store} go={(d) => { if (d === "accounts") push({ type: "accounts" }); else if (d === "goals") push({ type: "goals" }); else if (d === "budgets") { setBudgetsSeg("monthly"); push({ type: "budgets" }); } else if (d === "categories") push({ type: "categories" }); else if (d === "appearance") push({ type: "appearance" }); else if (d === "privacy") push({ type: "privacy" }); else if (d === "manual") push({ type: "manual" }); else if (d === "quickactions") push({ type: "quickactions" }); else if (d === "customize") push({ type: "customize" }); else if (d === "editProfile") push({ type: "editProfile" }); else if (d === "whatsnew") setWhatsNew(true); }} />;
+  else if (tab === "profile") tabScreen = <Profile store={store} go={(d) => { if (d === "accounts") push({ type: "accounts" }); else if (d === "goals") push({ type: "goals" }); else if (d === "budgets") { setBudgetsSeg("monthly"); push({ type: "budgets" }); } else if (d === "categories") push({ type: "categories" }); else if (d === "appearance") push({ type: "appearance" }); else if (d === "privacy") push({ type: "privacy" }); else if (d === "manual") push({ type: "manual" }); else if (d === "quickactions") push({ type: "quickactions" }); else if (d === "customize") push({ type: "customize" }); else if (d === "editProfile") push({ type: "editProfile" }); else if (d === "about") push({ type: "about" }); else if (d === "whatsnew") setWhatsNew(true); else if (d === "plan") { try { window.location.href = "itms-apps://apps.apple.com/account/subscriptions"; } catch {} } }} />;
   else tabScreen = <Placeholder tab={tab} />;
 
   // The pushed detail screen (overlay) — top of the stack. back() pops to the previous one.
@@ -109,7 +110,8 @@ export default function App() {
   else if (view?.type === "appearance") viewScreen = <Appearance store={store} back={back} />;
   else if (view?.type === "privacy") viewScreen = <PrivacyBackup store={store} back={back} />;
   else if (view?.type === "manual") viewScreen = <Manual store={store} back={back} />;
-  else if (view?.type === "notifications") viewScreen = <Notifications store={store} back={back} />;
+  else if (view?.type === "about") viewScreen = <About back={back} />;
+  else if (view?.type === "notifications") viewScreen = <Notifications store={store} back={back} onOpen={(nav) => push(nav)} />;
   else if (view?.type === "customize") viewScreen = <CustomizeDashboard store={store} back={back} />;
   else if (view?.type === "celebrate") viewScreen = <Celebration goal={view.goal} saved={view.saved} onKeep={() => back()} onArchive={() => { if (view.saved > 0) store.addTxn({ type: "goal_return", amount: view.saved, date: new Date().toISOString().slice(0, 10), bankId: store.banks[0]?.id, goalId: view.goalId, goalName: view.goal, catName: "Goal archived", catIcon: "saving" }); store.set("savings", (l) => l.map((s) => (s.id === view.goalId ? { ...s, status: "archived", spendingMode: false } : s))); popN(2); }} />;
   else if (view?.type === "quickactions") viewScreen = <QuickActions store={store} back={back} onEdit={(q) => push({ type: "editQuick", action: q })} />;

@@ -34,6 +34,8 @@ export const MARKS = {
   pencil: `<path d="M4 20h4L18.5 9.5a2 2 0 0 0-3-3L4 16v4Z"/>`,
   moon: `<path d="M21 12.8A8 8 0 1 1 11.2 3a6 6 0 0 0 9.8 9.8Z"/>`,
   sun: `<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/>`,
+  crown: `<path d="M4 8l3.7 3L12 5l4.3 6L20 8l-1.6 9.5H5.6L4 8Z"/><path d="M5.6 20.5h12.8"/>`,
+  mail: `<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7 8.5 6 8.5-6"/>`,
   arrowUp: `<path d="M12 19V5M5 12l7-7 7 7"/>`,
   arrowDown: `<path d="M12 5v14M5 12l7 7 7-7"/>`,
   down: `<path d="M12 5v14M19 12l-7 7-7-7"/>`,

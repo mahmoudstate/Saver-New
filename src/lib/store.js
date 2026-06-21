@@ -217,8 +217,19 @@ export function useStore() {
     });
   }, []);
 
+  // Factory reset — wipe every stored key and return to the fresh-install state
+  // (empty data + default settings + onboarding). Irreversible by design.
+  const resetAll = useCallback(() => {
+    for (const k in KEYS) localStorage.removeItem(KEYS[k]);
+    const fresh = {};
+    for (const k in ENTITIES) fresh[k] = Array.isArray(ENTITIES[k]) ? [] : ENTITIES[k];
+    for (const k in SCALARS) fresh[k] = SCALARS[k];
+    setCurrency(fresh.currency); // re-sync formatter to the default currency
+    setData(fresh);
+  }, []);
+
   return {
-    ...data, set, restore,
+    ...data, set, restore, resetAll,
     addTxn, addTxns, delTxn, updateTxn,
     alert, setAlert, confirm, setConfirm, toast, flash,
     confetti, fireConfetti,

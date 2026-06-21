@@ -5,6 +5,9 @@ import CatTile from "../ui/CatTile.jsx";
 import { fmt, currentMonth, cardGradient } from "../lib/format.js";
 import { calcBankBalance, calcFrozenForBank } from "../lib/calc.js";
 
+// same day+date label used across Activity / Budget / Project rows
+const rowDate = (d) => d ? new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "";
+
 function Row({ t, bankNameOf }) {
   let cls = "", sign = "", nm, sub, cat = null, color;
   if (t.type === "income") { cls = "in"; sign = "+"; nm = t.note || t.catName || "Income"; sub = t.catName || "Income"; }
@@ -14,6 +17,8 @@ function Row({ t, bankNameOf }) {
   else if (t.type === "goal_return") { cls = "in"; sign = "+"; cat = "goal"; nm = t.goalName ? "Returned · " + t.goalName : "Goal return"; sub = "Goal"; }
   else if (t.type === "transfer") { cat = "transfer"; color = "var(--blue)"; nm = "Transfer"; sub = `${bankNameOf(t.fromBankId || t.bankId)} → ${bankNameOf(t.toBankId)}`; }
   else { nm = t.catName || t.type; sub = ""; }
+  const dl = rowDate(t.date);
+  sub = sub ? `${sub} · ${dl}` : dl;
   return (
     <div className="icard">
       <CatTile txn={t} cat={cat} size={44} />

@@ -1,12 +1,21 @@
 // Saver — Home: PORTED 1:1 from showcase screen 01 (same classes/markup), data injected.
 import { useState, useRef, useMemo, useLayoutEffect, useEffect, Fragment } from "react";
 import Ico from "../ui/Ico.jsx";
+import Money from "../ui/Money.jsx";
 import { fmt, currentMonth, MONTHS, cardGradient } from "../lib/format.js";
 import { calcBankBalance, calcGoalSaved, calcFrozenForBank, totalBalance, totalSafe, totalFrozen, monthTxns, sumIncome, sumExpense, projectSpent, budgetSpentMonth } from "../lib/calc.js";
 import { DASH_SECTIONS, DASH_DEFAULT } from "../lib/store.js";
 import { unreadCount } from "../lib/notifications.js";
 
 const KNOWN_SECTIONS = DASH_SECTIONS.map((s) => s.id);
+
+// Privacy mask state that persists across tab re-mounts (module scope), but
+// resets to masked on a full app reload (i.e. close + reopen). It only re-masks
+// after the app has been in the background longer than REHIDE_MS — not on
+// navigation between screens.
+let maskState = true;        // true = amounts masked
+let bgSince = 0;             // timestamp the app last went to background
+const REHIDE_MS = 60 * 1000; // re-mask after ~1 min away
 
 const Contactless = ({ s = 20 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" style={{ opacity: .9 }}><path d="M5 11a3 3 0 0 1 0 2M9 8.5a6.5 6.5 0 0 1 0 7M13 6a10 10 0 0 1 0 12" /></svg>;
 
@@ -45,14 +54,19 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenGoal
   const scrollRef = useRef(null);
   // restore the scroll position from when Home was last left (tab-switch memory)
   useLayoutEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = initialScroll; }, []);
-  const [hide, setHide] = useState(true); // privacy-first: amounts masked on open
+  const [hide, setHide] = useState(maskState); // privacy-first: amounts masked on open
   const [page, setPage] = useState(0);
-  // Re-mask amounts whenever the app goes to the background, so the app-switcher
-  // snapshot and the next resume stay private (no lock screen, just hidden).
+  const toggleHide = () => setHide((v) => (maskState = !v));
+  // Re-mask only after the app has been in the background past REHIDE_MS, so the
+  // app-switcher snapshot stays private but plain navigation never re-masks.
   useEffect(() => {
-    const onHidden = () => { if (document.visibilityState === "hidden") setHide(true); };
-    document.addEventListener("visibilitychange", onHidden);
-    return () => document.removeEventListener("visibilitychange", onHidden);
+    const onVis = () => {
+      if (document.visibilityState === "hidden") { bgSince = Date.now(); return; }
+      if (bgSince && Date.now() - bgSince > REHIDE_MS) { maskState = true; setHide(true); }
+      bgSince = 0;
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
   const [budgetsOpen, setBudgetsOpen] = useState(false); // Home budgets card: expand to per-budget rows
   const [goalsOpen, setGoalsOpen] = useState(false); // Home goals card: expand to per-goal rows
@@ -111,16 +125,16 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenGoal
         <div className="toprow">
           <div><div style={{ fontSize: 11, letterSpacing: ".05em", textTransform: "uppercase", opacity: .72, fontWeight: 700 }}>{greet}</div><div style={{ fontSize: 15, fontWeight: 800, marginTop: 1 }}>{username || "there"}</div></div>
           <div className="grow" />
-          <div className="hib" onClick={() => setHide((v) => !v)}><Ico name={hide ? "eyeOff" : "eye"} size={20} /></div>
+          <div className="hib" onClick={toggleHide}><Ico name={hide ? "eyeOff" : "eye"} size={20} /></div>
           <div className="hib" onClick={() => onOpenNotifications?.()} style={{ position: "relative" }}><Ico name="bell" size={20} />{notifUnread > 0 && <span className="notifDot" />}</div>
         </div>
         <div className="hscroll" ref={pagerRef} onScroll={onScroll} style={{ overflow: "hidden", marginTop: 2, display: "flex", overflowX: "auto", scrollSnapType: "x mandatory" }}>
           <div style={{ minWidth: "100%", scrollSnapAlign: "start", display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 124 }}>
-            <div className="lbl">Safe to spend</div><div className="big tnum">{money(d.ts)}</div>
+            <div className="lbl">Safe to spend</div><Money className="big tnum" v={d.ts} masked={hide} />
             <div className="sub">{d.tf > 0 ? `${money(d.tf)} frozen in goals` : "Nothing frozen"}</div>
           </div>
           <div style={{ minWidth: "100%", scrollSnapAlign: "start", display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 124 }}>
-            <div className="lbl">Total balance</div><div className="big tnum">{money(d.tb)}</div>
+            <div className="lbl">Total balance</div><Money className="big tnum" v={d.tb} masked={hide} />
           </div>
         </div>
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 16, display: "flex", justifyContent: "center", gap: 6, zIndex: 1 }}>
@@ -156,9 +170,9 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenGoal
           <Ico name="chev" size={16} color="var(--faint)" />
         </div>
         <div style={{ display: "flex", alignItems: "center" }}>
-          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10 }}><span style={circ(34, 11, "rgba(16,185,129,.15)", "var(--success)")}><Ico name="arrowUp" size={16} stroke={2.5} /></span><div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700 }}>Income</div><div className="tnum" style={{ fontSize: 17.5, fontWeight: 800, color: "var(--success)" }}>{hide ? "••••" : "+" + fmt(d.inc)}</div></div></div>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10 }}><span style={circ(34, 11, "rgba(16,185,129,.15)", "var(--success)")}><Ico name="arrowUp" size={16} stroke={2.5} /></span><div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700 }}>Income</div><Money className="tnum" style={{ fontSize: 17.5, fontWeight: 800, color: "var(--success)" }} v={d.inc} sign="+" masked={hide} curSize={0.62} /></div></div>
           <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", margin: "2px 14px" }} />
-          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10 }}><span style={circ(34, 11, "rgba(229,84,78,.15)", "var(--red)")}><Ico name="arrowDown" size={16} stroke={2.5} /></span><div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700 }}>Spent</div><div className="tnum" style={{ fontSize: 17.5, fontWeight: 800, color: "var(--red)" }}>{hide ? "••••" : "−" + fmt(d.exp)}</div></div></div>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10 }}><span style={circ(34, 11, "rgba(229,84,78,.15)", "var(--red)")}><Ico name="arrowDown" size={16} stroke={2.5} /></span><div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700 }}>Spent</div><Money className="tnum" style={{ fontSize: 17.5, fontWeight: 800, color: "var(--red)" }} v={d.exp} sign="−" masked={hide} curSize={0.62} /></div></div>
         </div>
       </div>
 

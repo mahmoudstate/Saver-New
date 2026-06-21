@@ -5,18 +5,45 @@ export const CURRENCIES = [
   { code: "EGP", name: "Egyptian Pound", flag: "🇪🇬" }, { code: "GBP", name: "British Pound", flag: "🇬🇧" },
   { code: "USD", name: "US Dollar", flag: "🇺🇸" }, { code: "EUR", name: "Euro", flag: "🇪🇺" },
   { code: "SAR", name: "Saudi Riyal", flag: "🇸🇦" }, { code: "AED", name: "UAE Dirham", flag: "🇦🇪" },
+  { code: "KWD", name: "Kuwaiti Dinar", flag: "🇰🇼" },
 ];
 
 let _currency = "EGP";
 export const setCurrency = (c) => { _currency = c; };
 export const getCurrency = () => _currency;
 
+// Optional short overrides for currencies whose Intl code is a long string.
+// Left empty on purpose: EGP shows its plain "EGP" code (rendered small next to
+// big numbers via <Money/>) rather than a made-up symbol that could be mistaken
+// for another currency.
+const CUR_SYMBOL = {};
+
+const intl = (r, cur) => new Intl.NumberFormat("en-US", { style: "currency", currency: cur, minimumFractionDigits: r % 1 === 0 ? 0 : 1, maximumFractionDigits: 2 });
+
 export const fmt = (n, ov) => {
   const cur = ov || _currency;
   try {
     const r = Math.round(n * 100) / 100;
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: cur, minimumFractionDigits: r % 1 === 0 ? 0 : 1, maximumFractionDigits: 2 }).format(r);
+    let s = intl(r, cur).format(r);
+    const sym = CUR_SYMBOL[cur];
+    if (sym) s = s.replace(cur + " ", sym).replace(cur, sym);
+    return s;
   } catch { return `${cur} ${n}`; }
+};
+
+// Split a formatted amount into its currency part and its number part so big
+// displays can render the currency smaller/lighter than the number.
+export const fmtParts = (n, ov) => {
+  const cur = ov || _currency;
+  try {
+    const r = Math.round(n * 100) / 100;
+    let sym = "", num = "";
+    for (const p of intl(r, cur).formatToParts(r)) {
+      if (p.type === "currency") sym = CUR_SYMBOL[cur] || p.value;
+      else if (p.type !== "literal") num += p.value;
+    }
+    return { cur: sym, num };
+  } catch { return { cur, num: String(n) }; }
 };
 
 export const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];

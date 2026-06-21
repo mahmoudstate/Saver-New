@@ -3,10 +3,15 @@
 import Ico from "../ui/Ico.jsx";
 import { buildNotifications } from "../lib/notifications.js";
 
-export default function Notifications({ store, back }) {
+export default function Notifications({ store, back, onOpen }) {
   const items = buildNotifications(store);
   const newCount = items.filter((n) => n.unread).length;
   const markAllRead = () => store.set("notifReadKeys", [...new Set([...(store.notifReadKeys || []), ...items.filter((n) => n.unread).map((n) => n.key)])]);
+  // tapping an item: mark it read, then jump to the screen it's about
+  const open = (n) => {
+    if (n.unread) store.set("notifReadKeys", [...new Set([...(store.notifReadKeys || []), n.key])]);
+    if (n.nav) onOpen?.(n.nav);
+  };
 
   return (
     <div className="content padnav">
@@ -16,10 +21,13 @@ export default function Notifications({ store, back }) {
       </div>
       {items.length === 0 ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px", fontWeight: 600 }}>All caught up.</div>
         : items.map((n) => (
-          <div className="icard" key={n.key} style={{ opacity: n.unread ? 1 : .7 }}>
+          <div className="icard" key={n.key} onClick={() => open(n)} style={{ opacity: n.unread ? 1 : .7, cursor: n.nav ? "pointer" : "default" }}>
             <span className="circ" style={{ width: 40, height: 40, borderRadius: 12, background: n.bg, color: n.col }}><Ico name={n.icon} size={19} /></span>
             <div><div className="nm">{n.nm}</div><div className="mt">{n.mt}</div></div>
-            {n.unread && <span style={{ marginLeft: "auto", width: 9, height: 9, borderRadius: "50%", background: "var(--ac)" }} />}
+            <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+              {n.unread && <span style={{ width: 9, height: 9, borderRadius: "50%", background: "var(--ac)" }} />}
+              {n.nav && <Ico name="chev" size={18} color="var(--faint)" />}
+            </span>
           </div>
         ))}
     </div>
