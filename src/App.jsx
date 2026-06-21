@@ -31,6 +31,8 @@ import FilterResults from "./screens/FilterResults.jsx";
 import Appearance from "./screens/Appearance.jsx";
 import PrivacyBackup from "./screens/PrivacyBackup.jsx";
 import Manual from "./screens/Manual.jsx";
+import GuideTopic from "./screens/GuideTopic.jsx";
+import Tour, { HOME_TOUR } from "./ui/Tour.jsx";
 import About from "./screens/About.jsx";
 import QuickActions from "./screens/QuickActions.jsx";
 import QuickActionEditor from "./screens/QuickActionEditor.jsx";
@@ -72,6 +74,7 @@ export default function App() {
   const homeScroll = useRef(0); // remember Home scroll across tab switches (restore on first return, reset on re-tap)
   const [whatsNew, setWhatsNew] = useState(false);
   const [booting, setBooting] = useState(true); // splash on every app open
+  const [tour, setTour] = useState(false); // interactive coach-mark tour over Home
   const push = (v) => setStack((s) => [...s, v]);          // open a deeper screen
   // NOTE: back is wired straight to onClick/onClose in screens, so it must take NO
   // numeric arg (the click event would land there). Use popN for multi-level pops.
@@ -112,7 +115,8 @@ export default function App() {
   else if (view?.type === "editProfile") viewScreen = <ProfileEdit store={store} back={back} />;
   else if (view?.type === "appearance") viewScreen = <Appearance store={store} back={back} />;
   else if (view?.type === "privacy") viewScreen = <PrivacyBackup store={store} back={back} />;
-  else if (view?.type === "manual") viewScreen = <Manual store={store} back={back} />;
+  else if (view?.type === "manual") viewScreen = <Manual store={store} back={back} onOpenTopic={(id) => push({ type: "guideTopic", topicId: id })} onStartTour={() => { setStack([]); setTab("home"); setTour(true); }} />;
+  else if (view?.type === "guideTopic") viewScreen = <GuideTopic topicId={view.topicId} back={back} />;
   else if (view?.type === "about") viewScreen = <About back={back} />;
   else if (view?.type === "notifications") viewScreen = <Notifications store={store} back={back} onOpen={(nav) => push(nav)} />;
   else if (view?.type === "customize") viewScreen = <CustomizeDashboard store={store} back={back} />;
@@ -144,6 +148,7 @@ export default function App() {
       {!view && <BottomNav active={tab} onTab={navTab} onAdd={() => push({ type: "add" })} onQuickAdd={() => setQuickAdd(true)} />}
       {quickAdd && <QuickAddSheet store={store} onClose={() => setQuickAdd(false)} onSetup={() => { setQuickAdd(false); push({ type: "quickactions" }); }} onPick={(q) => { setQuickAdd(false); push({ type: "add", initial: { type: "expense", amount: +q.amount, bankId: q.bankId, expCatId: q.catId }, quickId: q.id }); }} />}
       {whatsNew && <WhatsNew onClose={() => setWhatsNew(false)} />}
+      {tour && <Tour steps={HOME_TOUR} onClose={() => setTour(false)} />}
       <Overlays store={store} />
     </div>
   );

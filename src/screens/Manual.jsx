@@ -1,14 +1,59 @@
-// Saver — Manual / Guide. DEFERRED: page scaffold only, content to be added later.
+// Saver — Guide hub: searchable list of topics grouped by area. Each topic opens
+// a page with a live demo built from the real app components.
+import { useRef, useState, useMemo } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import Ico from "../ui/Ico.jsx";
+import { GUIDE } from "../lib/guide.js";
 
-export default function Manual({ store, back }) {
+const REDUCED = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+export default function Manual({ back, onOpenTopic, onStartTour }) {
+  const scope = useRef(null);
+  const [q, setQ] = useState("");
+
+  const groups = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    if (!term) return GUIDE;
+    return GUIDE.map((g) => ({ ...g, topics: g.topics.filter((t) => (t.title + " " + t.blurb).toLowerCase().includes(term)) })).filter((g) => g.topics.length);
+  }, [q]);
+
+  useGSAP(() => {
+    if (REDUCED) return;
+    gsap.from(".gsap-card", { opacity: 0, y: 20, duration: 0.5, stagger: 0.06, ease: "power3.out" });
+  }, { scope, dependencies: [q] });
+
   return (
-    <div className="content padnav">
+    <div ref={scope} className="content padnav">
       <div className="hero">
         <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">Guide</div><div className="grow" /></div>
-        <div className="lbl">Manual</div><div className="big" style={{ fontSize: 30 }}>How Saver works</div><div className="sub">Coming soon</div>
+        <div className="lbl">How Saver works</div><div className="big" style={{ fontSize: 32 }}>Learn the app</div><div className="sub">Short, friendly walkthroughs with live examples</div>
       </div>
-      {/* TODO: Manual / Guide content — deferred, build with the latest content later. */}
+
+      <div className="gsap-card icard" onClick={() => onStartTour?.()} style={{ cursor: "pointer", background: "var(--acDim)", border: "none", marginBottom: 14 }}>
+        <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: "var(--ac)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}><Ico name="sparkles" size={20} /></span>
+        <div><div className="nm">Take the quick tour</div><div className="mt">A 60 second walk around your home screen</div></div>
+        <Ico name="chev" size={18} color="var(--acText)" style={{ marginLeft: "auto" }} />
+      </div>
+
+      <label className="field" style={{ marginBottom: 18 }}>
+        <span className="circ" style={{ width: 38, height: 38, borderRadius: 11, background: "var(--surface2)", color: "var(--muted)", display: "flex", alignItems: "center", justifyContent: "center" }}><Ico name="search" size={18} /></span>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search the guide" style={{ flex: 1, border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700 }} />
+      </label>
+
+      {groups.length === 0 ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px", fontWeight: 600 }}>Nothing matches that yet.</div>
+        : groups.map((g) => (
+          <div key={g.label}>
+            <div className="over">{g.label}</div>
+            {g.topics.map((t) => (
+              <div className="icard gsap-card" key={t.id} onClick={() => onOpenTopic?.(t.id)} style={{ cursor: "pointer" }}>
+                <span className="circ" style={{ width: 40, height: 40, borderRadius: 12, background: `color-mix(in srgb, ${t.color} 16%, transparent)`, color: t.color, display: "flex", alignItems: "center", justifyContent: "center" }}><Ico name={t.icon} size={20} /></span>
+                <div><div className="nm">{t.title}</div><div className="mt">{t.blurb}</div></div>
+                <Ico name="chev" size={18} color="var(--faint)" style={{ marginLeft: "auto" }} />
+              </div>
+            ))}
+          </div>
+        ))}
     </div>
   );
 }
