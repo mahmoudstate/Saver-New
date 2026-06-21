@@ -43,12 +43,33 @@ export function ConfirmModal({ data, onClose }) {
   );
 }
 
+// Semantic toast presets — one consistent color+icon per intent, drawn from the
+// app's own tokens. flash() can pass { type } instead of hand-picking color/icon;
+// an explicit color/icon still overrides the preset for one-off cases.
+export const TOAST_TYPES = {
+  success: { color: "var(--success)", icon: "check" },
+  info:    { color: "var(--blue)",    icon: "info" },
+  warning: { color: "var(--yellow)",  icon: "bell" },
+  danger:  { color: "var(--red)",     icon: "close" },
+  neutral: { color: "var(--muted)",   icon: "check" },
+};
+
+// Legacy calls pass a raw color and no type/icon. Map that color to a preset so
+// they still get a sensible icon — and so odd tokens (acText) read as success.
+const COLOR_TO_TYPE = {
+  "var(--success)": "success", "var(--acText)": "success", "var(--ac)": "success",
+  "var(--blue)": "info", "var(--yellow)": "warning", "var(--red)": "danger",
+  "var(--muted)": "neutral", "var(--purple)": "info",
+};
+
 export function Toast({ data }) {
   if (!data) return null;
-  const color = data.color || "var(--success)";
+  const preset = TOAST_TYPES[data.type] || TOAST_TYPES[COLOR_TO_TYPE[data.color]] || TOAST_TYPES.success;
+  const color = preset.color; // normalize to a palette color so the tint matches the app
+  const icon = data.icon || preset.icon;
   return (
     <div className="toast" role="status">
-      <span className="ic" style={{ background: color }}><Ico name={data.icon || "check"} size={18} color="#fff" /></span>
+      <span className="ic" style={tile(color)}><Ico name={icon} size={20} /></span>
       <div><div className="tx">{data.title}</div>{data.sub && <div className="ts">{data.sub}</div>}</div>
     </div>
   );

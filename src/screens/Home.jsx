@@ -1,9 +1,10 @@
 // Saver — Home: PORTED 1:1 from showcase screen 01 (same classes/markup), data injected.
-import { useState, useRef, useMemo, useLayoutEffect, Fragment } from "react";
+import { useState, useRef, useMemo, useLayoutEffect, useEffect, Fragment } from "react";
 import Ico from "../ui/Ico.jsx";
 import { fmt, currentMonth, MONTHS, cardGradient } from "../lib/format.js";
 import { calcBankBalance, calcGoalSaved, calcFrozenForBank, totalBalance, totalSafe, totalFrozen, monthTxns, sumIncome, sumExpense, projectSpent, budgetSpentMonth } from "../lib/calc.js";
 import { DASH_SECTIONS, DASH_DEFAULT } from "../lib/store.js";
+import { unreadCount } from "../lib/notifications.js";
 
 const KNOWN_SECTIONS = DASH_SECTIONS.map((s) => s.id);
 
@@ -40,11 +41,19 @@ const ordinal = (n) => { if (!n) return ""; const s = ["th", "st", "nd", "rd"], 
 
 export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenGoal, onOpenBudgets, onOpenBudget, onOpenProjects, onOpenProject, onOpenInstallments, onOpenInst, onOpenBill, onOpenNotifications, onOpenAllAccounts, onOpenBreakdown, onCustomize, initialScroll = 0, onScrollChange }) {
   const { banks, txns, savings, bills = [], budgets = [], installments = [], username } = store;
+  const notifUnread = unreadCount(store);
   const scrollRef = useRef(null);
   // restore the scroll position from when Home was last left (tab-switch memory)
   useLayoutEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = initialScroll; }, []);
-  const [hide, setHide] = useState(false);
+  const [hide, setHide] = useState(true); // privacy-first: amounts masked on open
   const [page, setPage] = useState(0);
+  // Re-mask amounts whenever the app goes to the background, so the app-switcher
+  // snapshot and the next resume stay private (no lock screen, just hidden).
+  useEffect(() => {
+    const onHidden = () => { if (document.visibilityState === "hidden") setHide(true); };
+    document.addEventListener("visibilitychange", onHidden);
+    return () => document.removeEventListener("visibilitychange", onHidden);
+  }, []);
   const [budgetsOpen, setBudgetsOpen] = useState(false); // Home budgets card: expand to per-budget rows
   const [goalsOpen, setGoalsOpen] = useState(false); // Home goals card: expand to per-goal rows
   const [instOpen, setInstOpen] = useState(false); // installments card expand
@@ -103,15 +112,15 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenGoal
           <div><div style={{ fontSize: 11, letterSpacing: ".05em", textTransform: "uppercase", opacity: .72, fontWeight: 700 }}>{greet}</div><div style={{ fontSize: 15, fontWeight: 800, marginTop: 1 }}>{username || "there"}</div></div>
           <div className="grow" />
           <div className="hib" onClick={() => setHide((v) => !v)}><Ico name={hide ? "eyeOff" : "eye"} size={20} /></div>
-          <div className="hib" onClick={() => onOpenNotifications?.()}><Ico name="bell" size={20} /></div>
+          <div className="hib" onClick={() => onOpenNotifications?.()} style={{ position: "relative" }}><Ico name="bell" size={20} />{notifUnread > 0 && <span className="notifDot" />}</div>
         </div>
         <div className="hscroll" ref={pagerRef} onScroll={onScroll} style={{ overflow: "hidden", marginTop: 2, display: "flex", overflowX: "auto", scrollSnapType: "x mandatory" }}>
           <div style={{ minWidth: "100%", scrollSnapAlign: "start", display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 124 }}>
-            <div className="lbl">Total balance</div><div className="big tnum">{money(d.tb)}</div>
-          </div>
-          <div style={{ minWidth: "100%", scrollSnapAlign: "start", display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 124 }}>
             <div className="lbl">Safe to spend</div><div className="big tnum">{money(d.ts)}</div>
             <div className="sub">{d.tf > 0 ? `${money(d.tf)} frozen in goals` : "Nothing frozen"}</div>
+          </div>
+          <div style={{ minWidth: "100%", scrollSnapAlign: "start", display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 124 }}>
+            <div className="lbl">Total balance</div><div className="big tnum">{money(d.tb)}</div>
           </div>
         </div>
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 16, display: "flex", justifyContent: "center", gap: 6, zIndex: 1 }}>

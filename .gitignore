@@ -12,9 +12,12 @@ npm-debug.log*
 .DS_Store
 .vscode/
 .idea/
+.claude/
 
-# Local dev-only tooling & data (not part of the app)
+# local screenshot tooling
 shot.cjs
-demo.json
-out.png
 *.shot.png
+shot.cjs
+*.png
+!icon.png
+dist/

@@ -72,6 +72,21 @@ export default function CategoryEditor({ store, category, kind: initialKind, onC
     onClose();
   };
 
+  // Delete just removes the category from the list — past transactions keep their own
+  // snapshot of the icon/name/colour, so they stay recorded and look exactly the same.
+  const del = () => {
+    store.setConfirm({
+      title: `Delete ${category.name}?`,
+      message: "This removes the category from your list. Transactions already in it keep their look and stay in your history.",
+      confirmText: "Delete category", danger: true, icon: "trash",
+      onConfirm: () => {
+        store.set(listKey, (list) => list.filter((c) => c.id !== category.id));
+        store.flash({ title: "Category deleted", sub: category.name, color: "var(--muted)" });
+        onClose();
+      },
+    });
+  };
+
   return (
     <div className="content padnav">
       <div className="hero">
@@ -106,6 +121,8 @@ export default function CategoryEditor({ store, category, kind: initialKind, onC
       <ColorField value={color} onChange={setColor} />
 
       <div className="cta"><div className="btn btn-primary btn-full" style={{ opacity: canSave ? 1 : .5 }} onClick={save}><Ico name="check" size={18} />{editing ? "Save category" : "Add category"}</div></div>
+
+      {editing && <div className="btn btn-full" style={{ marginTop: 12, background: "transparent", color: "var(--red)", border: "1px solid color-mix(in srgb, var(--red) 40%, transparent)" }} onClick={del}><Ico name="trash" size={17} />Delete category</div>}
 
       {iconsOpen && <IconSheet icons={iconsFor(kind)} kind={kind} glyph={glyph} color={color} onPick={setGlyph} onClose={() => setIconsOpen(false)} />}
     </div>

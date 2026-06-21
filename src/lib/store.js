@@ -12,7 +12,7 @@ export const KEYS = {
   username: "et_username", lastBackup: "et_lastBackup", bills: "et_bills",
   budgets: "et_budgets", quickActions: "et_quick_actions", seenWelcome: "et_seenWelcome",
   theme: "et_theme", installments: "et_installments", accent: "et_accent", dashboard: "et_dashboard",
-  avatar: "et_avatar", billTypes: "et_billTypes",
+  avatar: "et_avatar", billTypes: "et_billTypes", notifReadKeys: "et_notifReadKeys",
 };
 
 export const DASH_SECTIONS = [
@@ -39,7 +39,7 @@ const ENTITIES = {
   txns: [], banks: [], expCats: [], incCats: [], groups: [], savings: [],
   bills: [], budgets: [], installments: [], quickActions: [], billTypes: [],
 };
-const SCALARS = { currency: "EGP", username: "", avatar: "", theme: "system", accent: "mint", dashboard: DASH_DEFAULT, seenWelcome: false };
+const SCALARS = { currency: "EGP", username: "", avatar: "", theme: "system", accent: "mint", dashboard: DASH_DEFAULT, seenWelcome: false, notifReadKeys: [] };
 
 // Single store hook: loads everything, exposes data + persisted setters + locked actions.
 export function useStore() {
@@ -58,7 +58,7 @@ export function useStore() {
   // global message surface (friendly hybrid: blocking dialogs + confirms + toasts)
   const [alert, setAlert] = useState(null);     // { title, message, color }
   const [confirm, setConfirm] = useState(null);  // { title, message, color, confirmText, danger, onConfirm }
-  const [toast, setToast] = useState(null);      // { title, sub, color, icon }
+  const [toast, setToast] = useState(null);      // { title, sub, type?, color?, icon? } — type picks a semantic preset
   const toastTimer = useRef(null);
   const flash = useCallback((t) => {
     setToast(t);
