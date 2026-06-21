@@ -37,6 +37,7 @@ export const MARKS = {
   crown: `<path d="M4 8l3.7 3L12 5l4.3 6L20 8l-1.6 9.5H5.6L4 8Z"/><path d="M5.6 20.5h12.8"/>`,
   mail: `<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7 8.5 6 8.5-6"/>`,
   share: `<path d="M12 3v13"/><path d="m8 7 4-4 4 4"/><path d="M6 12H5a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-1"/>`,
+  book: `<path d="M4 5a2 2 0 0 1 2-2h11a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2V5Z"/><path d="M4 17a2 2 0 0 1 2-2h12"/><path d="M9 7h5"/>`,
   arrowUp: `<path d="M12 19V5M5 12l7-7 7 7"/>`,
   arrowDown: `<path d="M12 5v14M5 12l7 7 7-7"/>`,
   down: `<path d="M12 5v14M19 12l-7 7-7-7"/>`,

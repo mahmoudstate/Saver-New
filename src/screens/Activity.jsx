@@ -11,7 +11,7 @@ const Funnel = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
 // per-row date, light — e.g. "Thu, 5 Jun 2026"
 const rowDate = (date) => date ? new Date(date + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "";
 
-export default function Activity({ store, dateFilter, onPickDate, onFilter, onEdit, onAdd }) {
+export default function Activity({ store, dateFilter, onPickDate, onFilter, onEdit, onAdd, onLearn }) {
   const { txns, banks } = store;
   const [q, setQ] = useState("");
   const bankName = (t) => t.bankName || banks.find((b) => b.id === t.bankId)?.name || "";
@@ -85,7 +85,7 @@ export default function Activity({ store, dateFilter, onPickDate, onFilter, onEd
 
       {n === 0 && (query || hasDate
         ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "34px 20px", fontWeight: 600 }}>No transactions match{query ? ` “${q.trim()}”` : " these dates"}.</div>
-        : <EmptyState title="Nothing here… yet!" message="Pop in your first one and watch your balance, savings and spending spring to life." cta="Add my first" onCta={() => onAdd?.()} />)}
+        : <EmptyState title="Nothing here… yet!" message="Pop in your first one and watch your balance, savings and spending spring to life." cta="Add my first" onCta={() => onAdd?.()} learn="Learn how it works" onLearn={() => onLearn?.()} />)}
       {list.map(row)}
     </div>
   );

@@ -32,7 +32,7 @@ import Appearance from "./screens/Appearance.jsx";
 import PrivacyBackup from "./screens/PrivacyBackup.jsx";
 import Manual from "./screens/Manual.jsx";
 import GuideTopic from "./screens/GuideTopic.jsx";
-import Tour, { HOME_TOUR } from "./ui/Tour.jsx";
+import Tour, { APP_TOUR } from "./ui/Tour.jsx";
 import About from "./screens/About.jsx";
 import QuickActions from "./screens/QuickActions.jsx";
 import QuickActionEditor from "./screens/QuickActionEditor.jsx";
@@ -93,12 +93,12 @@ export default function App() {
   const openTab = (t) => { setBillsSeg(null); setStack([]); setTab(t); };
 
   if (booting) return <div className="app"><Splash onDone={() => setBooting(false)} /></div>;
-  if (!store.seenWelcome) return <div className="app"><Onboarding onDone={() => store.set("seenWelcome", true)} /></div>;
+  if (!store.seenWelcome) return <div className="app"><Onboarding onDone={() => { store.set("seenWelcome", true); setTour(true); }} /></div>;
 
   // The underlying tab — stays mounted under any pushed view so returning restores scroll/state.
   let tabScreen;
   if (tab === "home") tabScreen = <Home store={store} onTab={openTab} onOpenBank={(bank) => push({ type: "account", bank })} onOpenGoals={() => push({ type: "goals" })} onOpenGoal={(g) => push({ type: "goal", goalId: g.id })} onOpenBudgets={() => { setBudgetsSeg("monthly"); push({ type: "budgets" }); }} onOpenBudget={(b) => push({ type: "budget", budgetId: b.id })} onOpenProjects={() => { setBudgetsSeg("projects"); push({ type: "budgets" }); }} onOpenProject={(p) => push({ type: "project", projectId: p.id })} onOpenInstallments={() => { setBillsSeg("inst"); setTab("bills"); }} onOpenInst={(i) => push({ type: "inst", instId: i.id })} onOpenBill={(b) => push({ type: "sub", bill: b })} onOpenNotifications={() => push({ type: "notifications" })} onOpenAllAccounts={() => push({ type: "allAccounts" })} onOpenBreakdown={() => push({ type: "breakdown" })} onCustomize={() => push({ type: "customize" })} initialScroll={homeScroll.current} onScrollChange={(v) => { homeScroll.current = v; }} />;
-  else if (tab === "activity") tabScreen = <Activity store={store} dateFilter={activityDate} onPickDate={() => push({ type: "datePicker" })} onFilter={() => push({ type: "filter", hidePeriod: true, dateFilter: activityDate })} onEdit={(t) => push({ type: "edit", txn: t })} onAdd={() => push({ type: "add" })} />;
+  else if (tab === "activity") tabScreen = <Activity store={store} dateFilter={activityDate} onPickDate={() => push({ type: "datePicker" })} onFilter={() => push({ type: "filter", hidePeriod: true, dateFilter: activityDate })} onEdit={(t) => push({ type: "edit", txn: t })} onAdd={() => push({ type: "add" })} onLearn={() => push({ type: "guideTopic", topicId: "add" })} />;
   else if (tab === "bills") tabScreen = <Bills store={store} initialSeg={billsSeg} onAdd={(seg) => push(seg === "inst" ? { type: "editInst", plan: null } : { type: "editSub", bill: null })} onOpenSub={(bill) => push({ type: "sub", bill })} onOpenInst={(i) => push({ type: "inst", instId: i.id })} />;
   else if (tab === "profile") tabScreen = <Profile store={store} go={(d) => { if (d === "accounts") push({ type: "accounts" }); else if (d === "goals") push({ type: "goals" }); else if (d === "budgets") { setBudgetsSeg("monthly"); push({ type: "budgets" }); } else if (d === "categories") push({ type: "categories" }); else if (d === "appearance") push({ type: "appearance" }); else if (d === "privacy") push({ type: "privacy" }); else if (d === "manual") push({ type: "manual" }); else if (d === "quickactions") push({ type: "quickactions" }); else if (d === "customize") push({ type: "customize" }); else if (d === "editProfile") push({ type: "editProfile" }); else if (d === "about") push({ type: "about" }); else if (d === "whatsnew") setWhatsNew(true); else if (d === "plan") { try { window.location.href = "itms-apps://apps.apple.com/account/subscriptions"; } catch {} } }} />;
   else tabScreen = <Placeholder tab={tab} />;
@@ -148,7 +148,7 @@ export default function App() {
       {!view && <BottomNav active={tab} onTab={navTab} onAdd={() => push({ type: "add" })} onQuickAdd={() => setQuickAdd(true)} />}
       {quickAdd && <QuickAddSheet store={store} onClose={() => setQuickAdd(false)} onSetup={() => { setQuickAdd(false); push({ type: "quickactions" }); }} onPick={(q) => { setQuickAdd(false); push({ type: "add", initial: { type: "expense", amount: +q.amount, bankId: q.bankId, expCatId: q.catId }, quickId: q.id }); }} />}
       {whatsNew && <WhatsNew onClose={() => setWhatsNew(false)} />}
-      {tour && <Tour steps={HOME_TOUR} onClose={() => setTour(false)} />}
+      {tour && <Tour steps={APP_TOUR} onClose={() => setTour(false)} onNavigate={(g) => { if (g?.tab) { setStack([]); setTab(g.tab); } }} />}
       <Overlays store={store} />
     </div>
   );

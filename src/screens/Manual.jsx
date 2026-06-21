@@ -4,13 +4,14 @@ import { useRef, useState, useMemo } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import Ico from "../ui/Ico.jsx";
-import { GUIDE } from "../lib/guide.js";
+import { GUIDE, FAQ } from "../lib/guide.js";
 
 const REDUCED = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 export default function Manual({ back, onOpenTopic, onStartTour }) {
   const scope = useRef(null);
   const [q, setQ] = useState("");
+  const [faq, setFaq] = useState(-1);
 
   const groups = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -32,7 +33,7 @@ export default function Manual({ back, onOpenTopic, onStartTour }) {
 
       <div className="gsap-card icard" onClick={() => onStartTour?.()} style={{ cursor: "pointer", background: "var(--acDim)", border: "none", marginBottom: 14 }}>
         <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: "var(--ac)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}><Ico name="sparkles" size={20} /></span>
-        <div><div className="nm">Take the quick tour</div><div className="mt">A 60 second walk around your home screen</div></div>
+        <div><div className="nm">Take the quick tour</div><div className="mt">A quick walk through every part of the app</div></div>
         <Ico name="chev" size={18} color="var(--acText)" style={{ marginLeft: "auto" }} />
       </div>
 
@@ -54,6 +55,24 @@ export default function Manual({ back, onOpenTopic, onStartTour }) {
             ))}
           </div>
         ))}
+
+      {!q && (
+        <>
+          <div className="over" style={{ marginTop: 8 }}>Tips &amp; FAQ</div>
+          {FAQ.map((f, i) => {
+            const open = faq === i;
+            return (
+              <div className="icard" key={i} onClick={() => setFaq(open ? -1 : i)} style={{ cursor: "pointer", flexDirection: "column", alignItems: "stretch" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div className="nm" style={{ flex: 1 }}>{f.q}</div>
+                  <Ico name="chev" size={18} color="var(--faint)" style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform .2s" }} />
+                </div>
+                {open && <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--muted)", fontWeight: 600, marginTop: 10 }}>{f.a}</div>}
+              </div>
+            );
+          })}
+        </>
+      )}
     </div>
   );
 }

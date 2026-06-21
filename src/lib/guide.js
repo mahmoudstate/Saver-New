@@ -20,7 +20,7 @@ export const GUIDE = [
         tip: "Your amounts hide again on their own after you leave the app for a while.",
       },
       {
-        id: "accounts", icon: "wallet", color: "var(--blue)",
+        id: "accounts", icon: "wallet", color: "var(--ac)",
         title: "Bank accounts",
         blurb: "Add your accounts and keep an eye on each balance.",
         intro: "Add every account and cash wallet you use. Each one gets its own colourful card, a running balance, and a low balance alert so nothing sneaks up on you.",
@@ -32,13 +32,26 @@ export const GUIDE = [
         ],
         tip: "Open any account to see just its transactions for the month.",
       },
+      {
+        id: "transfer", icon: "transfer", color: "var(--ac)",
+        title: "Transfers",
+        blurb: "Move money between your own accounts.",
+        intro: "Need to shift money from one account to another? A transfer moves it across without counting as spending, so your totals stay honest.",
+        demo: "transfer",
+        steps: [
+          { icon: "transfer", title: "Open an account", text: "Tap Move money on the account card." },
+          { icon: "wallet", title: "Pick the other account", text: "Choose where the money should land." },
+          { icon: "check", title: "Confirm the amount", text: "It moves instantly and is not counted as a spend." },
+        ],
+        tip: "Transfers never touch your income or spending totals.",
+      },
     ],
   },
   {
     label: "Everyday money",
     topics: [
       {
-        id: "add", icon: "plus", color: "var(--blue)",
+        id: "add", icon: "plus", color: "var(--ac)",
         title: "Adding money in and out",
         blurb: "Record income, expenses and savings in seconds.",
         intro: "The plus button opens a simple keypad. Choose a type, type the amount, pick a category and account, and you are done. You can back date it too.",
@@ -51,7 +64,7 @@ export const GUIDE = [
         tip: "Set up Quick actions for the things you add all the time.",
       },
       {
-        id: "categories", icon: "layers", color: "var(--orange)",
+        id: "categories", icon: "layers", color: "var(--ac)",
         title: "Categories",
         blurb: "Organise your spending with icons and colours.",
         intro: "Categories are how Saver groups your money. Each one has its own icon and colour that show up everywhere, in your activity and your breakdown.",
@@ -75,6 +88,18 @@ export const GUIDE = [
         ],
         tip: "Tap any transaction to edit it, anywhere you see it.",
       },
+      {
+        id: "quick", icon: "zap", color: "var(--ac)",
+        title: "Quick actions",
+        blurb: "Save your most common transactions for one tap.",
+        intro: "Add the things you log over and over, like your morning coffee, as a quick action. Then one tap records it with the amount and account already set.",
+        demo: "quick",
+        steps: [
+          { icon: "zap", title: "Create a quick action", text: "Pick a category, amount and account." },
+          { icon: "plus", title: "Tap to log it", text: "Long press the add button to reach them fast." },
+        ],
+        tip: "Great for daily habits you do not want to type out every time.",
+      },
     ],
   },
   {
@@ -94,7 +119,20 @@ export const GUIDE = [
         tip: "When the time comes, you can spend straight from a goal.",
       },
       {
-        id: "bills", icon: "bills", color: "var(--purple)",
+        id: "spendgoal", icon: "target", color: "var(--ac)",
+        title: "Spend from a goal",
+        blurb: "Turn a goal into a spending pot when you are ready.",
+        intro: "When you have saved enough, switch a goal into spending mode. Now you can pay straight from it and watch the pot go down, instead of dipping into your everyday money.",
+        demo: "spendgoal",
+        steps: [
+          { icon: "target", title: "Open the goal", text: "Pick the goal you are ready to use." },
+          { icon: "lock", title: "Turn on spending", text: "Flip it into spending mode in one tap." },
+          { icon: "arrowDown", title: "Pay from the pot", text: "Each spend comes out of the goal, not your balance." },
+        ],
+        tip: "Perfect for a holiday fund or a big planned purchase.",
+      },
+      {
+        id: "bills", icon: "bills", color: "var(--ac)",
         title: "Bills and installments",
         blurb: "Keep every recurring payment on your radar.",
         intro: "Add your subscriptions and installment plans once. Saver reminds you before each one is due and keeps a clean history of what you paid.",
@@ -107,7 +145,7 @@ export const GUIDE = [
         tip: "Installments show you how many payments are left.",
       },
       {
-        id: "budgets", icon: "sparkles", color: "var(--purple)",
+        id: "budgets", icon: "sparkles", color: "var(--ac)",
         title: "Budgets and projects",
         blurb: "Set a monthly cap or track a one off project.",
         intro: "A budget is a monthly cap for a group of categories. A project is a pot you track until it is done, like setting up a new home. The ring shows how much is left at a glance.",
@@ -125,7 +163,7 @@ export const GUIDE = [
     label: "See and stay in control",
     topics: [
       {
-        id: "breakdown", icon: "target", color: "var(--blue)",
+        id: "breakdown", icon: "target", color: "var(--ac)",
         title: "Breakdown",
         blurb: "See where your money really goes each month.",
         intro: "Breakdown sorts your spending and income by category for any month. The biggest item sits on top, and each category gets a bar in its own colour.",
@@ -137,7 +175,7 @@ export const GUIDE = [
         tip: "Switch between Spending and Income with the toggle on top.",
       },
       {
-        id: "notifications", icon: "bell", color: "var(--yellow)",
+        id: "notifications", icon: "bell", color: "var(--ac)",
         title: "Notifications",
         blurb: "Friendly nudges about bills, goals and low balances.",
         intro: "Saver keeps a small inbox of things worth knowing, like a bill that is due soon or an account running low. Tap one to jump straight to it.",
@@ -168,6 +206,18 @@ export const GUIDE = [
     label: "Make it yours",
     topics: [
       {
+        id: "customize", icon: "grip", color: "var(--ac)",
+        title: "Customise your home",
+        blurb: "Reorder the sections or hide the ones you skip.",
+        intro: "Your home screen is yours. Drag the sections into the order that suits you, and hide any you do not use, so the first thing you see is the thing that matters most.",
+        demo: "customize",
+        steps: [
+          { icon: "grip", title: "Drag to reorder", text: "Hold a section and move it up or down." },
+          { icon: "eye", title: "Hide what you skip", text: "Turn off any section you do not need." },
+        ],
+        tip: "Put the section you check most right at the top.",
+      },
+      {
         id: "appearance", icon: "palette", color: "var(--ac)",
         title: "Appearance",
         blurb: "Light, dark, or follow your phone. Plus accent colours.",
@@ -180,7 +230,7 @@ export const GUIDE = [
         tip: "System theme switches with your phone automatically, day and night.",
       },
       {
-        id: "currency", icon: "coins", color: "var(--orange)",
+        id: "currency", icon: "coins", color: "var(--ac)",
         title: "Currency",
         blurb: "Show every amount in the currency you use.",
         intro: "Set your currency once and every amount across the app uses it, with a small symbol that never gets in the way of the number.",
@@ -192,7 +242,7 @@ export const GUIDE = [
         tip: "The currency symbol stays small so big numbers stay easy to read.",
       },
       {
-        id: "install", icon: "share", color: "var(--blue)",
+        id: "install", icon: "share", color: "var(--ac)",
         title: "Add Saver to your home screen",
         blurb: "Open Saver like a real app, in one tap.",
         intro: "Put Saver on your home screen and it opens full screen, just like a native app. It only takes a few seconds.",
@@ -206,6 +256,15 @@ export const GUIDE = [
       },
     ],
   },
+];
+
+// Short, plain answers to the questions people ask most.
+export const FAQ = [
+  { q: "Why are my amounts hidden?", a: "Saver masks your numbers by default to keep them private. Tap the eye on your home screen to show them, and they hide again after you have been away for a while." },
+  { q: "What does safe to spend mean?", a: "It is your balance minus the money you froze in goals, so the number you see is what you can really spend without touching your plans." },
+  { q: "How do I back up my data?", a: "Open Profile, then Privacy and backup, and tap Download backup. Keep that file somewhere safe. You can restore from it any time." },
+  { q: "Does my data ever leave my phone?", a: "No. Everything lives on your device. There are no ads, no tracking, and nothing is sent anywhere unless you export a backup yourself." },
+  { q: "Can I change my currency?", a: "Yes. Open Profile, tap Edit profile, then Currency, and pick the one you use. Every amount updates to match." },
 ];
 
 export const findTopic = (id) => {

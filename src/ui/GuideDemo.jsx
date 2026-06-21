@@ -201,7 +201,67 @@ function CurrencyDemo() {
 
 const InstallDemo = () => <Stage label="On your home screen"><InstallSteps /></Stage>;
 
-const DEMOS = { home: HomeDemo, add: AddDemo, goals: GoalsDemo, bills: BillsDemo, categories: CategoriesDemo, accounts: AccountsDemo, activity: ActivityDemo, budgets: BudgetsDemo, breakdown: BreakdownDemo, notifications: NotificationsDemo, privacy: PrivacyDemo, appearance: AppearanceDemo, currency: CurrencyDemo, install: InstallDemo };
+function QuickDemo() {
+  const items = [{ icon: "drinks", name: "Coffee", amt: 3.5 }, { icon: "groceries", name: "Lunch", amt: 12 }];
+  return (
+    <Stage label="One tap to add">
+      <div style={{ display: "flex", gap: 10 }}>
+        {items.map((q) => (
+          <div key={q.name} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "14px 8px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 16 }}>
+            <CatTile cat={q.icon} size={38} />
+            <div style={{ fontSize: 12.5, fontWeight: 800 }}>{q.name}</div>
+            <Money style={{ fontSize: 12.5, fontWeight: 700, color: "var(--muted)" }} v={q.amt} curSize={0.7} />
+          </div>
+        ))}
+      </div>
+    </Stage>
+  );
+}
+
+function CustomizeDemo() {
+  const rows = ["Accounts", "Bills", "Goals"];
+  return (
+    <Stage label="Drag to reorder, tap to hide">
+      {rows.map((r, i) => (
+        <div className="icard" key={r} style={{ margin: i ? "10px 0 0" : 0 }}>
+          <span style={{ color: "var(--faint)", display: "flex" }}><Ico name="grip" size={20} /></span>
+          <div className="nm">{r}</div>
+          <span className={`switch ${i === 2 ? "" : "on"}`} style={{ marginLeft: "auto", pointerEvents: "none" }}><i /></span>
+        </div>
+      ))}
+    </Stage>
+  );
+}
+
+function TransferDemo() {
+  const Chip = ({ name, color }) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 13px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 999, fontWeight: 800, fontSize: 13 }}>
+      <span style={{ width: 12, height: 12, borderRadius: "50%", background: color }} />{name}
+    </div>
+  );
+  return (
+    <Stage label="Between your accounts">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+        <Chip name="HSBC" color="#ec1623" /><Ico name="transfer" size={20} color="var(--ac)" /><Chip name="Cash" color="#f59e0b" />
+      </div>
+      <div style={{ textAlign: "center", marginTop: 14 }}><Money style={{ fontSize: 24, fontWeight: 800 }} v={200} curSize={0.5} /></div>
+    </Stage>
+  );
+}
+
+function SpendGoalDemo() {
+  return (
+    <Stage label="Spend straight from a goal">
+      <div className="icard" style={{ margin: 0 }}>
+        <CatTile cat="goal" color="var(--ac)" size={44} />
+        <div><div className="nm">New laptop</div><div className="mt">Spending mode is on</div></div>
+        <span className="switch on" style={{ marginLeft: "auto", pointerEvents: "none" }}><i /></span>
+      </div>
+    </Stage>
+  );
+}
+
+const DEMOS = { home: HomeDemo, add: AddDemo, goals: GoalsDemo, bills: BillsDemo, categories: CategoriesDemo, accounts: AccountsDemo, activity: ActivityDemo, budgets: BudgetsDemo, breakdown: BreakdownDemo, notifications: NotificationsDemo, privacy: PrivacyDemo, appearance: AppearanceDemo, currency: CurrencyDemo, install: InstallDemo, quick: QuickDemo, customize: CustomizeDemo, transfer: TransferDemo, spendgoal: SpendGoalDemo };
 
 export default function GuideDemo({ demo }) {
   const C = DEMOS[demo];
