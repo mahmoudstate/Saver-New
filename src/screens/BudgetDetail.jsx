@@ -1,13 +1,25 @@
 // Saver — Budget detail (monthly): ported 1:1 from showcase 12 (category ledger).
+import { useState } from "react";
 import Ico from "../ui/Ico.jsx";
 import CatTile from "../ui/CatTile.jsx";
-import { fmt, currentMonth, MONTHS, fmtDate } from "../lib/format.js";
+import MenuSheet from "../ui/MenuSheet.jsx";
+import { fmt, currentMonth, MONTHS } from "../lib/format.js";
 import { budgetSpentMonth, budgetTxns } from "../lib/calc.js";
 
-export default function BudgetDetail({ store, budgetId, back }) {
+const rowDate = (d) => d ? new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "";
+
+export default function BudgetDetail({ store, budgetId, back, onEdit }) {
   const { budgets = [], txns = [], banks = [] } = store;
+  const [menu, setMenu] = useState(false);
   const budget = budgets.find((b) => b.id === budgetId);
   if (!budget) return null;
+
+  // Delete just removes the tracker — the expenses themselves stay in your history.
+  const remove = () => store.setConfirm({
+    title: `Delete "${budget.name}"?`, message: "This removes the budget tracker. The expenses in these categories stay recorded in your history.",
+    danger: true, confirmText: "Delete budget", icon: "trash",
+    onConfirm: () => { store.set("budgets", (list) => list.filter((b) => b.id !== budgetId)); store.flash({ title: "Budget deleted", sub: budget.name, color: "var(--muted)" }); back(); },
+  });
   const cm = currentMonth();
   const spent = budgetSpentMonth(budget, txns, cm);
   const limit = budget.amount || 0;
@@ -20,7 +32,7 @@ export default function BudgetDetail({ store, budgetId, back }) {
   return (
     <div className="content padnav">
       <div className="hero">
-        <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">{budget.name}</div><div className="grow" /><div className="hchip"><Ico name="cal" size={14} />{MONTHS[+cm.split("-")[1] - 1]}</div></div>
+        <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">{budget.name}</div><div className="grow" /><div className="hib" onClick={() => onEdit?.(budget)} style={{ marginRight: 8 }}><Ico name="pencil" size={18} /></div><div className="hib" onClick={() => setMenu(true)}><Ico name="more" size={20} /></div></div>
         <div className="lbl">Spent</div>
         <div className="big tnum">{fmt(spent)}</div>
         <div className="sub">of {fmt(limit)} budget &nbsp;·&nbsp; {limit > 0 ? Math.round((spent / limit) * 100) : 0}% used</div>
@@ -36,10 +48,14 @@ export default function BudgetDetail({ store, budgetId, back }) {
         : rows.map((t) => (
           <div className="icard" key={t.id}>
             <CatTile txn={t} size={44} />
-            <div><div className="nm">{t.catName || t.note || "Expense"}</div><div className="mt">{bankName(t.bankId)} · {t.date ? fmtDate(t.date).split(":")[0] : ""}</div></div>
+            <div><div className="nm">{t.catName || t.note || "Expense"}</div><div className="mt">{bankName(t.bankId)} · {rowDate(t.date)}</div></div>
             <div className="amtb"><b className="tnum" style={{ color: "var(--red)" }}>−{fmt(t.amount)}</b></div>
           </div>
         ))}
+
+      {menu && <MenuSheet title={budget.name} onClose={() => setMenu(false)} items={[
+        { label: "Delete", icon: "trash", danger: true, sub: "Expenses stay in your history", onClick: remove },
+      ]} />}
     </div>
   );
 }

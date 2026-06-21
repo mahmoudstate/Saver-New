@@ -1,9 +1,9 @@
 // Saver — Installment detail: ring · schedule · pay (showcase 37). Pay / pay-ahead
 // / undo are the LOCKED legacy lifecycle (each creates/removes an expense txn and a
 // {month,date,txnId,num} payment). Stop keeps history; delete keeps past txns.
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Ico from "../ui/Ico.jsx";
-import NumberSheet from "../ui/NumberSheet.jsx";
+import StepSheet from "../ui/StepSheet.jsx";
 import MenuSheet from "../ui/MenuSheet.jsx";
 import { fmt, today, currentMonth, MONTHS } from "../lib/format.js";
 
@@ -17,6 +17,11 @@ export default function InstallmentDetail({ store, instId, back, onEdit }) {
   const inst = installments.find((i) => i.id === instId);
   const [sheet, setSheet] = useState(false);
   const [menu, setMenu] = useState(false);
+  // Guard against a fast double-tap paying the same installment twice (the state
+  // update is async, so two taps in one tick would read the same stale `paid`).
+  const busy = useRef(false);
+  const paidCount = inst ? (inst.payments ? inst.payments.length : inst.paidInstallments || 0) : 0;
+  useEffect(() => { busy.current = false; }, [paidCount]);
   if (!inst) return null;
 
   const label = inst.itemType || inst.company || inst.name || "Installment";
@@ -38,6 +43,9 @@ export default function InstallmentDetail({ store, instId, back, onEdit }) {
   const pct = total ? paid / total : 0;
   const done = paid >= total;
   const left = total - paid;
+  // The main "Pay" button settles only the current month's due installment; it
+  // disappears once this month is covered (paying ahead is the other button's job).
+  const paidThisMonth = payments.some((p) => p.month === cm);
 
   const startMonth = inst.startDate?.slice(0, 7) || payments[0]?.month || cm;
   const rows = Array.from({ length: total }, (_, i) => {
@@ -59,12 +67,14 @@ export default function InstallmentDetail({ store, instId, back, onEdit }) {
 
   // Pay the next N installments at once (default 1). Tags each with its scheduled month.
   const payN = (n) => {
+    if (busy.current) return; // a pay is already in flight this tick
     if (done) { store.setAlert({ title: "All paid off", message: "Every installment on this plan is already paid.", color: "var(--acText)", icon: "check" }); return; }
     n = Math.min(left, Math.max(1, n));
     const batch = [], newPays = [];
     for (let k = 0; k < n; k++) batch.push(mkTxn(paid + k + 1));
+    busy.current = true; // locks until the new `paid` re-renders (cleared by effect)
     const ids = store.addTxns(batch);
-    if (ids === false) return; // blocked (insufficient balance) — alert shown
+    if (ids === false) { busy.current = false; return; } // blocked (insufficient balance) — alert shown
     for (let k = 0; k < n; k++) newPays.push({ month: addMonths(startMonth, paid + k), date: today(), txnId: ids[k], num: paid + k + 1 });
     const status = persist([...payments, ...newPays]);
     if (status === "completed") store.setAlert({ title: "Paid off!", message: `Nice — "${label}" is fully paid. That's one less thing.`, color: "var(--acText)", icon: "check" });
@@ -131,20 +141,22 @@ export default function InstallmentDetail({ store, instId, back, onEdit }) {
         <div className="cta" style={{ display: "flex", gap: 10 }}>
           {inst.stopped
             ? <div className="btn btn-primary btn-full" onClick={toggleStop}><Ico name="check" size={18} />Resume plan</div>
-            : <>
-                <div className="btn btn-primary" style={{ flex: 1 }} onClick={() => payN(1)}><Ico name="check" size={18} />Pay {paid + 1} · {fmt(inst.installmentAmount)}</div>
-                {left > 1 && <div className="btn btn-secondary" style={{ flexShrink: 0 }} onClick={() => setSheet(true)}>Pay ahead</div>}
-              </>}
+            : !paidThisMonth
+              ? <div className="btn btn-primary btn-full" onClick={() => payN(1)}><Ico name="check" size={18} />Pay {paid + 1} · {fmt(inst.installmentAmount)}</div>
+              : <div className="btn btn-secondary btn-full" style={{ pointerEvents: "none", opacity: .8 }}><Ico name="check" size={18} />This month is paid</div>}
         </div>
       )}
 
       {menu && <MenuSheet title={label} onClose={() => setMenu(false)} items={[
-        { label: "Edit plan", icon: "pencil", onClick: () => onEdit?.(inst) },
+        ...(!done && !inst.stopped && left > 1 ? [{ label: "Pay ahead", icon: "card", sub: "Settle future months in advance", onClick: () => setSheet(true) }] : []),
         ...(!done ? [{ label: inst.stopped ? "Resume" : "Stop plan", icon: inst.stopped ? "check" : "back", sub: inst.stopped ? "Mark active again" : "Keeps your paid installments", onClick: toggleStop }] : []),
         { label: "Delete", icon: "trash", danger: true, sub: "Paid installments stay in history", onClick: remove },
       ]} />}
 
-      {sheet && <NumberSheet title="Pay how many ahead?" sub={`Up to ${left} left`} value={1} picks={[...new Set([1, 2, 3, 6, left].filter((n) => n >= 1 && n <= left))]} min={1} max={left} onConfirm={(n) => { setSheet(false); payN(n); }} onClose={() => setSheet(false)} />}
+      {sheet && <StepSheet title="Pay how many ahead?" sub={`Up to ${left} left`} value={1} picks={[2, 3, 6, left]} min={1} max={left} onConfirm={(n) => {
+        setSheet(false);
+        store.setConfirm({ title: `Pay ${n} installment${n === 1 ? "" : "s"} ahead?`, message: `This records ${n} payment${n === 1 ? "" : "s"} now — ${fmt(inst.installmentAmount * n)} from ${bankName}.`, confirmText: "Pay now", icon: "card", onConfirm: () => payN(n) });
+      }} onClose={() => setSheet(false)} />}
     </div>
   );
 }

@@ -29,8 +29,8 @@ function SubCard({ bill, onOpen }) {
 }
 
 export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg }) {
-  const { bills = [], installments = [], billTypes = [] } = store;
-  const resolveType = (id) => BILL_TYPES.find((t) => t.id === id) || billTypes.find((t) => t.id === id) || getBillType(id);
+  const { bills = [], installments = [] } = store;
+  const resolveType = (id) => BILL_TYPES.find((t) => t.id === id) || getBillType(id);
   const [seg, setSeg] = useState(initialSeg || "subs");
   const [subView, setSubView] = useState("active"); // active | history
   const [instView, setInstView] = useState("active"); // active | done
@@ -64,7 +64,11 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
     const by = {};
     subs.rows.forEach((b) => { const t = resolveType(b.typeId); (by[t.id] = by[t.id] || { type: t, items: [] }).items.push(b); });
     Object.values(by).forEach((g) => g.items.sort((a, b) => { const pa = a.isPaid ? 1 : 0, pb = b.isPaid ? 1 : 0; if (pa !== pb) return pa - pb; return (a.dueIn ?? 99) - (b.dueIn ?? 99); }));
-    return Object.values(by).sort((a, b) => b.items.reduce((s, x) => s + x.amount, 0) - a.items.reduce((s, x) => s + x.amount, 0));
+    // Order groups by urgency: soonest-due / overdue first; fully-paid groups sink
+    // to the bottom; ties broken by the larger monthly total.
+    const total = (g) => g.items.reduce((s, x) => s + x.amount, 0);
+    const urgency = (g) => { const unpaid = g.items.filter((x) => !x.isPaid); return unpaid.length ? Math.min(...unpaid.map((x) => x.dueIn ?? 9999)) : Infinity; };
+    return Object.values(by).sort((a, b) => { const d = urgency(a) - urgency(b); return d !== 0 ? d : total(b) - total(a); });
   }, [subs.rows]);
 
   const histGroups = useMemo(() => {
@@ -98,7 +102,7 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
   return (
     <div className="content padnav">
       <div className="hero">
-        <div className="toprow"><div className="ttl">Bills</div><div className="grow" /><div className="hib" onClick={() => onAdd?.(seg)}><Ico name="plus" size={20} /></div></div>
+        <div className="toprow"><div className="ttl">{isSubs ? "Bills" : "Installments"}</div><div className="grow" /><div className="hib" onClick={() => onAdd?.(seg)}><Ico name="plus" size={20} /></div></div>
         {isSubs
           ? <><div className="lbl">Due this month</div><div className="big tnum">{fmt(subs.due)}</div><div className="sub">{subs.active} active &nbsp;·&nbsp; {subs.soon} due soon &nbsp;·&nbsp; {subs.overdue} overdue</div></>
           : <><div className="lbl">Remaining to pay</div><div className="big tnum">{fmt(inst.remaining)}</div><div className="sub">{inst.plans} plans &nbsp;·&nbsp; {fmt(inst.dueAmt)} due this month</div></>}

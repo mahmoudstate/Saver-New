@@ -286,9 +286,11 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenGoal
                   <div key={p.id} onClick={() => onOpenProject?.(p)} style={{ cursor: "pointer", display: "flex", flexDirection: "column", gap: 6 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
-                      {p.amount > 0 && <span className="tnum" style={{ fontSize: 12.5, fontWeight: 800, color: over ? "var(--red)" : "var(--purple)", flexShrink: 0 }}>{pct}%</span>}
+                      <span className="tnum" style={{ fontSize: 12.5, fontWeight: 800, color: p.amount > 0 ? (over ? "var(--red)" : "var(--purple)") : "var(--muted)", flexShrink: 0 }}>{p.amount > 0 ? `${pct}%` : "Open"}</span>
                     </div>
-                    {p.amount > 0 && <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)" }}><i style={{ display: "block", width: `${Math.min(100, pct)}%`, height: "100%", borderRadius: 4, background: over ? "var(--red)" : "var(--purple)" }} /></div>}
+                    <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)", overflow: "hidden" }}>{p.amount > 0
+                      ? <i style={{ display: "block", width: `${Math.min(100, pct)}%`, height: "100%", borderRadius: 4, background: over ? "var(--red)" : "var(--purple)" }} />
+                      : <i className="bar-flow" style={{ display: "block", height: "100%", borderRadius: 4, "--c": "var(--purple)" }} />}</div>
                     <div className="tnum" style={{ fontSize: 11.5, fontWeight: 600, color: "var(--muted)" }}>{money(p.spent)} spent{p.amount > 0 ? ` · ${over ? `${money(-left)} over` : `${money(left)} left`} · of ${fmt(p.amount)}` : ""}</div>
                   </div>
                 );

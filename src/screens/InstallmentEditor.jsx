@@ -7,12 +7,13 @@
 import { useState } from "react";
 import Ico from "../ui/Ico.jsx";
 import AmountSheet from "../ui/AmountSheet.jsx";
-import NumberSheet from "../ui/NumberSheet.jsx";
+import StepSheet from "../ui/StepSheet.jsx";
 import DayGridSheet from "../ui/DayGridSheet.jsx";
 import OptionSheet from "../ui/OptionSheet.jsx";
 import PickerSheet from "../ui/PickerSheet.jsx";
 import ColorField from "../ui/ColorField.jsx";
 import IconField from "../ui/IconField.jsx";
+import CatTile from "../ui/CatTile.jsx";
 import { fmt, today } from "../lib/format.js";
 
 const r2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -121,7 +122,7 @@ export default function InstallmentEditor({ store, plan, onClose }) {
       {step === 0 && <>
         <div className="over">Tell us about it</div>
         <label className="field">
-          <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: "var(--acDim)", color: "var(--acText)" }}><Ico name="card" size={20} /></span>
+          <CatTile cat={glyph} name={title} color={color} size={42} />
           <div style={{ flex: 1 }}><div className="fl">What are you paying off?</div>
             <input value={item} onChange={(e) => setItem(e.target.value)} placeholder="e.g. iPhone 15" style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700, marginTop: 2, width: "100%" }} />
           </div>
@@ -181,11 +182,11 @@ export default function InstallmentEditor({ store, plan, onClose }) {
           : <div className="btn btn-primary" style={{ flex: 1, opacity: valid ? 1 : .5 }} onClick={save}><Ico name="check" size={18} />{editing ? "Save plan" : "Add installment"}</div>}
       </div>
 
-      {sheet === "count" && <NumberSheet title="How many months?" value={count} picks={[6, 12, 24, 36, 48]} min={1} max={120} onConfirm={(v) => { setCountVal(v); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "count" && <StepSheet title="How many months?" suffix="mo" value={count} picks={[6, 12, 24, 36, 48]} min={1} max={120} onConfirm={(v) => { setCountVal(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "monthly" && <AmountSheet title="Amount each month" confirmLabel="Set" onConfirm={(v) => { setMonthlyVal(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "total" && <AmountSheet title="Total amount" sub="Splits across the months" confirmLabel="Set" onConfirm={(v) => { setTotalVal(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "dp" && <AmountSheet title="Down payment" sub="Upfront amount before the monthly plan" confirmLabel="Set" onConfirm={(v) => { setDownPayment(v); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "paid" && <NumberSheet title="Months already paid" sub={`Out of ${count}`} value={paidInit} picks={[0, 1, 2, 3, 6]} min={0} max={count} onConfirm={(v) => { setPaidInit(v); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "paid" && <StepSheet title="Months already paid" sub={`Out of ${count}`} value={paidInit} picks={[1, 2, 3, 6]} min={0} max={count} onConfirm={(v) => { setPaidInit(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "due" && <DayGridSheet title="Due day" sub="Which day each month it's due." value={clampDay(dueDay)} onConfirm={(v) => { setDueDay(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "remind" && <OptionSheet title="Remind me" sub="Before it's due" value={reminderDays} onPick={(v) => { setReminderDays(v); setSheet(null); }} onClose={() => setSheet(null)} options={[{ value: 0, label: "Off" }, { value: 1, label: "1 day before" }, { value: 2, label: "2 days before" }, { value: 3, label: "3 days before" }, { value: 7, label: "1 week before" }]} />}
       {sheet === "account" && <PickerSheet title="Pay from" selectedId={bankId} onPick={setBankId} onClose={() => setSheet(null)} options={liveBanks.map((b) => ({ id: b.id, label: b.name, bankColor: b.color }))} />}

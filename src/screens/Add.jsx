@@ -6,8 +6,10 @@ import Ico from "../ui/Ico.jsx";
 import CatTile from "../ui/CatTile.jsx";
 import AmountSheet from "../ui/AmountSheet.jsx";
 import PickerSheet from "../ui/PickerSheet.jsx";
+import DateSheet from "../ui/DateSheet.jsx";
+import SegToggle from "../ui/SegToggle.jsx";
 import { resolveCat } from "../ui/cats.js";
-import { fmt, today } from "../lib/format.js";
+import { fmt, today, fmtDate } from "../lib/format.js";
 import { calcGoalSaved, calcBankBalance, calcFrozenForBank } from "../lib/calc.js";
 
 const catKeyOf = (c) => (c ? resolveCat({ catId: c.id, catGlyph: c.glyph, catName: c.name }) : null);
@@ -28,7 +30,8 @@ export default function Add({ store, initial, onSaved, onClose }) {
   const [incCatId, setIncCatId] = useState(incCats[0]?.id || null);
   const [goalId, setGoalId] = useState(goals[0]?.id || null);
   const [note, setNote] = useState("");
-  const [sheet, setSheet] = useState(null); // amount | account | category | goal
+  const [date, setDate] = useState(today());
+  const [sheet, setSheet] = useState(null); // amount | account | category | goal | date
 
   const meta = {
     expense: { title: "New expense", sign: "−", sub: "Expense · today", accLabel: "Account", cta: "Add transaction", ctaIcon: "check" },
@@ -36,6 +39,7 @@ export default function Add({ store, initial, onSaved, onClose }) {
     saving: { title: "Move to goal", sign: "+", sub: "Saving · frozen & safe", accLabel: "From account", cta: "Move to goal", ctaIcon: "lock" },
   }[type];
 
+  const dateLabel = date === today() ? "Today" : new Date(date + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
   const vaultGoal = srcGoal ? goals.find((g) => g.id === srcGoal) : null;
   const bank = banks.find((b) => b.id === bankId);
   const avail = bankId ? safeOf(bankId) : 0;
@@ -52,11 +56,12 @@ export default function Add({ store, initial, onSaved, onClose }) {
       return;
     }
     let txn;
-    if (type === "saving") txn = { type: "saving", amount, date: today(), bankId, bankName: bank?.name, goalId, catName: goal?.name, catIcon: "saving", note };
-    else if (type === "expense" && srcGoal) txn = { type: "goal_withdraw", amount, date: today(), goalId: srcGoal, goalName: vaultGoal?.name, catId: cat.id, catName: cat.name, catGlyph: cat.glyph, catColor: cat.color, note };
-    else txn = { type, amount, date: today(), bankId, bankName: bank?.name, catId: cat.id, catName: cat.name, catGlyph: cat.glyph, catColor: cat.color, note };
+    if (type === "saving") txn = { type: "saving", amount, date, bankId, bankName: bank?.name, goalId, catName: goal?.name, catIcon: "saving", note };
+    else if (type === "expense" && srcGoal) txn = { type: "goal_withdraw", amount, date, goalId: srcGoal, goalName: vaultGoal?.name, catId: cat.id, catName: cat.name, catGlyph: cat.glyph, catColor: cat.color, note };
+    else txn = { type, amount, date, bankId, bankName: bank?.name, catId: cat.id, catName: cat.name, catGlyph: cat.glyph, catColor: cat.color, note };
     const id = store.addTxn(txn);
     if (id === false) return; // blocked (alert shown by store)
+    if (type === "saving") store.fireConfetti(); // celebrate money moved into a goal
     if (!srcGoal) onSaved?.({ amount, bankId }); // remember last amount/bank (Quick Add shortcut)
     const label = type === "saving" ? `to ${goal?.name}` : type === "income" ? `to ${bank?.name}` : srcGoal ? `from ${vaultGoal?.name} vault` : `${cat?.name}`;
     store.flash({ title: `${meta.sign}${fmt(amount)} ${type === "income" ? "in" : type === "saving" ? "saved" : "spent"}`, sub: label, color: type === "income" ? "var(--success)" : type === "saving" ? "var(--ac)" : "var(--muted)", icon: "check" });
@@ -69,12 +74,10 @@ export default function Add({ store, initial, onSaved, onClose }) {
         <div className="toprow"><div className="ttl">{meta.title}</div><div className="grow" /><div className="hib" onClick={onClose}><Ico name="close" size={20} /></div></div>
         <div className="lbl">Amount · {store.currency}</div>
         <div className="big tnum" onClick={() => setSheet("amount")} style={{ cursor: "pointer" }}>{amount > 0 ? `${meta.sign}${fmt(amount)}` : <span style={{ opacity: .6 }}>{meta.sign}{fmt(0)}</span>}</div>
-        <div className="sub">{meta.sub}</div>
+        <div className="sub">{type === "saving" ? meta.sub : `${type === "income" ? "Income" : "Expense"} · ${dateLabel}`}</div>
       </div>
 
-      <div className="seg" style={{ marginBottom: 16 }}>
-        {["expense", "income", "saving"].map((t) => <b key={t} className={type === t ? "on" : ""} onClick={() => setType(t)} style={{ textTransform: "capitalize" }}>{t}</b>)}
-      </div>
+      <SegToggle style={{ marginBottom: 16 }} value={type} onChange={setType} options={[{ id: "expense", label: "Expense" }, { id: "income", label: "Income" }, { id: "saving", label: "Saving" }]} />
 
       {type === "saving" ? (
         <div className="field" onClick={() => setSheet("goal")} style={{ cursor: "pointer" }}>
@@ -102,6 +105,12 @@ export default function Add({ store, initial, onSaved, onClose }) {
         <span className="chev"><Ico name="chev" size={18} /></span>
       </div>
 
+      <div className="field" onClick={() => setSheet("date")} style={{ cursor: "pointer", marginTop: 12 }}>
+        <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: "var(--acDim)", color: "var(--acText)" }}><Ico name="cal" size={19} /></span>
+        <div style={{ flex: 1 }}><div className="fl">Date</div><div className="fv">{dateLabel}</div></div>
+        <span className="chev"><Ico name="chev" size={18} /></span>
+      </div>
+
       <label className="field note" style={{ marginTop: 12 }}>
         <Ico name="note" size={19} color="var(--faint)" style={{ marginRight: 2 }} />
         <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add a note…" style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", flex: 1, minWidth: 0 }} />
@@ -109,6 +118,7 @@ export default function Add({ store, initial, onSaved, onClose }) {
 
       <div className="cta"><div className={`btn btn-primary btn-full`} onClick={submit}><Ico name={meta.ctaIcon} size={19} />{meta.cta}</div></div>
 
+      {sheet === "date" && <DateSheet value={date} onPick={(d) => { setDate(d); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "amount" && <AmountSheet title="Enter amount" sub={meta.title} confirmLabel="Set amount" onConfirm={(v) => { setAmount(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "account" && <PickerSheet title={meta.accLabel} selectedId={srcGoal ? "vault:" + srcGoal : bankId} onPick={(id) => { if (id.startsWith?.("vault:")) setSrcGoal(id.slice(6)); else { setBankId(id); setSrcGoal(null); } }} onClose={() => setSheet(null)} options={[
         ...banks.filter((b) => !b.archived).map((b) => ({ id: b.id, label: b.name, bankColor: b.color, sub: type !== "income" ? `${fmt(Math.max(0, safeOf(b.id)))} available` : undefined })),

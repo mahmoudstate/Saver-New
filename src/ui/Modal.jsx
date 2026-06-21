@@ -1,6 +1,7 @@
 // Saver — global overlays: blocking AlertModal + ConfirmModal + transient Toast.
 // Ported 1:1 from the showcase .dialog / .toast helpers. Friendly hybrid messaging.
 import Ico from "./Ico.jsx";
+import ConfettiBurst from "./ConfettiBurst.jsx";
 
 const tile = (color) => ({ background: `color-mix(in srgb, ${color} 16%, transparent)`, color });
 
@@ -60,6 +61,7 @@ export default function Overlays({ store }) {
       <Toast data={store.toast} />
       <ConfirmModal data={store.confirm} onClose={() => store.setConfirm(null)} />
       <AlertModal data={store.alert} onClose={() => store.setAlert(null)} />
+      {store.confetti > 0 && <ConfettiBurst key={store.confetti} />}
     </>
   );
 }

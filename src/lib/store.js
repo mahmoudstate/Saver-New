@@ -65,6 +65,9 @@ export function useStore() {
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 2600);
   }, []);
+  // confetti is a counter; bumping it replays a global burst (rendered in App)
+  const [confetti, setConfetti] = useState(0);
+  const fireConfetti = useCallback(() => setConfetti((c) => c + 1), []);
 
   // keep currency formatter + theme attribute in sync
   useEffect(() => { setCurrency(data.currency); }, [data.currency]);
@@ -218,6 +221,7 @@ export function useStore() {
     ...data, set, restore,
     addTxn, addTxns, delTxn, updateTxn,
     alert, setAlert, confirm, setConfirm, toast, flash,
+    confetti, fireConfetti,
   };
 }
 

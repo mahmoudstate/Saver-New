@@ -98,7 +98,6 @@ export default function SubscriptionDetail({ store, bill: billProp, back, onEdit
       </div>
 
       {menu && <MenuSheet title={bill.name} onClose={() => setMenu(false)} items={[
-        { label: "Edit subscription", icon: "pencil", onClick: () => onEdit?.(bill) },
         { label: stopped ? "Resume" : "Stop subscription", icon: stopped ? "check" : "back", sub: stopped ? "Show it again this month" : "Keeps your payment history", onClick: toggleStop },
         { label: "Delete", icon: "trash", danger: true, sub: "Past payments stay in history", onClick: remove },
       ]} />}

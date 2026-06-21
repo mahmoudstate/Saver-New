@@ -6,6 +6,7 @@ import AmountSheet from "../ui/AmountSheet.jsx";
 import { resolveCat } from "../ui/cats.js";
 import { fmt } from "../lib/format.js";
 import ColorField from "../ui/ColorField.jsx";
+import IconField from "../ui/IconField.jsx";
 import { loadColors } from "../ui/ColorSheet.jsx";
 
 const goalCat = (g) => resolveCat({ catGlyph: g?.glyph, catName: g?.name }) || "goal";
@@ -15,14 +16,15 @@ export default function GoalEditor({ store, goal, onClose }) {
   const [name, setName] = useState(goal?.name || "");
   const [target, setTarget] = useState(goal?.goal || 0);
   const [color, setColor] = useState(goal?.color || loadColors()[0]);
+  const [glyph, setGlyph] = useState(goal?.glyph || "goal");
   const [spending, setSpending] = useState(!!goal?.spendingMode);
   const [sheet, setSheet] = useState(null);
   const canSave = name.trim().length > 0 && target > 0;
 
   const save = () => {
     if (!canSave) return;
-    if (editing) store.set("savings", (list) => list.map((s) => (s.id === goal.id ? { ...s, name: name.trim(), goal: target, color, spendingMode: spending } : s)));
-    else store.set("savings", (list) => [...list, { id: Date.now().toString(), name: name.trim(), goal: target, status: "active", spendingMode: spending, color }]);
+    if (editing) store.set("savings", (list) => list.map((s) => (s.id === goal.id ? { ...s, name: name.trim(), goal: target, color, glyph, spendingMode: spending } : s)));
+    else store.set("savings", (list) => [...list, { id: Date.now().toString(), name: name.trim(), goal: target, status: "active", spendingMode: spending, color, glyph }]);
     store.flash({ title: editing ? "Goal saved" : "Goal created", sub: name.trim(), color: "var(--acText)", icon: "check" });
     onClose();
   };
@@ -37,13 +39,14 @@ export default function GoalEditor({ store, goal, onClose }) {
       </div>
 
       <label className="field">
-        <CatTile cat={goalCat({ name, glyph: goal?.glyph })} name={name} size={42} />
+        <CatTile cat={goalCat({ name, glyph })} color={color} name={name} size={42} />
         <div style={{ flex: 1 }}><div className="fl">Name</div>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Travel fund" style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700, marginTop: 2, width: "100%" }} />
         </div><span className="chev"><Ico name="pencil" size={17} /></span>
       </label>
 
       <ColorField value={color} onChange={setColor} style={{ margin: "13px 0" }} />
+      <div style={{ marginBottom: 13 }}><IconField glyph={glyph} color={color} onPick={setGlyph} /></div>
 
       <div className="field">
         <div style={{ flex: 1 }}><div className="fl">Spending goal</div><div className="fv" style={{ color: "var(--muted)", fontWeight: 600, fontSize: 12.5 }}>Spend from this pot</div></div>

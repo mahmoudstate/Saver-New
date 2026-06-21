@@ -16,8 +16,6 @@ import { fmt, currentMonth, cardGradient } from "../lib/format.js";
 import { SERVICE_CAT_TO_TYPE, BILL_TYPES } from "../lib/services.js";
 
 const clampDay = (d) => Math.min(28, Math.max(1, d || 1));
-// Built-in bill-type glyphs mapped to the new app's CATS icon set.
-const TYPE_GLYPH = { streaming: "movie", software: "electronics", telecom: "wifi", shopping: "shopping", utilities: "electricity", other: "subscription" };
 
 // Brand tile: bundled logo for a preset service, else a custom icon, else monogram.
 function Brand({ domain, glyph, name, color, size = 42 }) {
@@ -27,7 +25,7 @@ function Brand({ domain, glyph, name, color, size = 42 }) {
 }
 
 export default function SubscriptionEditor({ store, bill, onClose }) {
-  const { banks = [], billTypes = [] } = store;
+  const { banks = [] } = store;
   const editing = !!bill;
   const [name, setName] = useState(bill?.name || "");
   const [amount, setAmount] = useState(bill?.amount || 0);
@@ -43,9 +41,7 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
 
   const bank = banks.find((b) => b.id === bankId);
   const canSave = name.trim() && amount > 0;
-  const allTypes = [...BILL_TYPES, ...billTypes];
-  const typeGlyph = (t) => TYPE_GLYPH[t.id] || t.glyph || "subscription";
-
+  const allTypes = BILL_TYPES;
   const selType = allTypes.find((t) => t.id === typeId) || allTypes.find((t) => t.id === "other");
   // Picking a brand: set name to the brand + brand colour (locked) + auto category.
   const pickService = (svc) => { setName(svc.name); setColor(svc.color); setDomain(svc.domain); setGlyph(""); setTypeId(SERVICE_CAT_TO_TYPE[svc.category] || "other"); setCustom(false); };
@@ -112,7 +108,7 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
       {/* ── Category (last) — a row that opens the picker ── */}
       <div className="over" style={{ marginTop: 20 }}>Category</div>
       <div className="field" onClick={() => setSheet("cat")} style={{ cursor: "pointer" }}>
-        <CatTile cat={typeGlyph(selType)} color={selType.color} size={42} />
+        <CatTile cat={selType.glyph} color="var(--ac)" size={42} />
         <div style={{ flex: 1 }}><div className="fl">Category</div><div className="fv">{selType.name}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
       </div>
 
@@ -127,21 +123,16 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "52vh", overflowY: "auto", paddingBottom: 4 }}>
               {allTypes.map((t) => (
                 <div key={t.id} className="icard" onClick={() => { setTypeId(t.id); setSheet(null); }} style={{ cursor: "pointer", border: typeId === t.id ? "1.5px solid var(--ac)" : undefined }}>
-                  <CatTile cat={typeGlyph(t)} color={t.color} size={40} />
+                  <CatTile cat={t.glyph} color="var(--ac)" size={40} />
                   <div className="nm" style={{ flex: 1 }}>{t.name}</div>
                   {typeId === t.id && <span style={{ color: "var(--ac)" }}><Ico name="check" size={18} /></span>}
                 </div>
               ))}
-              <div className="icard" onClick={() => setSheet("newcat")} style={{ cursor: "pointer", border: "1px dashed var(--border)" }}>
-                <span className="circ" style={{ width: 40, height: 40, borderRadius: 12, background: "var(--acDim)", color: "var(--acText)" }}><Ico name="plus" size={19} /></span>
-                <div style={{ flex: 1 }}><div className="nm">New category</div><div className="mt">Name it, pick an icon &amp; colour</div></div>
-              </div>
             </div>
           </div>
         </>
       )}
       {sheet === "custom" && <CustomIconSheet title="Custom icon" glyph={glyph || "subscription"} color={color} onDone={({ glyph, color }) => { setGlyph(glyph); setColor(color); setDomain(""); setCustom(true); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "newcat" && <CustomIconSheet title="New category" withName glyph="subscription" doneLabel="Add category" onDone={({ glyph, color, name }) => { const id = "custom_" + Date.now(); store.set("billTypes", (list) => [...list, { id, name, glyph, color }]); setTypeId(id); setSheet(null); }} onClose={() => setSheet("cat")} />}
       {sheet === "amount" && <AmountSheet title="Monthly amount" confirmLabel="Set" onConfirm={(v) => { setAmount(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "day" && <DayGridSheet title="Billing day" sub="Which day each month it's charged." value={clampDay(dueDay)} onConfirm={(v) => { setDueDay(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "remind" && <OptionSheet title="Remind me" sub="Before it's due" value={reminderDays} onPick={(v) => { setReminderDays(v); setSheet(null); }} onClose={() => setSheet(null)} options={[{ value: 0, label: "Off" }, { value: 1, label: "1 day before" }, { value: 2, label: "2 days before" }, { value: 3, label: "3 days before" }, { value: 7, label: "1 week before" }]} />}

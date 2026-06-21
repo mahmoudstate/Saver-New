@@ -1,10 +1,10 @@
-// Saver — new bottom nav: Home · Activity · [+] · Bills · Profile (squircle FAB)
+// Saver — new bottom nav: Home · Bills · [+] · Activity · Profile (squircle FAB)
 import Ico from "./Ico.jsx";
 
 const TABS = [
   { id: "home", icon: "home" },
-  { id: "activity", icon: "activity" },
   { id: "bills", icon: "bills" },
+  { id: "activity", icon: "activity" },
   { id: "profile", icon: "you" },
 ];
 

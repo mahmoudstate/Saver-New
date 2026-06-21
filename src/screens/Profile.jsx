@@ -33,7 +33,7 @@ export default function Profile({ store, go }) {
 
       <div className="over">Your money</div>
       <Row icon="wallet" bg="var(--blueDim)" color="var(--blue)" label="Bank accounts" value={banks.filter((b) => !b.archived).length} onClick={() => go?.("accounts")} />
-      <Row icon="layers" bg="var(--purpleDim)" color="var(--purple)" label="Categories" onClick={() => go?.("categories")} />
+      <Row icon="layers" bg="var(--orangeDim)" color="var(--orange)" label="Categories" onClick={() => go?.("categories")} />
       <Row icon="target" bg="var(--acDim)" color="var(--ac)" label="Savings goals" onClick={() => go?.("goals")} />
       <Row icon="sparkles" bg="var(--purpleDim)" color="var(--purple)" label="Budgets & projects" onClick={() => go?.("budgets")} />
       <Row icon="zap" bg="var(--yellowDim)" color="var(--yellow)" label="Quick actions" onClick={() => go?.("quickactions")} />
