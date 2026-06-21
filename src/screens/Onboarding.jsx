@@ -1,30 +1,57 @@
-// Saver — Onboarding / Welcome: ported 1:1 from showcase 27.
+// Saver — Onboarding / Welcome (first run): new design + GSAP entrance.
+// What you can do + how to add Saver to the home screen, then Get started.
+import { useRef } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import Ico from "../ui/Ico.jsx";
+import InstallSteps from "../ui/InstallSteps.jsx";
 import iconUrl from "../../icon.png";
 
+const REDUCED = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
 const ROWS = [
-  { icon: "wallet", bg: "var(--acDim)", color: "var(--acText)", nm: "See everything at a glance", mt: "Switch between Total and Safe to spend" },
-  { icon: "target", bg: "var(--yellowDim)", color: "var(--yellow)", nm: "Reach your goals", mt: "Freeze money — or spend from a goal vault" },
-  { icon: "shield", bg: "var(--blueDim)", color: "var(--blue)", nm: "Private & offline", mt: "Your data never leaves the device" },
+  { icon: "eye", color: "var(--blue)", nm: "Know what's safe to spend", mt: "Your real spendable number, right on the home screen." },
+  { icon: "target", color: "var(--ac)", nm: "Reach your goals", mt: "Save a little at a time and watch it grow." },
+  { icon: "shield", color: "var(--orange)", nm: "Private and offline", mt: "Everything stays on your phone." },
 ];
 
+const Title = ({ children }) => <div className="gsap-title" style={{ fontSize: 18, fontWeight: 800, letterSpacing: -.3, marginTop: 28, marginBottom: 14 }}>{children}</div>;
+
 export default function Onboarding({ onDone }) {
+  const scope = useRef(null);
+
+  useGSAP(() => {
+    if (REDUCED) return;
+    const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+    tl.from(".gsap-hero", { opacity: 0, y: 24, duration: 0.7 })
+      .from(".gsap-card", { opacity: 0, y: 24, duration: 0.6, stagger: 0.12 }, "-=0.3")
+      .from(".gsap-title", { opacity: 0, y: 16, duration: 0.5, stagger: 0.2 }, "-=0.2")
+      .from(".gsap-step", { opacity: 0, x: -18, duration: 0.5, stagger: 0.12 }, "-=0.2")
+      .from(".gsap-cta", { opacity: 0, y: 16, duration: 0.5 }, "-=0.15");
+  }, { scope });
+
   return (
-    <div className="content" style={{ paddingBottom: 96 }}>
+    <div ref={scope} className="content" style={{ paddingBottom: 110 }}>
       <div className="hero" style={{ paddingBottom: 34 }}>
-        <div style={{ position: "relative", zIndex: 1, textAlign: "center", paddingTop: 6 }}>
-          <img src={iconUrl} alt="" style={{ width: 72, height: 72, borderRadius: 20, boxShadow: "0 12px 28px rgba(0,0,0,.25)" }} />
-          <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: -1.2, marginTop: 18 }}>Welcome to Saver</div>
-          <div style={{ fontSize: 14, color: "var(--heroSub)", fontWeight: 600, marginTop: 8 }}>Clear money, calmly. All on your phone.</div>
+        <div className="gsap-hero" style={{ position: "relative", zIndex: 1, textAlign: "center", paddingTop: 6 }}>
+          <img src={iconUrl} alt="Saver" style={{ width: 80, height: 80, borderRadius: 22, boxShadow: "0 16px 34px rgba(0,0,0,.28)" }} />
+          <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: -1, marginTop: 18 }}>Welcome to Saver</div>
+          <div style={{ fontSize: 14, color: "var(--heroSub)", fontWeight: 700, marginTop: 8 }}>Spend clearly and save calmly</div>
         </div>
       </div>
+
+      <Title>What you can do</Title>
       {ROWS.map((r, i) => (
-        <div className="icard" key={i}>
-          <span className="circ" style={{ width: 40, height: 40, borderRadius: 12, background: r.bg, color: r.color }}><Ico name={r.icon} size={20} /></span>
-          <div><div className="nm">{r.nm}</div><div className="mt">{r.mt}</div></div>
+        <div className="icard gsap-card" key={i} style={{ alignItems: "flex-start", gap: 12 }}>
+          <span style={{ width: 40, height: 40, borderRadius: 12, background: `color-mix(in srgb, ${r.color} 16%, transparent)`, color: r.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Ico name={r.icon} size={20} /></span>
+          <div><div style={{ fontSize: 14.5, fontWeight: 800, letterSpacing: -.2 }}>{r.nm}</div><div style={{ fontSize: 13, lineHeight: 1.5, color: "var(--muted)", fontWeight: 600, marginTop: 3 }}>{r.mt}</div></div>
         </div>
       ))}
-      <div className="cta"><div className="btn btn-primary btn-full" onClick={onDone}>Get started</div></div>
+
+      <Title>Add Saver to your home screen</Title>
+      <InstallSteps />
+
+      <div className="cta"><div className="btn btn-primary btn-full gsap-cta" onClick={onDone}>Get started</div></div>
     </div>
   );
 }

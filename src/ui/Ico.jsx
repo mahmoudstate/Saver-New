@@ -36,6 +36,7 @@ export const MARKS = {
   sun: `<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/>`,
   crown: `<path d="M4 8l3.7 3L12 5l4.3 6L20 8l-1.6 9.5H5.6L4 8Z"/><path d="M5.6 20.5h12.8"/>`,
   mail: `<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7 8.5 6 8.5-6"/>`,
+  share: `<path d="M12 3v13"/><path d="m8 7 4-4 4 4"/><path d="M6 12H5a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-1"/>`,
   arrowUp: `<path d="M12 19V5M5 12l7-7 7 7"/>`,
   arrowDown: `<path d="M12 5v14M5 12l7 7 7-7"/>`,
   down: `<path d="M12 5v14M19 12l-7 7-7-7"/>`,

@@ -40,6 +40,7 @@ import InstallmentEditor from "./screens/InstallmentEditor.jsx";
 import Notifications from "./screens/Notifications.jsx";
 import CustomizeDashboard from "./screens/CustomizeDashboard.jsx";
 import Onboarding from "./screens/Onboarding.jsx";
+import Splash from "./screens/Splash.jsx";
 import Celebration from "./screens/Celebration.jsx";
 import WhatsNew from "./ui/WhatsNew.jsx";
 import AllAccounts from "./screens/AllAccounts.jsx";
@@ -70,6 +71,7 @@ export default function App() {
   const [activityDate, setActivityDate] = useState(null); // Activity date filter (month / day range)
   const homeScroll = useRef(0); // remember Home scroll across tab switches (restore on first return, reset on re-tap)
   const [whatsNew, setWhatsNew] = useState(false);
+  const [booting, setBooting] = useState(true); // splash on every app open
   const push = (v) => setStack((s) => [...s, v]);          // open a deeper screen
   // NOTE: back is wired straight to onClick/onClose in screens, so it must take NO
   // numeric arg (the click event would land there). Use popN for multi-level pops.
@@ -87,7 +89,8 @@ export default function App() {
   // Switch tab from inside a screen (e.g. Home's Bills card) without forcing a reset.
   const openTab = (t) => { setBillsSeg(null); setStack([]); setTab(t); };
 
-  if (!store.seenWelcome) return <div className="app"><Onboarding onDone={() => { store.set("seenWelcome", true); setWhatsNew(true); }} /></div>;
+  if (booting) return <div className="app"><Splash onDone={() => setBooting(false)} /></div>;
+  if (!store.seenWelcome) return <div className="app"><Onboarding onDone={() => store.set("seenWelcome", true)} /></div>;
 
   // The underlying tab — stays mounted under any pushed view so returning restores scroll/state.
   let tabScreen;
@@ -116,7 +119,7 @@ export default function App() {
   else if (view?.type === "celebrate") viewScreen = <Celebration goal={view.goal} saved={view.saved} onKeep={() => back()} onArchive={() => { if (view.saved > 0) store.addTxn({ type: "goal_return", amount: view.saved, date: new Date().toISOString().slice(0, 10), bankId: store.banks[0]?.id, goalId: view.goalId, goalName: view.goal, catName: "Goal archived", catIcon: "saving" }); store.set("savings", (l) => l.map((s) => (s.id === view.goalId ? { ...s, status: "archived", spendingMode: false } : s))); popN(2); }} />;
   else if (view?.type === "quickactions") viewScreen = <QuickActions store={store} back={back} onEdit={(q) => push({ type: "editQuick", action: q })} />;
   else if (view?.type === "editQuick") viewScreen = <QuickActionEditor store={store} action={view.action} onClose={back} />;
-  else if (view?.type === "account") viewScreen = <AccountLedger store={store} bank={view.bank} back={back} onMove={(b) => push({ type: "transfer", fromBankId: b.id })} onEdit={(b) => push({ type: "editAccount", account: b })} />;
+  else if (view?.type === "account") viewScreen = <AccountLedger store={store} bank={view.bank} back={back} onMove={(b) => push({ type: "transfer", fromBankId: b.id })} onEdit={(b) => push({ type: "editAccount", account: b })} onEditTxn={(t) => push({ type: "edit", txn: t })} />;
   else if (view?.type === "sub") viewScreen = <SubscriptionDetail store={store} bill={view.bill} back={back} onEdit={(b) => push({ type: "editSub", bill: b })} />;
   else if (view?.type === "editSub") viewScreen = <SubscriptionEditor store={store} bill={view.bill} onClose={back} />;
   else if (view?.type === "editInst") viewScreen = <InstallmentEditor store={store} plan={view.plan} onClose={back} />;
@@ -126,8 +129,8 @@ export default function App() {
   else if (view?.type === "editGoal") viewScreen = <GoalEditor store={store} goal={view.goal} onClose={back} />;
   else if (view?.type === "budgets") viewScreen = <Budgets store={store} initialSeg={budgetsSeg} onSegChange={setBudgetsSeg} back={back} onAdd={(seg) => push({ type: "editBudget", budget: null, kind: seg === "projects" ? "project" : "monthly" })} onOpenBudget={(b) => push({ type: "budget", budgetId: b.id })} onOpenProject={(p) => push({ type: "project", projectId: p.id })} />;
   else if (view?.type === "editBudget") viewScreen = <BudgetEditor store={store} budget={view.budget} initialKind={view.kind} onClose={back} />;
-  else if (view?.type === "budget") viewScreen = <BudgetDetail store={store} budgetId={view.budgetId} back={back} onEdit={(b) => push({ type: "editBudget", budget: b })} />;
-  else if (view?.type === "project") viewScreen = <ProjectDetail store={store} projectId={view.projectId} back={back} onEdit={(p) => push({ type: "editBudget", budget: p })} />;
+  else if (view?.type === "budget") viewScreen = <BudgetDetail store={store} budgetId={view.budgetId} back={back} onEdit={(b) => push({ type: "editBudget", budget: b })} onEditTxn={(t) => push({ type: "edit", txn: t })} />;
+  else if (view?.type === "project") viewScreen = <ProjectDetail store={store} projectId={view.projectId} back={back} onEdit={(p) => push({ type: "editBudget", budget: p })} onEditTxn={(t) => push({ type: "edit", txn: t })} />;
   else if (view?.type === "allAccounts") viewScreen = <AllAccounts store={store} back={back} onOpenBank={(b) => push({ type: "account", bank: b })} onAdd={() => push({ type: "editAccount", account: null })} />;
   else if (view?.type === "breakdown") viewScreen = <Breakdown store={store} back={back} />;
   else if (view?.type === "datePicker") viewScreen = <DatePicker initial={activityDate} onApply={(d) => setActivityDate(d.mode === "all" ? null : d)} back={back} />;

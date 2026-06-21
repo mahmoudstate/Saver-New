@@ -9,7 +9,7 @@ import { calcBankBalance, calcFrozenForBank } from "../lib/calc.js";
 // same day+date label used across Activity / Budget / Project rows
 const rowDate = (d) => d ? new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "";
 
-function Row({ t, bankNameOf }) {
+function Row({ t, bankNameOf, onClick }) {
   let cls = "", sign = "", nm, sub, cat = null, color;
   if (t.type === "income") { cls = "in"; sign = "+"; nm = t.note || t.catName || "Income"; sub = t.catName || "Income"; }
   else if (t.type === "expense") { cls = "out"; sign = "−"; nm = t.note || t.catName || "Expense"; sub = t.catName || "Expense"; }
@@ -21,7 +21,7 @@ function Row({ t, bankNameOf }) {
   const dl = rowDate(t.date);
   sub = sub ? `${sub} · ${dl}` : dl;
   return (
-    <div className="icard">
+    <div className="icard" onClick={onClick} style={onClick ? { cursor: "pointer" } : undefined}>
       <CatTile txn={t} cat={cat} size={44} />
       <div><div className="nm">{nm}</div><div className="mt">{sub}</div></div>
       <div className={`amt ${cls} tnum`} style={!cls && color ? { color } : undefined}>{sign}{fmt(t.amount)}</div>
@@ -29,7 +29,7 @@ function Row({ t, bankNameOf }) {
   );
 }
 
-export default function AccountLedger({ store, bank: bankProp, back, onMove, onEdit }) {
+export default function AccountLedger({ store, bank: bankProp, back, onMove, onEdit, onEditTxn }) {
   const { txns, banks } = store;
   // Always read the latest bank from the store so edits (colour/name) reflect immediately.
   const bank = banks.find((b) => b.id === bankProp.id) || bankProp;
@@ -63,7 +63,7 @@ export default function AccountLedger({ store, bank: bankProp, back, onMove, onE
       </div>
       <div className="over">This month</div>
       {list.length === 0 ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px", fontWeight: 600 }}>No transactions this month.</div>
-        : list.map((t) => <Row key={t.id} t={t} bankNameOf={bankNameOf} />)}
+        : list.map((t) => <Row key={t.id} t={t} bankNameOf={bankNameOf} onClick={onEditTxn ? () => onEditTxn(t) : undefined} />)}
     </div>
   );
 }

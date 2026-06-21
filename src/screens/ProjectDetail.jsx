@@ -11,7 +11,7 @@ const rowDate = (d) => d ? new Date(d + "T12:00:00").toLocaleDateString("en-GB",
 
 const monthsBetween = (start, end) => { if (!start) return 1; const [sy, sm] = start.split("-").map(Number); const [ey, em] = end.split("-").map(Number); return Math.max(1, (ey - sy) * 12 + (em - sm) + 1); };
 
-export default function ProjectDetail({ store, projectId, back, onEdit }) {
+export default function ProjectDetail({ store, projectId, back, onEdit, onEditTxn }) {
   const { budgets = [], txns = [], banks = [] } = store;
   const [menu, setMenu] = useState(false);
   const project = budgets.find((b) => b.id === projectId);
@@ -57,7 +57,7 @@ export default function ProjectDetail({ store, projectId, back, onEdit }) {
       <div className="over">Spending</div>
       {rows.length === 0 ? <div style={{ color: "var(--muted)", fontWeight: 600, padding: "8px 2px" }}>No spending yet.</div>
         : rows.map((t) => (
-          <div className="icard" key={t.id}>
+          <div className="icard" key={t.id} onClick={onEditTxn ? () => onEditTxn(t) : undefined} style={onEditTxn ? { cursor: "pointer" } : undefined}>
             <CatTile txn={t} size={44} />
             <div><div className="nm">{t.catName || t.note || "Expense"}</div><div className="mt">{bankName(t.bankId)} · {rowDate(t.date)}</div></div>
             <div className="amtb"><b className="tnum" style={{ color: "var(--red)" }}>−{fmt(t.amount)}</b></div>
