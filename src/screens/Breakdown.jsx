@@ -6,7 +6,7 @@ import CatTile from "../ui/CatTile.jsx";
 import Money from "../ui/Money.jsx";
 import MonthSheet from "../ui/MonthSheet.jsx";
 import SegToggle from "../ui/SegToggle.jsx";
-import { resolveCat } from "../ui/cats.js";
+import { resolveCat, CATS } from "../ui/cats.js";
 import { fmt, currentMonth, MONTHS } from "../lib/format.js";
 import { monthTxns } from "../lib/calc.js";
 
@@ -14,8 +14,8 @@ import { monthTxns } from "../lib/calc.js";
 const rowDate = (d) => d ? new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "";
 // "This month" for the current month, else "Mon" or "Mon YYYY" if a different year
 const monthChip = (m, cm) => { const [y, mo] = m.split("-"); return m === cm ? "This month" : `${MONTHS[+mo - 1]}${y !== cm.slice(0, 4) ? " " + y : ""}`; };
-
-const BARC = ["#E5544E", "#F59E0B", "#3B82F6", "#8B5CF6", "#16BFA6", "#A78BFA"];
+// the category's own colour (same as its CatTile icon), so each bar matches its glyph
+const catColor = (txn) => { const k = resolveCat(txn); return (k && CATS[k]) ? CATS[k][0] : (txn?.catColor || "var(--muted)"); };
 
 export default function Breakdown({ store, back }) {
   const { txns = [], banks = [] } = store;
@@ -68,7 +68,7 @@ export default function Breakdown({ store, back }) {
                   <CatTile txn={c.sample} size={34} />
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, marginBottom: 5 }}><span>{c.name}</span><span className="tnum">{fmt(c.sum)} · {pct}%</span></div>
-                    <div className="pbar bar"><i style={{ width: `${pct}%`, background: BARC[i % BARC.length] }} /></div>
+                    <div className="pbar bar"><i style={{ width: `${pct}%`, background: catColor(c.sample) }} /></div>
                   </div>
                 </div>
               );
