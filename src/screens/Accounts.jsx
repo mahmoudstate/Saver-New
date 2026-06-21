@@ -1,5 +1,6 @@
 // Saver — Accounts list: ported 1:1 from showcase 40 (manage banks & cash).
 import Ico from "../ui/Ico.jsx";
+import Money from "../ui/Money.jsx";
 import { fmt } from "../lib/format.js";
 import { calcBankBalance, calcFrozenForBank, totalBalance, totalFrozen } from "../lib/calc.js";
 
@@ -13,7 +14,7 @@ export default function Accounts({ store, back, onOpen, onAdd }) {
       <div className="hero">
         <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">Accounts</div><div className="grow" /><div className="hib" onClick={onAdd}><Ico name="plus" size={20} /></div></div>
         <div className="lbl">Total balance</div>
-        <div className="big tnum">{fmt(total)}</div>
+        <Money className="big tnum" v={total} />
         <div className="sub">{banks.filter((b) => !b.archived).length} accounts{frozen > 0 ? ` · ${fmt(frozen)} frozen in goals` : ""}</div>
       </div>
 

@@ -129,7 +129,7 @@ export default function App() {
   else if (view?.type === "budget") viewScreen = <BudgetDetail store={store} budgetId={view.budgetId} back={back} onEdit={(b) => push({ type: "editBudget", budget: b })} />;
   else if (view?.type === "project") viewScreen = <ProjectDetail store={store} projectId={view.projectId} back={back} onEdit={(p) => push({ type: "editBudget", budget: p })} />;
   else if (view?.type === "allAccounts") viewScreen = <AllAccounts store={store} back={back} onOpenBank={(b) => push({ type: "account", bank: b })} onAdd={() => push({ type: "editAccount", account: null })} />;
-  else if (view?.type === "breakdown") viewScreen = <Breakdown store={store} back={back} onFilter={() => push({ type: "filter" })} />;
+  else if (view?.type === "breakdown") viewScreen = <Breakdown store={store} back={back} />;
   else if (view?.type === "datePicker") viewScreen = <DatePicker initial={activityDate} onApply={(d) => setActivityDate(d.mode === "all" ? null : d)} back={back} />;
   else if (view?.type === "filter") viewScreen = <SmartFilter store={store} initial={view.filter} dateFilter={view.dateFilter} hidePeriod={view.hidePeriod} back={back} onApply={(f) => replace({ type: "results", filter: f })} />;
   else if (view?.type === "results") viewScreen = <FilterResults store={store} filter={view.filter} back={back} onEditFilter={() => replace({ type: "filter", filter: view.filter })} onEdit={(t) => push({ type: "edit", txn: t })} />;

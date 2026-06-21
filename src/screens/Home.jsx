@@ -19,7 +19,7 @@ const REHIDE_MS = 60 * 1000; // re-mask after ~1 min away
 
 const Contactless = ({ s = 20 }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" style={{ opacity: .9 }}><path d="M5 11a3 3 0 0 1 0 2M9 8.5a6.5 6.5 0 0 1 0 7M13 6a10 10 0 0 1 0 12" /></svg>;
 
-export function BankCard({ bank, available, frozen, low, money, onClick, wide, grid }) {
+export function BankCard({ bank, available, frozen, low, money, masked, onClick, wide, grid }) {
   const col = bank.color || "#0e9f6e";
   return (
     <div className="bankcard" onClick={onClick} style={{ background: cardGradient(col), cursor: "pointer", ...(wide ? { width: "100%", height: 168 } : {}), ...(grid ? { minWidth: 0, width: "100%", height: 152 } : {}), ...(low ? { boxShadow: "0 12px 24px -10px rgba(0,0,0,.45), inset 0 0 0 2px #F8B53D" } : {}) }}>
@@ -34,7 +34,7 @@ export function BankCard({ bank, available, frozen, low, money, onClick, wide, g
       </div>
       <div style={{ position: "relative", zIndex: 2 }}>
         <div style={{ fontSize: 10, opacity: .85, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".09em" }}>{low && frozen <= 0 ? "Available · low" : "Available"}</div>
-        <div className="tnum" style={{ fontSize: grid ? 22 : 27, fontWeight: 800, letterSpacing: -.6, lineHeight: 1.08 }}>{money(available)}</div>
+        <Money className="tnum" style={{ fontSize: grid ? 22 : 27, fontWeight: 800, letterSpacing: -.6, lineHeight: 1.08 }} v={available} masked={masked} curSize={0.5} />
         {frozen > 0
           ? <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6 }}><Ico name="lock" size={11} color="#fff" /><span className="tnum" style={{ fontSize: 11.5, fontWeight: 700, opacity: .92 }}>{money(frozen)} locked · goals</span></div>
           : low
@@ -155,7 +155,7 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenGoal
         {banks.filter((b) => !b.archived).map((b) => {
           const bal = calcBankBalance(b.id, txns), frozen = Math.max(0, calcFrozenForBank(b.id, savings, txns)), avail = bal - frozen;
           const low = b.lowBalanceThreshold && avail <= b.lowBalanceThreshold && avail >= 0;
-          return <BankCard key={b.id} bank={b} available={avail} frozen={frozen} low={low} money={money} onClick={() => onOpenBank?.(b)} />;
+          return <BankCard key={b.id} bank={b} available={avail} frozen={frozen} low={low} money={money} masked={hide} onClick={() => onOpenBank?.(b)} />;
         })}
         <div style={{ minWidth: 84, background: "var(--surface2)", border: "var(--cardBorder)", borderRadius: 22, padding: 14, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, color: "var(--acText)" }} onClick={() => onOpenAllAccounts?.()}><Ico name="layers" size={20} /><div style={{ fontSize: 11, fontWeight: 800, textAlign: "center" }}>All</div></div>
       </div>

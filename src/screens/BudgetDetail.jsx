@@ -3,6 +3,7 @@ import { useState } from "react";
 import Ico from "../ui/Ico.jsx";
 import CatTile from "../ui/CatTile.jsx";
 import MenuSheet from "../ui/MenuSheet.jsx";
+import Money from "../ui/Money.jsx";
 import { fmt, currentMonth, MONTHS } from "../lib/format.js";
 import { budgetSpentMonth, budgetTxns } from "../lib/calc.js";
 
@@ -34,7 +35,7 @@ export default function BudgetDetail({ store, budgetId, back, onEdit }) {
       <div className="hero">
         <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">{budget.name}</div><div className="grow" /><div className="hib" onClick={() => onEdit?.(budget)} style={{ marginRight: 8 }}><Ico name="pencil" size={18} /></div><div className="hib" onClick={() => setMenu(true)}><Ico name="more" size={20} /></div></div>
         <div className="lbl">Spent</div>
-        <div className="big tnum">{fmt(spent)}</div>
+        <Money className="big tnum" v={spent} />
         <div className="sub">of {fmt(limit)} budget &nbsp;·&nbsp; {limit > 0 ? Math.round((spent / limit) * 100) : 0}% used</div>
       </div>
 

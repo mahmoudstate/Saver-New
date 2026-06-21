@@ -7,6 +7,7 @@ import CatTile from "../ui/CatTile.jsx";
 import AmountSheet from "../ui/AmountSheet.jsx";
 import MenuSheet from "../ui/MenuSheet.jsx";
 import { resolveCat } from "../ui/cats.js";
+import Money from "../ui/Money.jsx";
 import { fmt, today, fmtDate } from "../lib/format.js";
 import { calcGoalSaved, goalBalancesPerBank } from "../lib/calc.js";
 
@@ -91,7 +92,7 @@ export default function GoalDetail({ store, goalId, back, onReached, onEdit }) {
       <div className="hero">
         <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">{goal.name}</div><div className="grow" /><div className="hib" onClick={() => onEdit?.(goal)} style={{ marginRight: 8 }}><Ico name="pencil" size={18} /></div><div className="hib" onClick={() => setMenu(true)}><Ico name="more" size={20} /></div></div>
         <div className="lbl">Saved</div>
-        <div className="big tnum">{fmt(saved)}</div>
+        <Money className="big tnum" v={saved} />
         <div className="sub">{left > 0 ? `${fmt(left)} left · ${Math.round(pct)}% of ${fmt(target)}` : `Reached · ${fmt(target)}`}</div>
       </div>
 

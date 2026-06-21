@@ -2,6 +2,7 @@
 import { useMemo } from "react";
 import Ico from "../ui/Ico.jsx";
 import CatTile from "../ui/CatTile.jsx";
+import Money from "../ui/Money.jsx";
 import { fmt, currentMonth, cardGradient } from "../lib/format.js";
 import { calcBankBalance, calcFrozenForBank } from "../lib/calc.js";
 
@@ -51,7 +52,7 @@ export default function AccountLedger({ store, bank: bankProp, back, onMove, onE
         </div>
         <div style={{ position: "relative", zIndex: 2 }}>
           <div className="lbl" style={{ color: "rgba(255,255,255,.82)" }}>Available</div>
-          <div className="big tnum" style={{ color: "#fff" }}>{fmt(avail)}</div>
+          <Money className="big tnum" style={{ color: "#fff" }} v={avail} />
           <div className="sub" style={{ color: "rgba(255,255,255,.85)", display: "flex", alignItems: "center", gap: 6 }}>
             {frozen > 0 ? <><Ico name="lock" size={12} color="#fff" />{fmt(frozen)} locked · {fmt(bal)} total</> : <>{fmt(bal)} total balance</>}
           </div>

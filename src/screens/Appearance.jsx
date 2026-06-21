@@ -1,5 +1,6 @@
 // Saver — Appearance: ported 1:1 from showcase 24 (light/dark + 6 calm accents).
 import Ico from "../ui/Ico.jsx";
+import Money from "../ui/Money.jsx";
 import { fmt } from "../lib/format.js";
 import { ACCENTS } from "../lib/store.js";
 import { totalBalance } from "../lib/calc.js";
@@ -14,7 +15,7 @@ export default function Appearance({ store, back }) {
     <div className="content padnav">
       <div className="hero">
         <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">Appearance</div><div className="grow" /></div>
-        <div className="lbl">Total balance</div><div className="big tnum">{fmt(total)}</div><div className="sub">Live preview — your theme &amp; colour</div>
+        <div className="lbl">Total balance</div><Money className="big tnum" v={total} /><div className="sub">Live preview — your theme &amp; colour</div>
       </div>
 
       <div className="over">Theme</div>

@@ -6,6 +6,7 @@ import Ico from "../ui/Ico.jsx";
 import ServiceLogo from "../ui/ServiceLogo.jsx";
 import CatTile from "../ui/CatTile.jsx";
 import SegToggle from "../ui/SegToggle.jsx";
+import Money from "../ui/Money.jsx";
 import { fmt, currentMonth, MONTHS } from "../lib/format.js";
 import { getBillType, BILL_TYPES } from "../lib/services.js";
 
@@ -104,8 +105,8 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
       <div className="hero">
         <div className="toprow"><div className="ttl">{isSubs ? "Bills" : "Installments"}</div><div className="grow" /><div className="hib" onClick={() => onAdd?.(seg)}><Ico name="plus" size={20} /></div></div>
         {isSubs
-          ? <><div className="lbl">Due this month</div><div className="big tnum">{fmt(subs.due)}</div><div className="sub">{subs.active} active &nbsp;·&nbsp; {subs.soon} due soon &nbsp;·&nbsp; {subs.overdue} overdue</div></>
-          : <><div className="lbl">Remaining to pay</div><div className="big tnum">{fmt(inst.remaining)}</div><div className="sub">{inst.plans} plans &nbsp;·&nbsp; {fmt(inst.dueAmt)} due this month</div></>}
+          ? <><div className="lbl">Due this month</div><Money className="big tnum" v={subs.due} /><div className="sub">{subs.active} active &nbsp;·&nbsp; {subs.soon} due soon &nbsp;·&nbsp; {subs.overdue} overdue</div></>
+          : <><div className="lbl">Remaining to pay</div><Money className="big tnum" v={inst.remaining} /><div className="sub">{inst.plans} plans &nbsp;·&nbsp; {fmt(inst.dueAmt)} due this month</div></>}
       </div>
 
       <SegToggle style={{ marginBottom: 14 }} value={seg} onChange={setSeg} options={[{ id: "subs", label: "Subscriptions" }, { id: "inst", label: "Installments" }]} />

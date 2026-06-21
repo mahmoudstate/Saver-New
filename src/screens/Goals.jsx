@@ -4,6 +4,7 @@ import Ico from "../ui/Ico.jsx";
 import CatTile from "../ui/CatTile.jsx";
 import SegToggle from "../ui/SegToggle.jsx";
 import { resolveCat } from "../ui/cats.js";
+import Money from "../ui/Money.jsx";
 import { fmt } from "../lib/format.js";
 import { calcGoalSaved, totalFrozen } from "../lib/calc.js";
 
@@ -24,7 +25,7 @@ export default function Goals({ store, back, onAdd, onOpenGoal }) {
       <div className="hero">
         <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">Goals</div><div className="grow" /><div className="hib" onClick={onAdd}><Ico name="plus" size={20} /></div></div>
         <div className="lbl">Saved toward goals</div>
-        <div className="big tnum">{fmt(totalSaved)}</div>
+        <Money className="big tnum" v={totalSaved} />
         <div className="sub">{goals.length} active &nbsp;·&nbsp; frozen &amp; safe</div>
       </div>
 

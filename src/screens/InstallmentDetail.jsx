@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import Ico from "../ui/Ico.jsx";
 import StepSheet from "../ui/StepSheet.jsx";
 import MenuSheet from "../ui/MenuSheet.jsx";
+import Money from "../ui/Money.jsx";
 import { fmt, today, currentMonth, MONTHS } from "../lib/format.js";
 
 const RING_C = 2 * Math.PI * 40; // r = 40
@@ -107,7 +108,7 @@ export default function InstallmentDetail({ store, instId, back, onEdit }) {
       <div className="hero">
         <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">{label}</div><div className="grow" /><div className="hib" onClick={() => onEdit?.(inst)} style={{ marginRight: 8 }}><Ico name="pencil" size={18} /></div><div className="hib" onClick={() => setMenu(true)}><Ico name="more" size={20} /></div></div>
         <div className="lbl">{inst.company ? inst.company + " · " : ""}{fmt(inst.installmentAmount)}/mo</div>
-        <div className="big tnum">{fmt(remaining)}</div>
+        <Money className="big tnum" v={remaining} />
         <div className="sub">{inst.stopped ? "stopped" : done ? "fully paid" : "left to pay"} · {bankName}</div>
       </div>
 

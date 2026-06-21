@@ -1,6 +1,7 @@
 // Saver — Filter Results: ported from showcase 55 (summary insight + list).
 import Ico from "../ui/Ico.jsx";
 import CatTile from "../ui/CatTile.jsx";
+import Money from "../ui/Money.jsx";
 import { fmt, fmtDate } from "../lib/format.js";
 import { PERIODS, SHOWS, applyFilter, summarize } from "../lib/filter.js";
 
@@ -24,7 +25,7 @@ export default function FilterResults({ store, filter, back, onEditFilter, onEdi
       <div className="hero">
         <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">Results</div><div className="grow" /><div className="hib" onClick={onEditFilter}><Ico name="funnel" size={18} /></div></div>
         <div className="lbl">Your view</div>
-        <div className="big tnum">{fmt(total)}</div>
+        <Money className="big tnum" v={total} />
         <div className="sub">{count} transaction{count === 1 ? "" : "s"}{count ? ` · avg ${fmt(avg)}` : ""}</div>
       </div>
 

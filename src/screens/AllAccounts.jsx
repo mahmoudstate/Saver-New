@@ -1,6 +1,7 @@
 // Saver — All Accounts: total in the hero + every bank as its gradient card (same design).
 import Ico from "../ui/Ico.jsx";
 import { BankCard } from "./Home.jsx";
+import Money from "../ui/Money.jsx";
 import { fmt } from "../lib/format.js";
 import { calcBankBalance, calcFrozenForBank, totalBalance, totalFrozen } from "../lib/calc.js";
 
@@ -14,7 +15,7 @@ export default function AllAccounts({ store, back, onOpenBank, onAdd }) {
       <div className="hero">
         <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">All accounts</div><div className="grow" /><div className="hib" onClick={onAdd}><Ico name="plus" size={20} /></div></div>
         <div className="lbl">Total balance</div>
-        <div className="big tnum">{fmt(total)}</div>
+        <Money className="big tnum" v={total} />
         <div className="sub">{banks.filter((b) => !b.archived).length} account{banks.filter((b) => !b.archived).length === 1 ? "" : "s"}{frozen > 0 ? ` · ${fmt(frozen)} frozen in goals` : ""}</div>
       </div>
 

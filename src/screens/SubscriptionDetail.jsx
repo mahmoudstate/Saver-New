@@ -6,6 +6,7 @@ import Ico from "../ui/Ico.jsx";
 import ServiceLogo from "../ui/ServiceLogo.jsx";
 import CatTile from "../ui/CatTile.jsx";
 import MenuSheet from "../ui/MenuSheet.jsx";
+import Money from "../ui/Money.jsx";
 import { fmt, today, currentMonth, cardGradient, MONTHS } from "../lib/format.js";
 
 export default function SubscriptionDetail({ store, bill: billProp, back, onEdit }) {
@@ -71,7 +72,7 @@ export default function SubscriptionDetail({ store, bill: billProp, back, onEdit
           <span style={{ background: "#fff", borderRadius: 15, padding: 4, display: "inline-flex", boxShadow: "0 8px 18px rgba(0,0,0,.2)" }}><Logo size={44} /></span>
           <div><div style={{ fontSize: 17, fontWeight: 800, letterSpacing: -.3 }}>{bill.name}</div><div style={{ fontSize: 12, opacity: .85, fontWeight: 600 }}>Subscription · monthly</div></div>
         </div>
-        <div className="big tnum" style={{ color: "#fff", marginTop: 12 }}>{fmt(bill.amount)}</div>
+        <Money className="big tnum" style={{ color: "#fff", marginTop: 12 }} v={bill.amount} />
         <div className="sub" style={{ color: "rgba(255,255,255,.85)" }}>{renews} · from {bankName}</div>
       </div>
 

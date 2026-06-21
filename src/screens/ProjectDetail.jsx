@@ -3,6 +3,7 @@ import { useState } from "react";
 import Ico from "../ui/Ico.jsx";
 import CatTile from "../ui/CatTile.jsx";
 import MenuSheet from "../ui/MenuSheet.jsx";
+import Money from "../ui/Money.jsx";
 import { fmt, currentMonth, MONTHS } from "../lib/format.js";
 import { projectSpent, budgetTxns } from "../lib/calc.js";
 
@@ -44,7 +45,7 @@ export default function ProjectDetail({ store, projectId, back, onEdit }) {
       <div className="hero">
         <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">{project.name}</div><div className="grow" /><div className="hib" onClick={() => onEdit?.(project)} style={{ marginRight: 8 }}><Ico name="pencil" size={18} /></div><div className="hib" onClick={() => setMenu(true)}><Ico name="more" size={20} /></div></div>
         <div className="lbl">Spent so far</div>
-        <div className="big tnum">{fmt(spent)}</div>
+        <Money className="big tnum" v={spent} />
         <div className="sub">of {fmt(total)} · {Math.round(pct)}%{range ? ` · ${range}` : ""}</div>
       </div>
 

@@ -8,6 +8,7 @@ import SegToggle from "../ui/SegToggle.jsx";
 import BudgetRing from "../ui/BudgetRing.jsx";
 import MonthSheet from "../ui/MonthSheet.jsx";
 import { resolveCat } from "../ui/cats.js";
+import Money from "../ui/Money.jsx";
 import { fmt, currentMonth, MONTHS } from "../lib/format.js";
 import { budgetSpentMonth, projectSpent } from "../lib/calc.js";
 
@@ -48,9 +49,9 @@ export default function Budgets({ store, back, onAdd, onOpenBudget, onOpenProjec
       <div className="hero">
         <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">{isMonthly ? "Budgets" : "Projects"}</div><div className="grow" />{isMonthly && <div className="hchip" onClick={() => setMonthSheet(true)} style={{ cursor: "pointer", marginRight: 8 }}><Ico name="cal" size={14} />{monthChip(vm, cm)}</div>}<div className="hib" onClick={() => onAdd?.(seg)}><Ico name="plus" size={20} /></div></div>
         {isMonthly ? <>
-          <div className="lbl">Spent</div><div className="big tnum">{fmt(mSpent)}</div><div className="sub">of {fmt(mLimit)} budget &nbsp;·&nbsp; {mLimit > 0 ? Math.round((mSpent / mLimit) * 100) : 0}% used</div>
+          <div className="lbl">Spent</div><Money className="big tnum" v={mSpent} /><div className="sub">of {fmt(mLimit)} budget &nbsp;·&nbsp; {mLimit > 0 ? Math.round((mSpent / mLimit) * 100) : 0}% used</div>
         </> : <>
-          <div className="lbl">Projects · spent so far</div><div className="big tnum">{fmt(pSpent)}</div><div className="sub">{active.length} active{completed.length ? ` · ${completed.length} completed` : ""}</div>
+          <div className="lbl">Projects · spent so far</div><Money className="big tnum" v={pSpent} /><div className="sub">{active.length} active{completed.length ? ` · ${completed.length} completed` : ""}</div>
         </>}
       </div>
 
