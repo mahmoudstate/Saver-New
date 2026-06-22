@@ -1,49 +1,39 @@
-// Saver — Splash: shows on every app open for ~2s, then hands off to the app.
-// Logo with a theme-coloured glow, version + maker line, and a loading bar.
-import { useRef } from "react";
-import gsap from "gsap";
-import { useGSAP } from "@gsap/react";
+// Saver — Splash: faithfully ported from the original app (CSS keyframes), with
+// the new logo, slogan and version. Shows on every app open, then hands off.
+import { useState, useEffect } from "react";
 import logo from "../../icon.png";
 import { APP_VERSION } from "../lib/format.js";
 
 const REDUCED = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 export default function Splash({ onDone }) {
-  const scope = useRef(null);
+  const [phase, setPhase] = useState(0);
 
-  useGSAP(() => {
-    // proceed to the app after the splash beat, animated or not
-    const t = setTimeout(() => onDone?.(), REDUCED ? 700 : 2200);
-    if (REDUCED) return () => clearTimeout(t);
-
-    const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-    tl.from(".sp-glow", { opacity: 0, scale: 0.6, duration: 0.7 })
-      .from(".sp-logo", { opacity: 0, scale: 0.82, y: 10, duration: 0.7 }, "-=0.45")
-      .from(".sp-meta", { opacity: 0, y: 12, duration: 0.5 }, "-=0.3")
-      .fromTo(".sp-fill", { scaleX: 0 }, { scaleX: 1, duration: 1.45, ease: "power1.inOut" }, "-=0.55");
-    // living details: a soft float on the logo and a breathing glow
-    gsap.to(".sp-logo", { y: -5, duration: 1.3, ease: "sine.inOut", yoyo: true, repeat: -1 });
-    gsap.to(".sp-glow", { opacity: 0.9, scale: 1.08, duration: 1.4, ease: "sine.inOut", yoyo: true, repeat: -1 });
-
-    return () => clearTimeout(t);
-  }, { scope });
+  useEffect(() => {
+    if (REDUCED) { const t = setTimeout(() => onDone?.(), 800); return () => clearTimeout(t); }
+    const t1 = setTimeout(() => setPhase(1), 700);
+    const t2 = setTimeout(() => setPhase(2), 2100);
+    const t3 = setTimeout(() => onDone?.(), 2800);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, []); // eslint-disable-line
 
   return (
-    <div ref={scope} style={{ position: "fixed", inset: 0, background: "var(--bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 9999, overflow: "hidden" }}>
-      <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span className="sp-glow" style={{ position: "absolute", width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, color-mix(in srgb, var(--ac) 55%, transparent) 0%, transparent 68%)", filter: "blur(8px)", opacity: 0.7 }} />
-        <img className="sp-logo" src={logo} alt="Saver" style={{ position: "relative", width: 104, height: 104, borderRadius: 26, boxShadow: "0 24px 60px -14px var(--ac), 0 8px 22px rgba(0,0,0,.25)" }} />
+    <div style={{ position: "fixed", inset: 0, zIndex: 999, background: "#0f0f13", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", opacity: phase === 2 ? 0 : 1, transition: phase === 2 ? "opacity 0.7s ease" : "none", userSelect: "none" }}>
+      <style>{`@keyframes saverLogoIn{0%{transform:scale(0.75) translateY(10px);opacity:0}60%{transform:scale(1.05) translateY(-3px);opacity:1}100%{transform:scale(1) translateY(0);opacity:1}}@keyframes saverFadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}@keyframes saverGlow{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 40px 10px color-mix(in srgb, var(--ac) 14%, transparent)}}@keyframes saverBounce{0%,80%,100%{transform:translateY(0);opacity:0.3}40%{transform:translateY(-7px);opacity:1}}`}</style>
+
+      <div style={{ animation: "saverLogoIn 1.0s cubic-bezier(0.175,0.885,0.32,1.275) both, saverGlow 2.5s ease 1s infinite", marginBottom: 24, borderRadius: 28 }}>
+        <img src={logo} alt="Saver" style={{ width: 120, height: 120, borderRadius: 28, display: "block" }} />
       </div>
 
-      <div className="sp-meta" style={{ position: "absolute", bottom: "calc(env(safe-area-inset-bottom, 0px) + 40px)", left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-        <div className="sp-fill-track" style={{ width: 132, height: 4, borderRadius: 999, background: "var(--surface2)", overflow: "hidden" }}>
-          <i className="sp-fill" style={{ display: "block", height: "100%", borderRadius: 999, background: "var(--ac)", transformOrigin: "left center" }} />
-        </div>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 12.5, fontWeight: 800, color: "var(--muted)", letterSpacing: ".02em" }}>Saver One v{APP_VERSION}</div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--faint)", marginTop: 3, letterSpacing: ".04em" }}>Powered by Mahmoud</div>
-        </div>
+      <div style={{ color: "#e8e8f0", fontSize: 32, fontWeight: 800, letterSpacing: 10, textTransform: "uppercase", marginBottom: 6, animation: "saverLogoIn 1.0s 0.15s both" }}>Saver</div>
+
+      <div style={{ color: "var(--ac)", fontSize: 12.5, fontWeight: 500, letterSpacing: 2, opacity: phase >= 1 ? 1 : 0, animation: phase >= 1 ? "saverFadeUp 0.6s ease forwards" : "none", marginBottom: 80 }}>Save it the easy way</div>
+
+      <div style={{ display: "flex", gap: 7, position: "absolute", bottom: 70 }}>
+        {[0, 1, 2].map((i) => <div key={i} style={{ width: 5, height: 5, borderRadius: 99, background: "var(--ac)", animation: `saverBounce 1.3s ease ${i * 0.22}s infinite` }} />)}
       </div>
+
+      <div style={{ color: "#444460", fontSize: 10, position: "absolute", bottom: 24, fontWeight: 700, letterSpacing: 1 }}>Saver One V{APP_VERSION}</div>
     </div>
   );
 }
