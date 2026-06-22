@@ -236,12 +236,12 @@ header.lead{padding:48px 0 6px}
 .bankcard .bc-shine{position:absolute;top:0;left:-75%;width:55%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.30),transparent);transform:skewX(-20deg);animation:bcShine 4.2s ease-in-out infinite;pointer-events:none}
 .bankcard .bc-orb{position:absolute;border-radius:50%;background:rgba(255,255,255,.16);filter:blur(2px)}
 @keyframes bcShine{0%{left:-75%}55%,100%{left:145%}}
-.fab{width:54px;height:54px;border-radius:18px;background:linear-gradient(180deg,color-mix(in srgb,var(--ac) 86%,#fff),var(--ac));color:var(--onacc);
+.fab{width:56px;height:56px;border-radius:19px;background:var(--ac);color:var(--onacc);
   display:flex;align-items:center;justify-content:center;margin:0 6px;transform:translateY(-6px);cursor:pointer;-webkit-tap-highlight-color:transparent;
-  box-shadow:0 5px 0 color-mix(in srgb,var(--ac) 55%,#000),inset 0 2px 0 rgba(255,255,255,.5),inset 0 -5px 8px rgba(0,0,0,.16);
-  transition:transform .1s ease,box-shadow .1s ease}
-.fab:active{transform:translateY(-1px) scale(.98);
-  box-shadow:0 1px 0 color-mix(in srgb,var(--ac) 55%,#000),inset 0 2px 6px rgba(0,0,0,.28)}
+  box-shadow:0 8px 18px -6px rgba(0,0,0,.34),0 2px 6px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.22);
+  transition:transform .13s cubic-bezier(.34,1.4,.64,1),box-shadow .13s ease}
+.fab:active{transform:translateY(-4px) scale(.93);
+  box-shadow:0 4px 10px -5px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.2)}
 .hind{position:absolute;left:50%;bottom:7px;transform:translateX(-50%);width:120px;height:5px;border-radius:var(--r-pill);
   background:color-mix(in srgb,var(--text) 15%,transparent);z-index:8}
 
