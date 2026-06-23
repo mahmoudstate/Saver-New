@@ -26,7 +26,7 @@ export default function PrivacyBackup({ store, back }) {
         store.setConfirm({
           title: "Restore this backup?", message: "This overwrites your current data with the file's contents.",
           color: "var(--acText)", confirmText: "Restore", icon: "download",
-          onConfirm: () => { store.restore(data); store.flash({ title: "Backup restored", color: "var(--acText)", icon: "check" }); },
+          onConfirm: () => { if (store.restore(data)) store.flash({ title: "Backup restored", color: "var(--acText)", icon: "check" }); },
         });
       } catch { store.setAlert({ title: "Couldn't read file", message: "That doesn't look like a Saver backup.", color: "var(--red)" }); }
     };

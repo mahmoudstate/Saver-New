@@ -12,7 +12,7 @@ export default function GuideSteps({ steps = [], color = "var(--ac)" }) {
             {i < steps.length - 1 && <span style={{ flex: 1, width: 2, background: "var(--line)", marginTop: 4, minHeight: 16 }} />}
           </div>
           <div style={{ paddingBottom: i < steps.length - 1 ? 18 : 0 }}>
-            <div style={{ fontSize: 14.5, fontWeight: 800, letterSpacing: -.2 }}>{s.title}</div>
+            <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: -.2 }}>{s.title}</div>
             <div style={{ fontSize: 13, lineHeight: 1.55, color: "var(--muted)", fontWeight: 600, marginTop: 3 }}>{s.text}</div>
           </div>
         </div>

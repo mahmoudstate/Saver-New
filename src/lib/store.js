@@ -35,11 +35,28 @@ export const ACCENTS = {
 export const loadKey = (key, fallback) => { try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; } catch { return fallback; } };
 export const saveKey = (key, val) => { try { localStorage.setItem(key, JSON.stringify(val)); return true; } catch (e) { console.warn("Storage:", e); return false; } };
 
+// Unique id generator — collision-proof UUID where available, with a safe fallback
+// for non-secure contexts (crypto.randomUUID needs https/localhost). Replaces the
+// legacy Date.now() ids (which could theoretically collide within the same ms).
+const newId = () => {
+  try { if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID(); } catch { /* fall through */ }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
 const ENTITIES = {
   txns: [], banks: [], expCats: [], incCats: [], groups: [], savings: [],
   bills: [], budgets: [], installments: [], quickActions: [], billTypes: [],
 };
 const SCALARS = { currency: "EGP", username: "", avatar: "", theme: "system", accent: "mint", dashboard: DASH_DEFAULT, seenWelcome: false, notifReadKeys: [] };
+
+// Validate a backup payload before restoring — never mutates state.
+const validateBackup = (p) => {
+  if (!p || typeof p !== "object" || Array.isArray(p)) return { ok: false, error: "That doesn't look like a Saver backup." };
+  if (p._app !== "Saver") return { ok: false, error: "This file isn't a Saver backup." };
+  if (typeof p._version !== "number" || p._version < 1) return { ok: false, error: "This backup file looks corrupted." };
+  for (const k in ENTITIES) if (p[k] != null && !Array.isArray(p[k])) return { ok: false, error: "This backup file looks corrupted." };
+  return { ok: true };
+};
 
 // Single store hook: loads everything, exposes data + persisted setters + locked actions.
 export function useStore() {
@@ -85,6 +102,19 @@ export function useStore() {
   }, [data.theme]);
   useEffect(() => { const [ac, ac2] = ACCENTS[data.accent] || ACCENTS.mint; const s = document.documentElement.style; s.setProperty("--ac", ac); s.setProperty("--ac2", ac2); }, [data.accent]);
 
+  // Ask the browser to keep our data durable (resists eviction / storage pressure).
+  // Runs once on mount; silent + safe where unsupported (older Safari/Chrome).
+  useEffect(() => {
+    (async () => {
+      try {
+        if (navigator.storage?.persist && navigator.storage?.persisted) {
+          const already = await navigator.storage.persisted();
+          if (!already) await navigator.storage.persist();
+        }
+      } catch { /* best-effort: ignore */ }
+    })();
+  }, []);
+
   const set = useCallback((key, valOrFn) => {
     setData((prev) => {
       const val = typeof valOrFn === "function" ? valOrFn(prev[key]) : valOrFn;
@@ -94,6 +124,12 @@ export function useStore() {
   }, []);
 
   // ── Transaction CRUD (LOCKED logic, ported verbatim from legacy) ──
+  // Re-entrancy guard for addTxn. addTxn is fully synchronous, but `dataRef.current`
+  // only catches up to a committed `set("txns", …)` AFTER React re-renders (via the
+  // dataRef useEffect). So a fast double-tap fires a 2nd addTxn in a later tick while
+  // dataRef is still STALE → it would re-validate against the old balance (possible
+  // overspend) and write a DUPLICATE txn. The guard below blocks that 2nd call until
+  // state has settled. Release is time-based on purpose (see the `finally` in addTxn).
   const processingRef = useRef(false);
 
   // Keep installment plans AND bills in sync when their linked transactions are removed.
@@ -141,20 +177,26 @@ export function useStore() {
         let rem = t.amount;
         const bpb = goalBalancesPerBank(t.goalId, txns);
         const newTxns = [];
-        const ts = Date.now();
+        const splitGroupId = newId(); // one shared group id for all members of this split
         for (const [bId, bAmt] of Object.entries(bpb)) {
           if (bAmt > 0 && rem > 0) {
             const deduct = Math.min(bAmt, rem);
             const bankObj = banks.find((b) => b.id === bId);
-            newTxns.push({ ...t, id: (ts + newTxns.length).toString(), amount: deduct, bankId: bId, bankName: bankObj?.name || "Unknown", splitGroupId: ts.toString() });
+            newTxns.push({ ...t, id: newId(), amount: deduct, bankId: bId, bankName: bankObj?.name || "Unknown", splitGroupId });
             rem -= deduct;
           }
         }
         if (newTxns.length > 0) { set("txns", (prev) => [...newTxns, ...prev]); HAPTICS.success(); return newTxns[0].id; }
       }
-      const id = Date.now().toString();
+      const id = newId();
       set("txns", (prev) => [{ ...t, id }, ...prev]);
       HAPTICS.success(); return id;
+    // NOTE: released via a 500ms timer, NOT synchronously, and this is intentional.
+    // A sync release would unlock before React re-renders + refreshes dataRef, so a
+    // rapid 2nd tap would still read stale data and double-submit. The delay bridges
+    // that window until the new txns state has settled. Do NOT replace with a plain
+    // sync release. A clean refactor = release-on-settle (useEffect on txns) PLUS a
+    // sync release on every early `return false`; only worth it with double-tap tests.
     } finally { setTimeout(() => { processingRef.current = false; }, 500); }
   }, [set]);
 
@@ -169,8 +211,7 @@ export function useStore() {
       const avail = calc.safeToSpend(bId);
       if (avail < total) { HAPTICS.warning(); setAlert({ title: "Not enough balance", message: `Available balance is ${fmt(avail)}. That doesn't cover this.`, color: "var(--red)" }); return false; }
     }
-    const ts = Date.now();
-    const withIds = list.map((t, i) => ({ ...t, id: (ts + i).toString() }));
+    const withIds = list.map((t) => ({ ...t, id: newId() }));
     set("txns", (prev) => [...withIds, ...prev]);
     HAPTICS.success(); return withIds.map((t) => t.id);
   }, [set]);
@@ -207,14 +248,17 @@ export function useStore() {
     return true;
   }, [set]);
 
-  // restore a full backup payload (maps backup keys → store)
+  // restore a full backup payload (maps backup keys → store) — validated first.
   const restore = useCallback((payload) => {
+    const check = validateBackup(payload);
+    if (!check.ok) { HAPTICS.warning(); setAlert({ title: "Couldn't restore", message: check.error, color: "var(--red)" }); return false; }
     setData((prev) => {
       const next = { ...prev };
       for (const k in ENTITIES) if (payload[k]) { next[k] = payload[k]; saveKey(KEYS[k], payload[k]); }
       for (const k in SCALARS) if (payload[k] != null) { next[k] = payload[k]; saveKey(KEYS[k], payload[k]); }
       return next;
     });
+    return true;
   }, []);
 
   // Factory reset — wipe every stored key and return to the fresh-install state

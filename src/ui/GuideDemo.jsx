@@ -55,7 +55,7 @@ function GoalsDemo() {
       <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
         <BudgetRing spent={1200} total={1800} size={104} stroke={12} />
         <div>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)" }}>Saved so far</div>
+          <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)" }}>Saved so far</div>
           <Money style={{ fontSize: 22, fontWeight: 800, letterSpacing: -.3 }} v={1200} curSize={0.5} />
           <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 5 }}><Ico name="lock" size={12} color="var(--ac)" />{fmt(1800)} target</div>
         </div>
@@ -119,7 +119,7 @@ function BudgetsDemo() {
       <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
         <BudgetRing spent={420} total={500} size={104} stroke={12} />
         <div>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)" }}>Spent</div>
+          <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)" }}>Spent</div>
           <Money style={{ fontSize: 22, fontWeight: 800, letterSpacing: -.3 }} v={420} curSize={0.5} />
           <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--muted)", marginTop: 2 }}>of {fmt(500)} budget</div>
         </div>

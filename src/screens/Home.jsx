@@ -2,6 +2,7 @@
 import { useState, useRef, useMemo, useLayoutEffect, useEffect, Fragment } from "react";
 import Ico from "../ui/Ico.jsx";
 import Money from "../ui/Money.jsx";
+import ActivationCard from "../ui/ActivationCard.jsx";
 import { fmt, currentMonth, MONTHS, cardGradient } from "../lib/format.js";
 import { calcBankBalance, calcGoalSaved, calcFrozenForBank, totalBalance, totalSafe, totalFrozen, monthTxns, sumIncome, sumExpense, projectSpent, budgetSpentMonth } from "../lib/calc.js";
 import { DASH_SECTIONS, DASH_DEFAULT } from "../lib/store.js";
@@ -48,7 +49,7 @@ export function BankCard({ bank, available, frozen, low, money, masked, onClick,
 const circ = (size = 42, r = 13, bg, color) => ({ width: size, height: size, borderRadius: r, background: bg, color, display: "flex", alignItems: "center", justifyContent: "center" });
 const ordinal = (n) => { if (!n) return ""; const s = ["th", "st", "nd", "rd"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
 
-export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenGoal, onOpenBudgets, onOpenBudget, onOpenProjects, onOpenProject, onOpenInstallments, onOpenInst, onOpenBill, onOpenNotifications, onOpenAllAccounts, onOpenBreakdown, onCustomize, initialScroll = 0, onScrollChange }) {
+export default function Home({ store, onTab, onAdd, onOpenBank, onOpenGoals, onOpenGoal, onOpenBudgets, onOpenBudget, onOpenProjects, onOpenProject, onOpenInstallments, onOpenInst, onOpenBill, onOpenNotifications, onOpenAllAccounts, onOpenBreakdown, onCustomize, initialScroll = 0, onScrollChange }) {
   const { banks, txns, savings, bills = [], budgets = [], installments = [], username } = store;
   const notifUnread = unreadCount(store);
   const scrollRef = useRef(null);
@@ -142,6 +143,8 @@ export default function Home({ store, onTab, onOpenBank, onOpenGoals, onOpenGoal
           <span style={{ width: page === 1 ? 18 : 6, height: 6, borderRadius: 3, background: page === 1 ? "#fff" : "rgba(255,255,255,.45)" }} />
         </div>
       </div>
+
+      <ActivationCard store={store} onAdd={onAdd} onOpenGoals={onOpenGoals} />
 
       {(() => {
       const saved = store.dashboard?.order ? store.dashboard : DASH_DEFAULT;

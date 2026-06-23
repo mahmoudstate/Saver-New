@@ -22,10 +22,10 @@ export default function InstallSteps() {
           </div>
           <div style={{ paddingBottom: i < STEPS.length - 1 ? 18 : 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 11, fontWeight: 800, color: "var(--acText)" }}>STEP {i + 1}</span>
+              <span style={{ fontSize: 11.5, fontWeight: 800, color: "var(--acText)" }}>STEP {i + 1}</span>
             </div>
             <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: -.2, marginTop: 2 }}>{s.title}</div>
-            <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--muted)", fontWeight: 600, marginTop: 3 }}>{s.text}</div>
+            <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--muted)", fontWeight: 600, marginTop: 3 }}>{s.text}</div>
           </div>
         </div>
       ))}

@@ -30,7 +30,7 @@ export default function QuickAddSheet({ store, onClose, onSetup, onPick }) {
             {active.map((q) => { const c = catOf(q.catId); return (
               <div key={q.id} onClick={() => onPick?.(q)} style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--surface)", border: "var(--cardBorder)", boxShadow: "var(--cardShadow)", borderRadius: 16, padding: 13, cursor: "pointer" }}>
                 <CatTile cat={catKeyOf(c)} name={c?.name} size={40} />
-                <div><div className="nm" style={{ fontSize: 13.5, fontWeight: 700 }}>{c?.name}</div><div className="tnum" style={{ fontSize: 12, color: "var(--muted)", fontWeight: 600, marginTop: 1 }}>{fmt(+q.amount)}</div></div>
+                <div><div className="nm" style={{ fontSize: 13, fontWeight: 700 }}>{c?.name}</div><div className="tnum" style={{ fontSize: 12, color: "var(--muted)", fontWeight: 600, marginTop: 1 }}>{fmt(+q.amount)}</div></div>
               </div>
             ); })}
           </div>

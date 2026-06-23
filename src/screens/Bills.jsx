@@ -13,9 +13,6 @@ import { getBillType, BILL_TYPES } from "../lib/services.js";
 const monthLabel = (m) => `${MONTHS[+m.split("-")[1] - 1]} ${m.split("-")[0]}`;
 const guessCat = (t = "") => /phone|iphone|mobile|tablet|ipad/i.test(t) ? "phone" : /car|loan|auto|vehicle/i.test(t) ? "transport" : /laptop|pc|mac/i.test(t) ? "phone" : null;
 
-// Map a status color to the app's themed pill class (handles dark/light + theme).
-const statusPill = (c = "") => /red/.test(c) ? "pill pill-red" : /orange|yellow/.test(c) ? "pill pill-yellow" : /success/.test(c) ? "pill pill-green" : "chip";
-
 // Small status dot (drawn, not an emoji) — same size as the Active dot.
 const Dot = ({ color, size = 8 }) => <span style={{ width: size, height: size, borderRadius: "50%", background: color, flexShrink: 0, display: "inline-block" }} />;
 
@@ -29,11 +26,14 @@ function SubCard({ bill, onOpen }) {
   return (
     <div className="icard" onClick={() => onOpen?.(bill)} style={{ cursor: "pointer" }}>
       <BillLogo bill={bill} />
-      <div><div className="nm">{bill.name}</div><div className="mt">{bill.note ? bill.note + " · " : ""}monthly{bill.dueDay ? " · day " + bill.dueDay : ""}</div></div>
-      <div className="amtb">
-        <b className="tnum">{fmt(bill.amount)}</b>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, marginTop: 5 }}><Dot color={bill.statusColor} size={7} /><small style={{ color: "var(--muted)", fontWeight: 700, fontSize: 11 }}>{bill.status}</small></div>
+      <div style={{ minWidth: 0 }}>
+        <div className="nm">{bill.name}</div>
+        <div className="mt" style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+          <span>{bill.note ? bill.note + " · " : ""}monthly{bill.dueDay ? " · day " + bill.dueDay : ""} ·</span>
+          <Dot color={bill.statusColor} size={7} /><span>{bill.status}</span>
+        </div>
       </div>
+      <b className="tnum" style={{ marginLeft: "auto", flexShrink: 0, fontSize: 18, fontWeight: 800, letterSpacing: "-.3px" }}>{fmt(bill.amount)}</b>
     </div>
   );
 }
@@ -162,11 +162,13 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
               {g.items.map(({ bill, p }) => (
                 <div className="icard" key={bill.id + p.month} onClick={() => onOpenSub?.(bill)} style={{ cursor: "pointer" }}>
                   <BillLogo bill={bill} size={42} />
-                  <div><div className="nm">{bill.name}</div><div className="mt">Paid{p.date ? " " + p.date : ""}</div></div>
-                  <div className="amtb">
-                    <b className="tnum">{fmt(bill.amount)}</b>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, marginTop: 5 }}><Dot color="var(--success)" size={7} /><small style={{ color: "var(--muted)", fontWeight: 700, fontSize: 11 }}>Paid</small></div>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="nm">{bill.name}</div>
+                    <div className="mt" style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+                      <Dot color="var(--success)" size={7} /><span>Paid{p.date ? " · " + p.date : ""}</span>
+                    </div>
                   </div>
+                  <b className="tnum" style={{ marginLeft: "auto", flexShrink: 0, fontSize: 18, fontWeight: 800, letterSpacing: "-.3px" }}>{fmt(bill.amount)}</b>
                 </div>
               ))}
             </div>

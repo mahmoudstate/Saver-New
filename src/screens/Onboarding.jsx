@@ -17,6 +17,19 @@ const ROWS = [
 
 const Title = ({ children }) => <div className="gsap-title" style={{ fontSize: 18, fontWeight: 800, letterSpacing: -.3, marginTop: 28, marginBottom: 14 }}>{children}</div>;
 
+// Trust badges — same look as About.jsx, surfaced at first run (privacy-first).
+const TRUST = [
+  { icon: "lock", label: "On your phone" },
+  { icon: "close", label: "No ads" },
+  { icon: "eyeOff", label: "No tracking" },
+];
+const Badge = ({ icon, label }) => (
+  <div className="gsap-step" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 7, padding: "16px 8px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 16 }}>
+    <span style={{ width: 38, height: 38, borderRadius: 12, background: "var(--acDim)", color: "var(--ac)", display: "flex", alignItems: "center", justifyContent: "center" }}><Ico name={icon} size={19} /></span>
+    <div style={{ fontSize: 12, fontWeight: 800, textAlign: "center" }}>{label}</div>
+  </div>
+);
+
 export default function Onboarding({ onDone }) {
   const scope = useRef(null);
 
@@ -47,6 +60,11 @@ export default function Onboarding({ onDone }) {
           <div><div style={{ fontSize: 14.5, fontWeight: 800, letterSpacing: -.2 }}>{r.nm}</div><div style={{ fontSize: 13, lineHeight: 1.5, color: "var(--muted)", fontWeight: 600, marginTop: 3 }}>{r.mt}</div></div>
         </div>
       ))}
+
+      <Title>Private by design</Title>
+      <div style={{ display: "flex", gap: 10 }}>
+        {TRUST.map((b) => <Badge key={b.label} icon={b.icon} label={b.label} />)}
+      </div>
 
       <Title>Add Saver to your home screen</Title>
       <InstallSteps />

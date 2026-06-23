@@ -5,7 +5,7 @@ export default function Privacy({ onBack }) {
 
   return (
     <div style={{
-      background: "#0f0f13", color: "#8888a8", fontFamily: "'DM Sans', sans-serif",
+      background: "#0f0f13", color: "#8888a8", fontFamily: "'Inter', 'Cairo', sans-serif",
       padding: "24px 16px 40px", minHeight: "100vh", display: "flex", flexDirection: "column",
       boxSizing: "border-box"
     }}>

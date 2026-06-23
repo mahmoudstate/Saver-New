@@ -22,7 +22,7 @@ export default function BudgetRing({ spent, total, size = 132, stroke = 14 }) {
       </svg>
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
         <b className="tnum" style={{ fontSize: 27, fontWeight: 800, letterSpacing: -1, color: col }}>{Math.round(pct)}%</b>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", marginTop: 1 }}>used</span>
+        <span style={{ fontSize: 11.5, fontWeight: 700, color: "var(--muted)", marginTop: 1 }}>used</span>
       </div>
     </div>
   );

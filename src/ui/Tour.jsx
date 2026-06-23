@@ -46,7 +46,7 @@ export default function Tour({ steps = [], onClose, onNavigate }) {
           <span style={{ width: 32, height: 32, borderRadius: 10, background: "var(--acDim)", color: "var(--ac)", display: "flex", alignItems: "center", justifyContent: "center" }}><Ico name={step.icon || "sparkles"} size={17} /></span>
           <div style={{ fontSize: 15.5, fontWeight: 800, letterSpacing: -.2 }}>{step.title}</div>
         </div>
-        <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--muted)", fontWeight: 600 }}>{step.text}</div>
+        <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--muted)", fontWeight: 600 }}>{step.text}</div>
 
         <div style={{ display: "flex", alignItems: "center", marginTop: 16, gap: 10 }}>
           <div style={{ display: "flex", gap: 5 }}>
