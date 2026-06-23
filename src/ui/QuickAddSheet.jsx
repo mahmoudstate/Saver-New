@@ -15,7 +15,7 @@ export default function QuickAddSheet({ store, onClose, onSetup, onPick }) {
   return (
     <>
       <div className="dim" onClick={onClose} />
-      <div className="sheet" role="dialog" aria-label="Quick add">
+      <div className="sheet" role="dialog" aria-label="Quick add" style={{ paddingBottom: "calc(176px + var(--safe-bottom, 0px))" }}>
         <div className="grab" />
         <div style={{ display: "flex", alignItems: "center", margin: "0 2px 14px" }}>
           <div><div style={{ fontSize: 16, fontWeight: 800 }}>Quick add</div><div className="caption" style={{ marginTop: 1 }}>Pick one to log fast</div></div>
