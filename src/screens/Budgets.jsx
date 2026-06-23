@@ -9,8 +9,8 @@ import BudgetRing from "../ui/BudgetRing.jsx";
 import MonthSheet from "../ui/MonthSheet.jsx";
 import { resolveCat } from "../ui/cats.js";
 import Money from "../ui/Money.jsx";
-import { fmt, currentMonth, MONTHS } from "../lib/format.js";
-import { budgetSpentMonth, projectSpent } from "../lib/calc.js";
+import { fmt, currentMonth, today, MONTHS } from "../lib/format.js";
+import { budgetSpentMonth, projectSpent, budgetTxns, daysLeftInMonth, spentPerActiveDay } from "../lib/calc.js";
 
 const budgetCat = (b) => b.glyph || resolveCat({ catId: b.cats?.[0], catName: b.name }) || "income";
 const rangeLabel = (start, end) => `${MONTHS[+(start || end).split("-")[1] - 1]}–${MONTHS[+end.split("-")[1] - 1]}`;
@@ -44,6 +44,13 @@ export default function Budgets({ store, back, onAdd, onOpenBudget, onOpenProjec
   const overCount = monthly.filter((b) => b.over).length;
   const pSpent = active.reduce((a, p) => a + p.spent, 0);
 
+  // Daily pacing for the viewed month: how much is safe to spend per remaining day,
+  // and how much was actually spent per day (averaged over days that had spending).
+  const mTxns = (() => { const seen = new Set(), rows = []; monthly.forEach((b) => budgetTxns(b, txns, vm).forEach((t) => { if (!seen.has(t.id)) { seen.add(t.id); rows.push(t); } })); return rows; })();
+  const daysLeft = daysLeftInMonth(vm, today());
+  const safePerDay = vm === cm && mLimit > 0 ? Math.max(0, (mLimit - mSpent)) / daysLeft : null;
+  const spentPerDay = spentPerActiveDay(mTxns);
+
   return (
     <div className="content padnav">
       <div className="hero">
@@ -68,6 +75,21 @@ export default function Budgets({ store, back, onAdd, onOpenBudget, onOpenProjec
               <span className={`pill${overCount ? " pill-red" : ""}`} style={{ alignSelf: "flex-start", fontSize: 11.5 }}>
                 <Ico name={overCount ? "bell" : "check"} size={13} />{overCount ? `${overCount} over` : "On track"}
               </span>
+            </div>
+          </div>
+
+          {/* daily pacing: safe-to-spend per remaining day + actual average per spending day */}
+          <div className="tile" style={{ display: "flex", padding: 14, marginBottom: 16 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="over" style={{ margin: 0 }}>Safe / day</div>
+              <div className="title tnum" style={{ fontSize: 18, marginTop: 4 }}>{safePerDay != null ? fmt(safePerDay) : "—"}</div>
+              <div className="caption" style={{ marginTop: 2 }}>{safePerDay != null ? `${daysLeft} day${daysLeft === 1 ? "" : "s"} left` : "Past month"}</div>
+            </div>
+            <div style={{ width: 1, background: "var(--border)", margin: "2px 14px" }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="over" style={{ margin: 0 }}>Spent / day</div>
+              <div className="title tnum" style={{ fontSize: 18, marginTop: 4 }}>{fmt(spentPerDay)}</div>
+              <div className="caption" style={{ marginTop: 2 }}>avg on days you spent</div>
             </div>
           </div>
 

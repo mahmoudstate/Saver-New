@@ -32,6 +32,7 @@ export const MARKS = {
   trash: `<path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M6 7l1 13h10l1-13"/>`,
   grip: `<circle cx="9" cy="6" r="1.4" fill="${D}" stroke="none"/><circle cx="15" cy="6" r="1.4" fill="${D}" stroke="none"/><circle cx="9" cy="12" r="1.4" fill="${D}" stroke="none"/><circle cx="15" cy="12" r="1.4" fill="${D}" stroke="none"/><circle cx="9" cy="18" r="1.4" fill="${D}" stroke="none"/><circle cx="15" cy="18" r="1.4" fill="${D}" stroke="none"/>`,
   pencil: `<path d="M4 20h4L18.5 9.5a2 2 0 0 0-3-3L4 16v4Z"/>`,
+  link: `<path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 0 1 0 10h-2"/><path d="M8 12h8"/>`,
   moon: `<path d="M21 12.8A8 8 0 1 1 11.2 3a6 6 0 0 0 9.8 9.8Z"/>`,
   sun: `<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/>`,
   crown: `<path d="M4 8l3.7 3L12 5l4.3 6L20 8l-1.6 9.5H5.6L4 8Z"/><path d="M5.6 20.5h12.8"/>`,

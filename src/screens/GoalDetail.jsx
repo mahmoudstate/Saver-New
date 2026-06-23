@@ -6,6 +6,7 @@ import Ico from "../ui/Ico.jsx";
 import CatTile from "../ui/CatTile.jsx";
 import AmountSheet from "../ui/AmountSheet.jsx";
 import MenuSheet from "../ui/MenuSheet.jsx";
+import LinkBadge from "../ui/LinkBadge.jsx";
 import { resolveCat } from "../ui/cats.js";
 import Money from "../ui/Money.jsx";
 import { fmt, today, fmtDate } from "../lib/format.js";
@@ -13,7 +14,7 @@ import { calcGoalSaved, goalBalancesPerBank } from "../lib/calc.js";
 
 const goalCat = (g) => resolveCat({ catGlyph: g.glyph, catName: g.name }) || "goal";
 
-export default function GoalDetail({ store, goalId, back, onReached, onEdit }) {
+export default function GoalDetail({ store, goalId, back, onReached, onEdit, onEditTxn }) {
   const { savings = [], banks = [], txns = [] } = store;
   const goal = savings.find((s) => s.id === goalId);
   const [sheet, setSheet] = useState(null); // "add" | "return"
@@ -29,6 +30,9 @@ export default function GoalDetail({ store, goalId, back, onReached, onEdit }) {
 
   const perBank = Object.entries(goalBalancesPerBank(goalId, txns)).filter(([, v]) => v > 0.0001);
   const contributions = txns.filter((t) => t.goalId === goalId).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  // Chain badge only when 2+ operations actually share the same split group id.
+  const groupSizes = {}; txns.forEach((t) => { if (t.splitGroupId) groupSizes[t.splitGroupId] = (groupSizes[t.splitGroupId] || 0) + 1; });
+  const isLinked = (t) => t.splitGroupId && groupSizes[t.splitGroupId] > 1;
 
   const addMoney = (amount, bankId) => {
     const bank = bankOf(bankId);
@@ -126,9 +130,17 @@ export default function GoalDetail({ store, goalId, back, onReached, onEdit }) {
           const positive = t.type === "saving";
           const labels = { saving: "Added to goal", goal_withdraw: "Spent from goal", goal_return: "Returned to bank" };
           return (
-            <div className="icard" key={t.id}>
+            <div className="icard" key={t.id} onClick={onEditTxn ? () => onEditTxn(t) : undefined} style={onEditTxn ? { cursor: "pointer" } : undefined}>
               <CatTile cat={positive ? goalCat(goal) : null} color={positive ? goal.color : undefined} name={positive ? goal.name : "↩"} size={44} />
-              <div><div className="nm">{labels[t.type] || t.catName}</div><div className="mt">{(bankOf(t.bankId)?.name || "—")} · {t.date ? fmtDate(t.date).split(":")[0] : ""}</div></div>
+              <div style={{ minWidth: 0 }}>
+                <div className="nm">{labels[t.type] || t.catName}</div>
+                <div className="mt">{(bankOf(t.bankId)?.name || "—")} · {t.date ? fmtDate(t.date).split(":")[0] : ""}</div>
+                {isLinked(t) && (
+                  <div className="mt" style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 2 }}>
+                    <LinkBadge groupId={t.splitGroupId} />
+                  </div>
+                )}
+              </div>
               <div className="amtb"><b className="tnum" style={{ color: positive ? "var(--success)" : "var(--muted)" }}>{positive ? "+" : "−"}{fmt(t.amount)}</b></div>
             </div>
           );

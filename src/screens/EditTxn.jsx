@@ -34,9 +34,15 @@ export default function EditTxn({ store, txn, onClose }) {
     onClose();
   };
 
+  // Split operations share a splitGroupId — deleting one removes the whole linked set,
+  // so warn with the exact count first.
+  const linkedCount = txn.splitGroupId ? (store.txns || []).filter((x) => x.splitGroupId === txn.splitGroupId).length : 1;
   const remove = () => store.setConfirm({
-    title: "Delete transaction?", message: `This removes ${sign}${fmt(txn.amount)} from your history.`,
-    confirmText: "Delete", danger: true, icon: "trash",
+    title: linkedCount > 1 ? "Delete linked operations?" : "Delete transaction?",
+    message: linkedCount > 1
+      ? `This is split across ${linkedCount} accounts. Deleting it removes all ${linkedCount} linked operations from your history.`
+      : `This removes ${sign}${fmt(txn.amount)} from your history.`,
+    confirmText: linkedCount > 1 ? `Delete ${linkedCount} operations` : "Delete", danger: true, icon: "trash",
     onConfirm: () => { const r = store.delTxn(txn.id); if (r !== false) { store.flash({ title: "Deleted", color: "var(--muted)", icon: "trash" }); onClose(); } },
   });
 

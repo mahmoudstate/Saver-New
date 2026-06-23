@@ -49,6 +49,7 @@ export default function InstallmentDetail({ store, instId, back, onEdit }) {
   const paidThisMonth = payments.some((p) => p.month === cm);
 
   const startMonth = inst.startDate?.slice(0, 7) || payments[0]?.month || cm;
+  const nextDueMonth = !done && !inst.stopped ? MONTHS[+addMonths(startMonth, paid).split("-")[1] - 1] : null;
   const rows = Array.from({ length: total }, (_, i) => {
     const num = i + 1;
     const p = payments[i];
@@ -109,7 +110,7 @@ export default function InstallmentDetail({ store, instId, back, onEdit }) {
         <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">{label}</div><div className="grow" /><div className="hib" onClick={() => onEdit?.(inst)} style={{ marginRight: 8 }}><Ico name="pencil" size={18} /></div><div className="hib" onClick={() => setMenu(true)}><Ico name="more" size={20} /></div></div>
         <div className="lbl">{inst.company ? inst.company + " · " : ""}{fmt(inst.installmentAmount)}/mo</div>
         <Money className="big tnum" v={remaining} />
-        <div className="sub">{inst.stopped ? "stopped" : done ? "fully paid" : "left to pay"} · {bankName}</div>
+        <div className="sub">{inst.stopped ? "Stopped" : done ? "Fully paid" : `Next ${nextDueMonth} · ${fmt(inst.installmentAmount)}`}</div>
       </div>
 
       <div className="card ringcard r" style={{ "--d": ".16s", display: "flex", alignItems: "center", gap: 20, marginBottom: 16 }}>

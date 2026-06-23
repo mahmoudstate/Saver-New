@@ -4,8 +4,8 @@ import Ico from "../ui/Ico.jsx";
 import CatTile from "../ui/CatTile.jsx";
 import MenuSheet from "../ui/MenuSheet.jsx";
 import Money from "../ui/Money.jsx";
-import { fmt, currentMonth, MONTHS } from "../lib/format.js";
-import { budgetSpentMonth, budgetTxns } from "../lib/calc.js";
+import { fmt, currentMonth, today, MONTHS } from "../lib/format.js";
+import { budgetSpentMonth, budgetTxns, daysLeftInMonth, spentPerActiveDay } from "../lib/calc.js";
 
 const rowDate = (d) => d ? new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "";
 
@@ -29,6 +29,9 @@ export default function BudgetDetail({ store, budgetId, back, onEdit, onEditTxn 
   const left = limit - spent;
   const rows = budgetTxns(budget, txns, cm).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   const bankName = (id) => banks.find((b) => b.id === id)?.name || "—";
+  const daysLeft = daysLeftInMonth(cm, today());
+  const safePerDay = limit > 0 ? Math.max(0, left) / daysLeft : null;
+  const spentPerDay = spentPerActiveDay(rows);
 
   return (
     <div className="content padnav">
@@ -42,6 +45,19 @@ export default function BudgetDetail({ store, budgetId, back, onEdit, onEditTxn 
       <div className="tile" style={{ marginBottom: 18, padding: 14 }}>
         <div className="pbar bar"><i style={{ width: `${pct}%`, background: over ? "var(--red)" : pct >= 80 ? "var(--yellow)" : "var(--ac)" }} /></div>
         <div className="caption" style={{ marginTop: 9, color: over ? "var(--red)" : "var(--muted)" }}>{over ? `${fmt(-left)} over for ${MONTHS[+cm.split("-")[1] - 1]}` : `${fmt(left)} left for ${MONTHS[+cm.split("-")[1] - 1]}`}</div>
+        <div style={{ display: "flex", marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="over" style={{ margin: 0 }}>Safe / day</div>
+            <div className="title tnum" style={{ fontSize: 17, marginTop: 4 }}>{safePerDay != null ? fmt(safePerDay) : "—"}</div>
+            <div className="caption" style={{ marginTop: 2 }}>{daysLeft} day{daysLeft === 1 ? "" : "s"} left</div>
+          </div>
+          <div style={{ width: 1, background: "var(--border)", margin: "2px 14px" }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="over" style={{ margin: 0 }}>Spent / day</div>
+            <div className="title tnum" style={{ fontSize: 17, marginTop: 4 }}>{fmt(spentPerDay)}</div>
+            <div className="caption" style={{ marginTop: 2 }}>avg on days you spent</div>
+          </div>
+        </div>
       </div>
 
       <div className="over">Transactions</div>

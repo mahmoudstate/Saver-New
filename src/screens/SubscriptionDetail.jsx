@@ -72,14 +72,18 @@ export default function SubscriptionDetail({ store, bill: billProp, back, onEdit
           <span style={{ background: "#fff", borderRadius: 15, padding: 4, display: "inline-flex", boxShadow: "0 8px 18px rgba(0,0,0,.2)" }}><Logo size={44} /></span>
           <div><div style={{ fontSize: 17, fontWeight: 800, letterSpacing: -.3 }}>{bill.name}</div><div style={{ fontSize: 12, opacity: .85, fontWeight: 600 }}>Subscription · monthly</div></div>
         </div>
-        <Money className="big tnum" style={{ color: "#fff", marginTop: 12 }} v={bill.amount} />
-        <div className="sub" style={{ color: "rgba(255,255,255,.85)" }}>{renews} · from {bankName}</div>
+        <div className="lbl" style={{ color: "rgba(255,255,255,.8)", marginTop: 12 }}>Monthly</div>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginTop: 2 }}>
+          <Money className="big tnum" style={{ color: "#fff" }} v={bill.amount} />
+          <span onClick={toggleStop} style={{ flexShrink: 0, marginBottom: 5, display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,.18)", color: "#fff", fontWeight: 700, fontSize: 12, padding: "6px 12px", borderRadius: "var(--r-pill)", cursor: "pointer" }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: stopped ? "rgba(255,255,255,.55)" : "var(--success)" }} />{stopped ? "Inactive" : "Active"}</span>
+        </div>
+        <div className="sub" style={{ color: "rgba(255,255,255,.85)" }}>{renews}{bill.dueDay && !stopped ? ` · day ${bill.dueDay}` : ""} · from {bankName}</div>
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 18 }}>
         <span className="chip">{fmt(bill.amount * 12)} / year</span>
         {bill.reminderDays != null && <span className="chip">Reminder · {bill.reminderDays === 0 ? "off" : bill.reminderDays + "d"}</span>}
-        <span className="chip">{(bill.payments || []).length} payments</span>
+        <span className="chip">{(bill.payments || []).length > 0 ? `${fmt(bill.amount * (bill.payments || []).length)} over ${(bill.payments || []).length} payment${(bill.payments || []).length === 1 ? "" : "s"}` : "No payments yet"}</span>
       </div>
 
       <div className="over">Payment history</div>

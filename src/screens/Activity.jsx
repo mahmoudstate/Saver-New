@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Ico from "../ui/Ico.jsx";
 import CatTile from "../ui/CatTile.jsx";
 import EmptyState from "../ui/EmptyState.jsx";
+import LinkBadge from "../ui/LinkBadge.jsx";
 import { fmt } from "../lib/format.js";
 
 const Funnel = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5h18l-7 8.5V20l-4-2.5v-4z" /></svg>;
@@ -15,6 +16,9 @@ export default function Activity({ store, dateFilter, onPickDate, onFilter, onEd
   const { txns, banks } = store;
   const [q, setQ] = useState("");
   const bankName = (t) => t.bankName || banks.find((b) => b.id === t.bankId)?.name || "";
+  // A split shows the chain badge only when 2+ operations actually share the group id.
+  const groupSizes = useMemo(() => { const m = {}; txns.forEach((t) => { if (t.splitGroupId) m[t.splitGroupId] = (m[t.splitGroupId] || 0) + 1; }); return m; }, [txns]);
+  const isLinked = (t) => t.splitGroupId && groupSizes[t.splitGroupId] > 1;
 
   const hasDate = dateFilter && dateFilter.mode !== "all";
   const inDate = (d) => {
@@ -41,19 +45,28 @@ export default function Activity({ store, dateFilter, onPickDate, onFilter, onEd
   const summary = hasDate ? `Showing ${dateFilter.label} · ${count}` : count;
 
   const row = (t) => {
-    let cls = "", sign = "", nm, sub, cat = null, color;
+    let cls = "", sign = "", nm, sub, cat = null, color, goalInfo = null;
     const dl = rowDate(t.date);
     if (t.type === "income") { cls = "in"; sign = "+"; nm = t.note || t.catName || "Income"; sub = `${bankName(t)} · ${dl}`; }
     else if (t.type === "expense") { cls = "out"; sign = "−"; nm = t.note || t.catName || "Expense"; sub = `${bankName(t)} · ${dl}`; }
     else if (t.type === "saving") { cat = "goal"; color = "var(--ac)"; nm = t.goalName ? "Saved · " + t.goalName : "Saving"; sub = `${bankName(t)} · ${dl}`; }
-    else if (t.type === "goal_withdraw") { cls = "out"; sign = "−"; cat = "goal"; nm = t.goalName ? "Spent from " + t.goalName : "Goal spend"; sub = `${bankName(t)} · ${dl}`; }
+    else if (t.type === "goal_withdraw") { cls = "out"; sign = "−"; nm = t.catName || "Goal spend"; sub = `${bankName(t)} · ${dl}`; goalInfo = t.goalName || "Goal"; }
     else if (t.type === "goal_return") { cls = "in"; sign = "+"; cat = "goal"; nm = t.goalName ? "Returned · " + t.goalName : "Goal return"; sub = `${bankName(t)} · ${dl}`; }
     else if (t.type === "transfer") { cat = "transfer"; color = "var(--blue)"; nm = "Transfer"; sub = `${bankName(t)} → ${t.toBankName || ""} · ${dl}`; }
     else { nm = t.catName || t.type; sub = `${bankName(t)} · ${dl}`; }
     return (
       <div className="icard" key={t.id} onClick={() => onEdit?.(t)} style={{ cursor: "pointer" }}>
         <CatTile txn={t} cat={cat} size={44} />
-        <div><div className="nm">{nm}</div><div className="mt">{sub}</div></div>
+        <div style={{ minWidth: 0 }}>
+          <div className="nm">{nm}</div>
+          <div className="mt">{sub}</div>
+          {goalInfo && (
+            <div className="mt" style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", marginTop: 2 }}>
+              <span style={{ color: "var(--acText)" }}>Goal · {goalInfo}</span>
+              {isLinked(t) && <LinkBadge groupId={t.splitGroupId} />}
+            </div>
+          )}
+        </div>
         <div className={`amt ${cls} tnum`} style={!cls && color ? { color } : undefined}>{sign}{fmt(t.amount)}</div>
       </div>
     );

@@ -129,7 +129,7 @@ export default function App() {
   else if (view?.type === "editInst") viewScreen = <InstallmentEditor store={store} plan={view.plan} onClose={back} />;
   else if (view?.type === "inst") viewScreen = <InstallmentDetail store={store} instId={view.instId} back={back} onEdit={(p) => push({ type: "editInst", plan: p })} />;
   else if (view?.type === "goals") viewScreen = <Goals store={store} back={back} onAdd={() => push({ type: "editGoal", goal: null })} onOpenGoal={(g) => push({ type: "goal", goalId: g.id })} />;
-  else if (view?.type === "goal") viewScreen = <GoalDetail store={store} goalId={view.goalId} back={back} onReached={(g, saved) => push({ type: "celebrate", goalId: g.id, goal: g.name, saved })} onEdit={(g) => push({ type: "editGoal", goal: g })} />;
+  else if (view?.type === "goal") viewScreen = <GoalDetail store={store} goalId={view.goalId} back={back} onReached={(g, saved) => push({ type: "celebrate", goalId: g.id, goal: g.name, saved })} onEdit={(g) => push({ type: "editGoal", goal: g })} onEditTxn={(t) => push({ type: "edit", txn: t })} />;
   else if (view?.type === "editGoal") viewScreen = <GoalEditor store={store} goal={view.goal} onClose={back} />;
   else if (view?.type === "budgets") viewScreen = <Budgets store={store} initialSeg={budgetsSeg} onSegChange={setBudgetsSeg} back={back} onAdd={(seg) => push({ type: "editBudget", budget: null, kind: seg === "projects" ? "project" : "monthly" })} onOpenBudget={(b) => push({ type: "budget", budgetId: b.id })} onOpenProject={(p) => push({ type: "project", projectId: p.id })} />;
   else if (view?.type === "editBudget") viewScreen = <BudgetEditor store={store} budget={view.budget} initialKind={view.kind} onClose={back} />;

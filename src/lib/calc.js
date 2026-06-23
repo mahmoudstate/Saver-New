@@ -63,6 +63,21 @@ export const budgetTxns = (budget, txns, month) =>
 export const budgetSpentMonth = (budget, txns, month) => txns.filter((t) => inBudget(t, budget.cats) && (t.date || "").startsWith(month)).reduce((a, t) => a + t.amount, 0);
 export const projectSpent = (project, txns) => txns.filter((t) => inBudget(t, project.cats) && (!project.startMonth || (t.date || "").slice(0, 7) >= project.startMonth)).reduce((a, t) => a + t.amount, 0);
 
+// ── Daily pacing (new helpers — no locked maths touched) ──
+export const daysInMonth = (month) => { const [y, m] = month.split("-").map(Number); return new Date(y, m, 0).getDate(); };
+// Days still ahead in `month` (incl. today). For a past/future month vs todayISO, returns whole month.
+export const daysLeftInMonth = (month, todayISO) => {
+  const total = daysInMonth(month);
+  if (!todayISO || todayISO.slice(0, 7) !== month) return total;
+  return Math.max(1, total - Number(todayISO.slice(8, 10)) + 1);
+};
+// Average actually-spent per day, over only the days that had spending (rows = txns).
+export const spentPerActiveDay = (rows) => {
+  const days = new Set(rows.map((t) => t.date).filter(Boolean));
+  const total = rows.reduce((a, t) => a + t.amount, 0);
+  return days.size ? total / days.size : 0;
+};
+
 // Month-scoped income / expense (expense includes goal_withdraw, per legacy)
 export const monthTxns = (txns, month) => txns.filter((t) => (t.date || "").startsWith(month));
 export const sumIncome = (txns) => txns.filter((t) => t.type === "income").reduce((a, t) => a + t.amount, 0);

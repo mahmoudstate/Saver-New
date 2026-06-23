@@ -13,6 +13,9 @@ import { getBillType, BILL_TYPES } from "../lib/services.js";
 const monthLabel = (m) => `${MONTHS[+m.split("-")[1] - 1]} ${m.split("-")[0]}`;
 const guessCat = (t = "") => /phone|iphone|mobile|tablet|ipad/i.test(t) ? "phone" : /car|loan|auto|vehicle/i.test(t) ? "transport" : /laptop|pc|mac/i.test(t) ? "phone" : null;
 
+// Map a status color to the app's themed pill class (handles dark/light + theme).
+const statusPill = (c = "") => /red/.test(c) ? "pill pill-red" : /orange|yellow/.test(c) ? "pill pill-yellow" : /success/.test(c) ? "pill pill-green" : "chip";
+
 function BillLogo({ bill, size = 44 }) {
   if (bill.domain) return <ServiceLogo domain={bill.domain} name={bill.name} color={bill.color} size={size} />;
   if (bill.glyph) return <CatTile cat={bill.glyph} name={bill.name} color={bill.color} size={size} />;
@@ -24,7 +27,10 @@ function SubCard({ bill, onOpen }) {
     <div className="icard" onClick={() => onOpen?.(bill)} style={{ cursor: "pointer" }}>
       <BillLogo bill={bill} />
       <div><div className="nm">{bill.name}</div><div className="mt">{bill.note ? bill.note + " · " : ""}monthly{bill.dueDay ? " · day " + bill.dueDay : ""}</div></div>
-      <div className="amtb"><b className="tnum">{fmt(bill.amount)}</b><small style={{ color: bill.statusColor }}>{bill.status}</small></div>
+      <div className="amtb">
+        <b className="tnum">{fmt(bill.amount)}</b>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}><span className={statusPill(bill.statusColor)} style={{ fontSize: 11, padding: "3px 9px" }}>{bill.status}</span></div>
+      </div>
     </div>
   );
 }
@@ -57,7 +63,17 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
     const paid = (b) => b.payments?.some((p) => p.month === cm);
     const rows = bills.filter((b) => active(b) || paid(b)).map(statusOf);
     const unpaid = rows.filter((r) => !r.isPaid);
-    return { rows, due: unpaid.reduce((s, r) => s + r.amount, 0), active: rows.length, soon: unpaid.filter((r) => r.dueIn != null && r.dueIn >= 0 && r.dueIn <= 3).length, overdue: unpaid.filter((r) => r.dueIn != null && r.dueIn < 0).length };
+    const paidRows = rows.filter((r) => r.isPaid);
+    const total = rows.reduce((s, r) => s + r.amount, 0);
+    return {
+      rows, active: rows.length,
+      due: unpaid.reduce((s, r) => s + r.amount, 0),
+      soon: unpaid.filter((r) => r.dueIn != null && r.dueIn >= 0 && r.dueIn <= 3).length,
+      overdue: unpaid.filter((r) => r.dueIn != null && r.dueIn < 0).length,
+      total, yearly: total * 12,
+      paidCount: paidRows.length, paidAmt: paidRows.reduce((s, r) => s + r.amount, 0),
+      unpaidCount: unpaid.length,
+    };
   }, [bills, cm, day]);
 
   // Active = grouped by category. Within a group: unpaid first (soonest due), paid sink.
@@ -84,7 +100,14 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
     const paidThisMonth = (i) => i.payments?.some((p) => p.month === cm);
     const rows = installments.map((i) => ({ ...i, paid: paidOf(i), remaining: Math.max(0, i.totalAmount - paidOf(i) * i.installmentAmount), pct: i.totalInstallments ? (paidOf(i) / i.totalInstallments) * 100 : 0, done: done(i), stopped: !!i.stopped, dueThis: !paidThisMonth(i) && !done(i) && !i.stopped }));
     const live = rows.filter((r) => !r.done && !r.stopped);
-    return { rows, remaining: live.reduce((s, r) => s + r.remaining, 0), plans: live.length, dueAmt: rows.filter((r) => r.dueThis).reduce((s, r) => s + r.installmentAmount, 0) };
+    const paidAmtOf = (r) => r.paid * r.installmentAmount;
+    return {
+      rows, plans: live.length,
+      remaining: live.reduce((s, r) => s + r.remaining, 0),
+      dueAmt: rows.filter((r) => r.dueThis).reduce((s, r) => s + r.installmentAmount, 0),
+      total: live.reduce((s, r) => s + r.totalAmount, 0),
+      paidAmt: live.reduce((s, r) => s + paidAmtOf(r), 0),
+    };
   }, [installments, cm]);
 
   const isSubs = seg === "subs";
@@ -105,8 +128,10 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
       <div className="hero">
         <div className="toprow"><div className="ttl">{isSubs ? "Bills" : "Installments"}</div><div className="grow" /><div className="hib" onClick={() => onAdd?.(seg)}><Ico name="plus" size={20} /></div></div>
         {isSubs
-          ? <><div className="lbl">Due this month</div><Money className="big tnum" v={subs.due} /><div className="sub">{subs.active} active &nbsp;·&nbsp; {subs.soon} due soon &nbsp;·&nbsp; {subs.overdue} overdue</div></>
-          : <><div className="lbl">Remaining to pay</div><Money className="big tnum" v={inst.remaining} /><div className="sub">{inst.plans} plans &nbsp;·&nbsp; {fmt(inst.dueAmt)} due this month</div></>}
+          ? <><div className="lbl">Total bills this month</div><Money className="big tnum" v={subs.total} />
+            <div className="sub">{subs.due > 0 && <>{fmt(subs.due)} {subs.overdue > 0 ? "overdue" : "due"} &nbsp;·&nbsp; </>}{subs.paidCount} of {subs.active} paid &nbsp;·&nbsp; {fmt(subs.yearly)}/yr</div></>
+          : <><div className="lbl">Remaining</div><Money className="big tnum" v={inst.remaining} />
+            <div className="sub">{inst.dueAmt > 0 && <>{fmt(inst.dueAmt)} due &nbsp;·&nbsp; </>}{inst.total > 0 ? Math.round((inst.paidAmt / inst.total) * 100) : 0}% paid &nbsp;·&nbsp; {inst.plans} plans</div></>}
       </div>
 
       <SegToggle style={{ marginBottom: 14 }} value={seg} onChange={setSeg} options={[{ id: "subs", label: "Subscriptions" }, { id: "inst", label: "Installments" }]} />
@@ -129,7 +154,10 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
                 <div className="icard" key={bill.id + p.month} onClick={() => onOpenSub?.(bill)} style={{ cursor: "pointer" }}>
                   <BillLogo bill={bill} size={42} />
                   <div><div className="nm">{bill.name}</div><div className="mt">Paid{p.date ? " " + p.date : ""}</div></div>
-                  <div className="amtb"><b className="tnum">{fmt(bill.amount)}</b><small style={{ color: "var(--success)" }}>Paid</small></div>
+                  <div className="amtb">
+                    <b className="tnum">{fmt(bill.amount)}</b>
+                    <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}><span className="pill pill-green" style={{ fontSize: 11, padding: "3px 9px" }}>Paid</span></div>
+                  </div>
                 </div>
               ))}
             </div>
