@@ -16,6 +16,9 @@ const guessCat = (t = "") => /phone|iphone|mobile|tablet|ipad/i.test(t) ? "phone
 // Map a status color to the app's themed pill class (handles dark/light + theme).
 const statusPill = (c = "") => /red/.test(c) ? "pill pill-red" : /orange|yellow/.test(c) ? "pill pill-yellow" : /success/.test(c) ? "pill pill-green" : "chip";
 
+// Small status dot (drawn, not an emoji) — same size as the Active dot.
+const Dot = ({ color, size = 8 }) => <span style={{ width: size, height: size, borderRadius: "50%", background: color, flexShrink: 0, display: "inline-block" }} />;
+
 function BillLogo({ bill, size = 44 }) {
   if (bill.domain) return <ServiceLogo domain={bill.domain} name={bill.name} color={bill.color} size={size} />;
   if (bill.glyph) return <CatTile cat={bill.glyph} name={bill.name} color={bill.color} size={size} />;
@@ -29,7 +32,7 @@ function SubCard({ bill, onOpen }) {
       <div><div className="nm">{bill.name}</div><div className="mt">{bill.note ? bill.note + " · " : ""}monthly{bill.dueDay ? " · day " + bill.dueDay : ""}</div></div>
       <div className="amtb">
         <b className="tnum">{fmt(bill.amount)}</b>
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}><span className={statusPill(bill.statusColor)} style={{ fontSize: 11, padding: "3px 9px" }}>{bill.status}</span></div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, marginTop: 5 }}><Dot color={bill.statusColor} size={7} /><small style={{ color: "var(--muted)", fontWeight: 700, fontSize: 11 }}>{bill.status}</small></div>
       </div>
     </div>
   );
@@ -129,9 +132,15 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
         <div className="toprow"><div className="ttl">{isSubs ? "Bills" : "Installments"}</div><div className="grow" /><div className="hib" onClick={() => onAdd?.(seg)}><Ico name="plus" size={20} /></div></div>
         {isSubs
           ? <><div className="lbl">Total bills this month</div><Money className="big tnum" v={subs.total} />
-            <div className="sub">{subs.due > 0 && <>{fmt(subs.due)} {subs.overdue > 0 ? "overdue" : "due"} &nbsp;·&nbsp; </>}{subs.paidCount} of {subs.active} paid &nbsp;·&nbsp; {fmt(subs.yearly)}/yr</div></>
+            <div className="sub" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <Dot color={subs.overdue > 0 ? "var(--red)" : subs.due > 0 ? "var(--yellow)" : "var(--success)"} />
+              <span>{subs.due > 0 && <>{fmt(subs.due)} {subs.overdue > 0 ? "overdue" : "due"} &nbsp;·&nbsp; </>}{subs.paidCount} of {subs.active} paid &nbsp;·&nbsp; {fmt(subs.yearly)}/yr</span>
+            </div></>
           : <><div className="lbl">Remaining</div><Money className="big tnum" v={inst.remaining} />
-            <div className="sub">{inst.dueAmt > 0 && <>{fmt(inst.dueAmt)} due &nbsp;·&nbsp; </>}{inst.total > 0 ? Math.round((inst.paidAmt / inst.total) * 100) : 0}% paid &nbsp;·&nbsp; {inst.plans} plans</div></>}
+            <div className="sub" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <Dot color={inst.dueAmt > 0 ? "var(--yellow)" : "var(--success)"} />
+              <span>{inst.dueAmt > 0 && <>{fmt(inst.dueAmt)} due &nbsp;·&nbsp; </>}{inst.total > 0 ? Math.round((inst.paidAmt / inst.total) * 100) : 0}% paid &nbsp;·&nbsp; {inst.plans} plans</span>
+            </div></>}
       </div>
 
       <SegToggle style={{ marginBottom: 14 }} value={seg} onChange={setSeg} options={[{ id: "subs", label: "Subscriptions" }, { id: "inst", label: "Installments" }]} />
@@ -156,7 +165,7 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
                   <div><div className="nm">{bill.name}</div><div className="mt">Paid{p.date ? " " + p.date : ""}</div></div>
                   <div className="amtb">
                     <b className="tnum">{fmt(bill.amount)}</b>
-                    <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}><span className="pill pill-green" style={{ fontSize: 11, padding: "3px 9px" }}>Paid</span></div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, marginTop: 5 }}><Dot color="var(--success)" size={7} /><small style={{ color: "var(--muted)", fontWeight: 700, fontSize: 11 }}>Paid</small></div>
                   </div>
                 </div>
               ))}
