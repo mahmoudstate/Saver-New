@@ -17,9 +17,9 @@ export function txnView(t, bankNameOf = () => "") {
   let cls = "", sign = "", cat = null, amtColor, title, sub, goalLine = null;
   if (t.type === "income") { cls = "in"; sign = "+"; title = t.catName || t.note || "Income"; sub = `${bank} · ${dl}`; }
   else if (t.type === "expense") { cls = "out"; sign = "−"; title = t.catName || t.note || "Expense"; sub = `${bank} · ${dl}`; }
-  else if (t.type === "saving") { cat = "deposit"; amtColor = "var(--ac)"; title = t.goalName ? "Saved · " + t.goalName : "Saving"; sub = `${bank} · ${dl}`; }
+  else if (t.type === "saving") { cat = "deposit"; amtColor = "var(--ac)"; sub = `${bank} · ${dl}`; if (t.goalName) { title = "Saved"; goalLine = `Goal · ${t.goalName}`; } else title = "Saving"; }
   else if (t.type === "goal_withdraw") { cls = "out"; sign = "−"; title = t.catName || "Goal spend"; sub = `${bank} · ${dl}`; goalLine = `Goal · ${t.goalName || "Goal"}`; }
-  else if (t.type === "goal_return") { cls = "in"; sign = "+"; cat = "goalReturn"; title = t.goalName ? "Returned · " + t.goalName : "Goal return"; sub = `${bank} · ${dl}`; }
+  else if (t.type === "goal_return") { cls = "in"; sign = "+"; cat = "goalReturn"; sub = `${bank} · ${dl}`; if (t.goalName) { title = "Returned"; goalLine = `Goal · ${t.goalName}`; } else title = "Goal return"; }
   else if (t.type === "transfer") { cat = "transfer"; amtColor = "var(--blue)"; title = "Transfer"; sub = `${t.bankName || bankNameOf(t.fromBankId || t.bankId) || ""} → ${t.toBankName || bankNameOf(t.toBankId) || ""} · ${dl}`; }
   else { title = t.catName || t.type; sub = `${bank} · ${dl}`; }
   return { cls, sign, cat, amtColor, title, sub, goalLine };
