@@ -49,7 +49,7 @@ export function BankCard({ bank, available, frozen, low, money, masked, onClick,
 const circ = (size = 42, r = 13, bg, color) => ({ width: size, height: size, borderRadius: r, background: bg, color, display: "flex", alignItems: "center", justifyContent: "center" });
 const ordinal = (n) => { if (!n) return ""; const s = ["th", "st", "nd", "rd"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
 
-export default function Home({ store, onTab, onAdd, onOpenBank, onOpenGoals, onOpenGoal, onOpenBudgets, onOpenBudget, onOpenProjects, onOpenProject, onOpenInstallments, onOpenInst, onOpenBill, onOpenNotifications, onOpenAllAccounts, onOpenBreakdown, onCustomize, initialScroll = 0, onScrollChange }) {
+export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onAddGoal, onOpenBank, onOpenGoals, onOpenGoal, onOpenBudgets, onOpenBudget, onOpenProjects, onOpenProject, onOpenInstallments, onOpenInst, onOpenBill, onOpenNotifications, onOpenAllAccounts, onOpenBreakdown, onCustomize, initialScroll = 0, onScrollChange }) {
   const { banks, txns, savings, bills = [], budgets = [], installments = [], username } = store;
   const notifUnread = unreadCount(store);
   const scrollRef = useRef(null);
@@ -144,7 +144,7 @@ export default function Home({ store, onTab, onAdd, onOpenBank, onOpenGoals, onO
         </div>
       </div>
 
-      <ActivationCard store={store} onAdd={onAdd} onOpenGoals={onOpenGoals} />
+      <ActivationCard store={store} onAdd={onAdd} onAddAccount={onAddAccount} onAddBill={onAddBill} onAddGoal={onAddGoal} />
 
       {(() => {
       const saved = store.dashboard?.order ? store.dashboard : DASH_DEFAULT;
