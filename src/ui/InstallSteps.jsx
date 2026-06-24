@@ -15,8 +15,8 @@ export default function InstallSteps() {
       {STEPS.map((s, i) => (
         <div className="gsap-step" key={i} style={{ display: "flex", gap: 14 }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <span style={{ width: 42, height: 42, borderRadius: 14, background: "var(--ac)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 4px 10px -3px var(--ac)" }}>
-              {s.icon === "logo" ? <img src={logo} alt="" style={{ width: 26, height: 26, borderRadius: 8 }} /> : <Ico name={s.icon} size={20} color="#fff" />}
+            <span style={{ width: 42, height: 42, borderRadius: 14, background: "var(--acDim)", color: "var(--ac)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              {s.icon === "logo" ? <img src={logo} alt="" style={{ width: 26, height: 26, borderRadius: 8 }} /> : <Ico name={s.icon} size={20} />}
             </span>
             {i < STEPS.length - 1 && <span style={{ flex: 1, width: 2, background: "var(--line)", marginTop: 4, minHeight: 18 }} />}
           </div>
