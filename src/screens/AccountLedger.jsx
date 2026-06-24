@@ -1,33 +1,10 @@
 // Saver — Account ledger: ported 1:1 from showcase 11. Bank-gradient hero + this-month ledger.
 import { useMemo } from "react";
 import Ico from "../ui/Ico.jsx";
-import CatTile from "../ui/CatTile.jsx";
+import TxnRow from "../ui/TxnRow.jsx";
 import Money from "../ui/Money.jsx";
 import { fmt, currentMonth, cardGradient } from "../lib/format.js";
 import { calcBankBalance, calcFrozenForBank } from "../lib/calc.js";
-
-// same day+date label used across Activity / Budget / Project rows
-const rowDate = (d) => d ? new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "";
-
-function Row({ t, bankNameOf, onClick }) {
-  let cls = "", sign = "", nm, sub, cat = null, color;
-  if (t.type === "income") { cls = "in"; sign = "+"; nm = t.note || t.catName || "Income"; sub = t.catName || "Income"; }
-  else if (t.type === "expense") { cls = "out"; sign = "−"; nm = t.note || t.catName || "Expense"; sub = t.catName || "Expense"; }
-  else if (t.type === "saving") { cat = "goal"; color = "var(--ac)"; nm = t.goalName ? "Saved · " + t.goalName : "Saving"; sub = "To goal"; }
-  else if (t.type === "goal_withdraw") { cls = "out"; sign = "−"; cat = "goal"; nm = t.goalName ? "Spent from " + t.goalName : "Goal spend"; sub = "Goal"; }
-  else if (t.type === "goal_return") { cls = "in"; sign = "+"; cat = "goal"; nm = t.goalName ? "Returned · " + t.goalName : "Goal return"; sub = "Goal"; }
-  else if (t.type === "transfer") { cat = "transfer"; color = "var(--blue)"; nm = "Transfer"; sub = `${bankNameOf(t.fromBankId || t.bankId)} → ${bankNameOf(t.toBankId)}`; }
-  else { nm = t.catName || t.type; sub = ""; }
-  const dl = rowDate(t.date);
-  sub = sub ? `${sub} · ${dl}` : dl;
-  return (
-    <div className="icard" onClick={onClick} style={onClick ? { cursor: "pointer" } : undefined}>
-      <CatTile txn={t} cat={cat} size={44} />
-      <div><div className="nm">{nm}</div><div className="mt">{sub}</div></div>
-      <div className={`amt ${cls} tnum`} style={!cls && color ? { color } : undefined}>{sign}{fmt(t.amount)}</div>
-    </div>
-  );
-}
 
 export default function AccountLedger({ store, bank: bankProp, back, onMove, onEdit, onEditTxn }) {
   const { txns, banks } = store;
@@ -38,7 +15,10 @@ export default function AccountLedger({ store, bank: bankProp, back, onMove, onE
   const bal = calcBankBalance(bank.id, txns), frozen = Math.max(0, calcFrozenForBank(bank.id, [], txns)), avail = bal - frozen;
   const list = useMemo(() => txns
     .filter((t) => (t.bankId === bank.id || t.toBankId === bank.id || t.fromBankId === bank.id) && (t.date || "").startsWith(cm))
-    .sort((a, b) => (b.date || "").localeCompare(a.date || "")), [txns, bank.id, cm]);
+    .sort((a, b) => (b.date || "").localeCompare(a.date || "") || (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0)), [txns, bank.id, cm]);
+  // chain badge shows only when 2+ operations actually share the split group id
+  const groupSizes = useMemo(() => { const m = {}; txns.forEach((t) => { if (t.splitGroupId) m[t.splitGroupId] = (m[t.splitGroupId] || 0) + 1; }); return m; }, [txns]);
+  const isLinked = (t) => t.splitGroupId && groupSizes[t.splitGroupId] > 1;
 
   return (
     <div className="content padnav">
@@ -63,7 +43,7 @@ export default function AccountLedger({ store, bank: bankProp, back, onMove, onE
       </div>
       <div className="over">This month</div>
       {list.length === 0 ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px", fontWeight: 600 }}>No transactions this month.</div>
-        : list.map((t) => <Row key={t.id} t={t} bankNameOf={bankNameOf} onClick={onEditTxn ? () => onEditTxn(t) : undefined} />)}
+        : list.map((t) => <TxnRow key={t.id} txn={t} bankNameOf={bankNameOf} onClick={onEditTxn ? () => onEditTxn(t) : undefined} linked={isLinked(t)} />)}
     </div>
   );
 }

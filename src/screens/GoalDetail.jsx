@@ -7,12 +7,10 @@ import CatTile from "../ui/CatTile.jsx";
 import AmountSheet from "../ui/AmountSheet.jsx";
 import MenuSheet from "../ui/MenuSheet.jsx";
 import LinkBadge from "../ui/LinkBadge.jsx";
-import { resolveCat } from "../ui/cats.js";
 import Money from "../ui/Money.jsx";
 import { fmt, today, fmtDate } from "../lib/format.js";
 import { calcGoalSaved, goalBalancesPerBank } from "../lib/calc.js";
 
-const goalCat = (g) => resolveCat({ catGlyph: g.glyph, catName: g.name }) || "goal";
 
 export default function GoalDetail({ store, goalId, back, onReached, onEdit, onEditTxn }) {
   const { savings = [], banks = [], txns = [] } = store;
@@ -131,7 +129,7 @@ export default function GoalDetail({ store, goalId, back, onReached, onEdit, onE
           const labels = { saving: "Added to goal", goal_withdraw: "Spent from goal", goal_return: "Returned to bank" };
           return (
             <div className="icard" key={t.id} onClick={onEditTxn ? () => onEditTxn(t) : undefined} style={onEditTxn ? { cursor: "pointer" } : undefined}>
-              <CatTile cat={positive ? goalCat(goal) : null} color={positive ? goal.color : undefined} name={positive ? goal.name : "↩"} size={44} />
+              <CatTile txn={t} cat={t.type === "saving" ? "deposit" : t.type === "goal_return" ? "goalReturn" : null} size={44} />
               <div style={{ minWidth: 0 }}>
                 <div className="nm">{labels[t.type] || t.catName}</div>
                 <div className="mt">{(bankOf(t.bankId)?.name || "—")} · {t.date ? fmtDate(t.date).split(":")[0] : ""}</div>

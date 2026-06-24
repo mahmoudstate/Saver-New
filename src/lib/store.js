@@ -43,6 +43,12 @@ const newId = () => {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 };
 
+// Monotonic creation stamp — used to order same-date transactions (newest first).
+// UUID ids carry no time info, so this is the reliable sort key. Strictly increasing
+// even within the same millisecond so a batch (splits / back-fill) keeps its order.
+let _lastStamp = 0;
+const stamp = () => { const n = Date.now(); _lastStamp = n > _lastStamp ? n : _lastStamp + 1; return _lastStamp; };
+
 const ENTITIES = {
   txns: [], banks: [], expCats: [], incCats: [], groups: [], savings: [],
   bills: [], budgets: [], installments: [], quickActions: [], billTypes: [],
@@ -182,14 +188,14 @@ export function useStore() {
           if (bAmt > 0 && rem > 0) {
             const deduct = Math.min(bAmt, rem);
             const bankObj = banks.find((b) => b.id === bId);
-            newTxns.push({ ...t, id: newId(), amount: deduct, bankId: bId, bankName: bankObj?.name || "Unknown", splitGroupId });
+            newTxns.push({ ...t, id: newId(), createdAt: stamp(), amount: deduct, bankId: bId, bankName: bankObj?.name || "Unknown", splitGroupId });
             rem -= deduct;
           }
         }
         if (newTxns.length > 0) { set("txns", (prev) => [...newTxns, ...prev]); HAPTICS.success(); return newTxns[0].id; }
       }
       const id = newId();
-      set("txns", (prev) => [{ ...t, id }, ...prev]);
+      set("txns", (prev) => [{ ...t, id, createdAt: stamp() }, ...prev]);
       HAPTICS.success(); return id;
     // NOTE: released via a 500ms timer, NOT synchronously, and this is intentional.
     // A sync release would unlock before React re-renders + refreshes dataRef, so a
@@ -211,7 +217,7 @@ export function useStore() {
       const avail = calc.safeToSpend(bId);
       if (avail < total) { HAPTICS.warning(); setAlert({ title: "Not enough balance", message: `Available balance is ${fmt(avail)}. That doesn't cover this.`, color: "var(--red)" }); return false; }
     }
-    const withIds = list.map((t) => ({ ...t, id: newId() }));
+    const withIds = list.map((t) => ({ ...t, id: newId(), createdAt: stamp() }));
     set("txns", (prev) => [...withIds, ...prev]);
     HAPTICS.success(); return withIds.map((t) => t.id);
   }, [set]);

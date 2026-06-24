@@ -1,8 +1,8 @@
 // Saver — Filter Results: ported from showcase 55 (summary insight + list).
 import Ico from "../ui/Ico.jsx";
-import CatTile from "../ui/CatTile.jsx";
+import TxnRow from "../ui/TxnRow.jsx";
 import Money from "../ui/Money.jsx";
-import { fmt, fmtDate } from "../lib/format.js";
+import { fmt } from "../lib/format.js";
 import { PERIODS, SHOWS, applyFilter, summarize } from "../lib/filter.js";
 
 export default function FilterResults({ store, filter, back, onEditFilter, onEdit }) {
@@ -10,7 +10,9 @@ export default function FilterResults({ store, filter, back, onEditFilter, onEdi
   const bankName = (id) => banks.find((b) => b.id === id)?.name || "";
   const catName = (id) => [...expCats, ...incCats].find((c) => c.id === id)?.name;
 
-  const list = applyFilter(txns, filter).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  const list = applyFilter(txns, filter).sort((a, b) => (b.date || "").localeCompare(a.date || "") || (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
+  const groupSizes = {}; txns.forEach((t) => { if (t.splitGroupId) groupSizes[t.splitGroupId] = (groupSizes[t.splitGroupId] || 0) + 1; });
+  const isLinked = (t) => t.splitGroupId && groupSizes[t.splitGroupId] > 1;
   const { count, total, avg } = summarize(list);
 
   const chips = [];
@@ -38,17 +40,7 @@ export default function FilterResults({ store, filter, back, onEditFilter, onEdi
 
       <div className="over">Transactions</div>
       {list.length === 0 ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "30px", fontWeight: 600 }}>Nothing matches this view.</div>
-        : list.map((t) => {
-          const out = t.type === "expense" || t.type === "goal_withdraw" || t.type === "transfer";
-          const sign = t.type === "income" || t.type === "goal_return" ? "+" : out ? "−" : "+";
-          return (
-            <div className="icard" key={t.id} onClick={() => onEdit?.(t)} style={{ cursor: "pointer" }}>
-              <CatTile txn={t} size={44} />
-              <div><div className="nm">{t.catName || t.type}</div><div className="mt">{bankName(t.bankId)}{t.date ? " · " + fmtDate(t.date).split(":")[0] : ""}</div></div>
-              <div className={`amt ${out ? "out" : "in"} tnum`}>{sign}{fmt(t.amount)}</div>
-            </div>
-          );
-        })}
+        : list.map((t) => <TxnRow key={t.id} txn={t} bankNameOf={bankName} onClick={() => onEdit?.(t)} linked={isLinked(t)} />)}
     </div>
   );
 }

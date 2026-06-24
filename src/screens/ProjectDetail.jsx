@@ -1,13 +1,11 @@
 // Saver — Project detail (cross-month): ported 1:1 from showcase 42 (long-term tracking).
 import { useState } from "react";
 import Ico from "../ui/Ico.jsx";
-import CatTile from "../ui/CatTile.jsx";
+import TxnRow from "../ui/TxnRow.jsx";
 import MenuSheet from "../ui/MenuSheet.jsx";
 import Money from "../ui/Money.jsx";
 import { fmt, currentMonth, MONTHS } from "../lib/format.js";
 import { projectSpent, budgetTxns } from "../lib/calc.js";
-
-const rowDate = (d) => d ? new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "";
 
 const monthsBetween = (start, end) => { if (!start) return 1; const [sy, sm] = start.split("-").map(Number); const [ey, em] = end.split("-").map(Number); return Math.max(1, (ey - sy) * 12 + (em - sm) + 1); };
 
@@ -56,13 +54,7 @@ export default function ProjectDetail({ store, projectId, back, onEdit, onEditTx
 
       <div className="over">Spending</div>
       {rows.length === 0 ? <div style={{ color: "var(--muted)", fontWeight: 600, padding: "8px 2px" }}>No spending yet.</div>
-        : rows.map((t) => (
-          <div className="icard" key={t.id} onClick={onEditTxn ? () => onEditTxn(t) : undefined} style={onEditTxn ? { cursor: "pointer" } : undefined}>
-            <CatTile txn={t} size={44} />
-            <div><div className="nm">{t.catName || t.note || "Expense"}</div><div className="mt">{bankName(t.bankId)} · {rowDate(t.date)}</div></div>
-            <div className="amtb"><b className="tnum" style={{ color: "var(--red)" }}>−{fmt(t.amount)}</b></div>
-          </div>
-        ))}
+        : rows.map((t) => <TxnRow key={t.id} txn={t} bankNameOf={bankName} onClick={onEditTxn ? () => onEditTxn(t) : undefined} />)}
 
       <div className="cta">
         {archived
