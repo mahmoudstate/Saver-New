@@ -5,9 +5,11 @@ import TxnRow from "../ui/TxnRow.jsx";
 import Money from "../ui/Money.jsx";
 import { fmt, currentMonth, cardGradient } from "../lib/format.js";
 import { calcBankBalance, calcFrozenForBank } from "../lib/calc.js";
+import { useT } from "../lib/i18n.js";
 
 export default function AccountLedger({ store, bank: bankProp, back, onMove, onEdit, onEditTxn }) {
   const { txns, banks } = store;
+  const tr = useT();
   // Always read the latest bank from the store so edits (colour/name) reflect immediately.
   const bank = banks.find((b) => b.id === bankProp.id) || bankProp;
   const cm = currentMonth();
@@ -31,18 +33,18 @@ export default function AccountLedger({ store, bank: bankProp, back, onMove, onE
           <div className="hib" style={{ background: "rgba(255,255,255,.2)", color: "#fff" }} onClick={() => onEdit?.(bank)}><Ico name="pencil" size={18} /></div>
         </div>
         <div style={{ position: "relative", zIndex: 2 }}>
-          <div className="lbl" style={{ color: "rgba(255,255,255,.82)" }}>Available</div>
+          <div className="lbl" style={{ color: "rgba(255,255,255,.82)" }}>{tr("home.available")}</div>
           <Money className="big tnum" style={{ color: "#fff" }} v={avail} />
           <div className="sub" style={{ color: "rgba(255,255,255,.85)", display: "flex", alignItems: "center", gap: 6 }}>
-            {frozen > 0 ? <><Ico name="lock" size={12} color="#fff" />{fmt(frozen)} locked · {fmt(bal)} total</> : <>{fmt(bal)} total balance</>}
+            {frozen > 0 ? <><Ico name="lock" size={12} color="#fff" />{tr("account.lockedTotal", { frozen: fmt(frozen), bal: fmt(bal) })}</> : <>{tr("account.totalBalance", { bal: fmt(bal) })}</>}
           </div>
         </div>
       </div>
       <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-        <button className="btn btn-secondary" style={{ flex: 1, height: 46, fontSize: 14 }} onClick={() => onMove?.(bank)}><Ico name="transfer" size={17} />Move money</button>
+        <button className="btn btn-secondary" style={{ flex: 1, height: 46, fontSize: 14 }} onClick={() => onMove?.(bank)}><Ico name="transfer" size={17} />{tr("account.moveMoney")}</button>
       </div>
-      <div className="over">This month</div>
-      {list.length === 0 ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px", fontWeight: 600 }}>No transactions this month.</div>
+      <div className="over">{tr("account.thisMonth")}</div>
+      {list.length === 0 ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px", fontWeight: 600 }}>{tr("account.noTxnsMonth")}</div>
         : list.map((t) => <TxnRow key={t.id} txn={t} bankNameOf={bankNameOf} onClick={onEditTxn ? () => onEditTxn(t) : undefined} linked={isLinked(t)} />)}
     </div>
   );

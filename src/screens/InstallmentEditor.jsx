@@ -15,6 +15,7 @@ import ColorField from "../ui/ColorField.jsx";
 import IconField from "../ui/IconField.jsx";
 import CatTile from "../ui/CatTile.jsx";
 import { fmt, today } from "../lib/format.js";
+import { useT } from "../lib/i18n.js";
 
 const r2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 // "YYYY-MM" n months from the current month (n negative = past).
@@ -23,6 +24,7 @@ const clampDay = (d) => Math.min(28, Math.max(1, d || 1));
 
 export default function InstallmentEditor({ store, plan, onClose }) {
   const { banks = [] } = store;
+  const tr = useT();
   const editing = !!plan;
   const liveBanks = banks.filter((b) => !b.archived);
 
@@ -66,7 +68,7 @@ export default function InstallmentEditor({ store, plan, onClose }) {
 
     if (editing) {
       store.set("installments", (list) => list.map((i) => (i.id === plan.id ? { ...i, ...base } : i)));
-      store.flash({ title: "Plan saved", sub: `${title} · ${count}×${fmt(monthly)}`, color: "var(--acText)", icon: "check" });
+      store.flash({ title: tr("inst.planSaved"), sub: `${title} · ${count}×${fmt(monthly)}`, color: "var(--acText)", icon: "check" });
       onClose();
       return;
     }
@@ -113,23 +115,23 @@ export default function InstallmentEditor({ store, plan, onClose }) {
   return (
     <div className="content padnav">
       <div className="hero">
-        <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">{editing ? "Edit plan" : "New installment"}</div><div className="grow" /><div className="hchip">Step {step + 1} / 3</div></div>
+        <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">{editing ? tr("inst.editPlan") : tr("inst.newInstallment")}</div><div className="grow" /><div className="hchip">{tr("inst.step", { n: step + 1 })}</div></div>
         {heroBig}
         <div style={{ display: "flex", gap: 6, marginTop: 14 }}>{[0, 1, 2].map((i) => <i key={i} style={{ flex: 1, height: 5, borderRadius: 3, background: i <= step ? "#fff" : "rgba(255,255,255,.35)" }} />)}</div>
       </div>
 
       {/* ───── STEP 1 · What & who ───── */}
       {step === 0 && <>
-        <div className="over">Tell us about it</div>
+        <div className="over">{tr("inst.tellUs")}</div>
         <label className="field">
           <CatTile cat={glyph} name={title} color={color} size={42} />
-          <div style={{ flex: 1 }}><div className="fl">What are you paying off?</div>
-            <input value={item} onChange={(e) => setItem(e.target.value)} placeholder="e.g. iPhone 15" style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700, marginTop: 2, width: "100%" }} />
+          <div style={{ flex: 1 }}><div className="fl">{tr("inst.payingOff")}</div>
+            <input value={item} onChange={(e) => setItem(e.target.value)} placeholder={tr("inst.itemPlaceholder")} style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700, marginTop: 2, width: "100%" }} />
           </div>
         </label>
         <label className="field" style={{ marginTop: 12 }}>
-          <div style={{ flex: 1 }}><div className="fl">Store or provider</div>
-            <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="e.g. ValU, B.TECH…" style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700, marginTop: 2, width: "100%" }} />
+          <div style={{ flex: 1 }}><div className="fl">{tr("inst.storeProvider")}</div>
+            <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder={tr("inst.providerPlaceholder")} style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700, marginTop: 2, width: "100%" }} />
           </div>
         </label>
         <ColorField value={color} onChange={setColor} style={{ marginTop: 12 }} />
@@ -138,35 +140,35 @@ export default function InstallmentEditor({ store, plan, onClose }) {
 
       {/* ───── STEP 2 · The numbers ───── */}
       {step === 1 && <>
-        <div className="over">The plan</div>
-        <Row label="Months" value={`${count} payments`} onClick={() => setSheet("count")} />
-        <Row label="Per month" value={monthly > 0 ? fmt(monthly) : "Set"} onClick={() => setSheet("monthly")} />
-        <Row label="Total · auto" value={effTotal > 0 ? fmt(effTotal) : "Set"} onClick={() => setSheet("total")} dim />
-        <div className="over" style={{ marginTop: 18 }}>Optional</div>
-        <Row label="Down payment" value={downPayment > 0 ? fmt(downPayment) : "None"} onClick={() => setSheet("dp")} />
-        {!editing && downPayment > 0 && <Toggle on={deductDp} set={setDeductDp} onText="Records an expense and lowers your balance" offText="Info only — balance unchanged" />}
-        {!editing && <Row label="Already paid" value={paidInit > 0 ? `${paidInit} of ${count}` : "None"} onClick={() => setSheet("paid")} />}
-        {!editing && paidInit > 0 && <Toggle on={deductPaid} set={setDeductPaid} onText={`Records ${paidInit} expense${paidInit === 1 ? "" : "s"} and lowers your balance`} offText="Info only — balance unchanged" />}
+        <div className="over">{tr("inst.thePlan")}</div>
+        <Row label={tr("inst.months")} value={tr("inst.payments", { n: count })} onClick={() => setSheet("count")} />
+        <Row label={tr("inst.perMonth")} value={monthly > 0 ? fmt(monthly) : tr("editor.setGeneric")} onClick={() => setSheet("monthly")} />
+        <Row label={tr("inst.totalAuto")} value={effTotal > 0 ? fmt(effTotal) : tr("editor.setGeneric")} onClick={() => setSheet("total")} dim />
+        <div className="over" style={{ marginTop: 18 }}>{tr("inst.optional")}</div>
+        <Row label={tr("inst.downPayment")} value={downPayment > 0 ? fmt(downPayment) : tr("inst.none")} onClick={() => setSheet("dp")} />
+        {!editing && downPayment > 0 && <Toggle on={deductDp} set={setDeductDp} onText={tr("inst.dpOn")} offText={tr("inst.infoOnly")} />}
+        {!editing && <Row label={tr("inst.alreadyPaid")} value={paidInit > 0 ? tr("inst.nOfTotal", { n: paidInit, total: count }) : tr("inst.none")} onClick={() => setSheet("paid")} />}
+        {!editing && paidInit > 0 && <Toggle on={deductPaid} set={setDeductPaid} onText={tr(paidInit === 1 ? "inst.paidOnOne" : "inst.paidOnMany", { n: paidInit })} offText={tr("inst.infoOnly")} />}
       </>}
 
       {/* ───── STEP 3 · Account & schedule ───── */}
       {step === 2 && <>
-        <div className="over">Where & when</div>
+        <div className="over">{tr("inst.whereWhen")}</div>
         <div className="field" onClick={() => setSheet("account")} style={{ cursor: "pointer" }}>
           <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: bank?.color || "var(--muted)", color: "#fff", fontWeight: 800, fontSize: 14 }}>{(bank?.name || "?").slice(0, 1).toUpperCase()}</span>
-          <div style={{ flex: 1 }}><div className="fl">Pay from</div><div className="fv">{bank?.name || "Pick"}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
+          <div style={{ flex: 1 }}><div className="fl">{tr("inst.payFrom")}</div><div className="fv">{bank?.name || tr("sub.pick")}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
         </div>
-        <Row label="Due day" value={`Day ${clampDay(dueDay)}`} onClick={() => setSheet("due")} />
-        <Row label="Remind me" value={reminderDays === 0 ? "Off" : `${reminderDays} day${reminderDays === 1 ? "" : "s"} before`} onClick={() => setSheet("remind")} />
+        <Row label={tr("inst.dueDay")} value={tr("sub.dayN", { n: clampDay(dueDay) })} onClick={() => setSheet("due")} />
+        <Row label={tr("sub.remindMe")} value={reminderDays === 0 ? tr("sub.off") : tr(reminderDays === 1 ? "sub.dayBefore" : "sub.daysBefore", { n: reminderDays })} onClick={() => setSheet("remind")} />
         <label className="field" style={{ marginTop: 12 }}>
-          <div style={{ flex: 1 }}><div className="fl">Note</div>
-            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. 0% interest" style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700, marginTop: 2, width: "100%" }} />
+          <div style={{ flex: 1 }}><div className="fl">{tr("inst.note")}</div>
+            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={tr("inst.notePlaceholder")} style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700, marginTop: 2, width: "100%" }} />
           </div>
         </label>
 
         <div className="tile" style={{ marginTop: 14, padding: "14px 16px" }}>
-          <div className="over" style={{ marginTop: 0, marginBottom: 8 }}>Review</div>
-          {[["Item", title || "—"], ["Plan", count > 0 && monthly > 0 ? `${count} × ${fmt(monthly)}` : "—"], ["Total", fmt(effTotal)], ...(downPayment > 0 ? [["Deposit", fmt(downPayment) + (deductDp ? "" : " · info")]] : []), ...(paidInit > 0 ? [["Already paid", `${paidInit}${deductPaid ? "" : " · info"}`]] : []), ["From", bank?.name || "—"], ["Due day", `Day ${clampDay(dueDay)}`]].map(([k, v], i, arr) => (
+          <div className="over" style={{ marginTop: 0, marginBottom: 8 }}>{tr("inst.review")}</div>
+          {[[tr("inst.rItem"), title || "—"], [tr("inst.rPlan"), count > 0 && monthly > 0 ? `${count} × ${fmt(monthly)}` : "—"], [tr("inst.rTotal"), fmt(effTotal)], ...(downPayment > 0 ? [[tr("inst.rDeposit"), fmt(downPayment) + (deductDp ? "" : tr("inst.infoSuffix"))]] : []), ...(paidInit > 0 ? [[tr("inst.rAlreadyPaid"), `${paidInit}${deductPaid ? "" : tr("inst.infoSuffix")}`]] : []), [tr("inst.rFrom"), bank?.name || "—"], [tr("inst.rDueDay"), tr("sub.dayN", { n: clampDay(dueDay) })]].map(([k, v], i, arr) => (
             <div key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: i === arr.length - 1 ? "none" : "1px solid var(--line)" }}>
               <span style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600 }}>{k}</span>
               <span className="tnum" style={{ color: "var(--text)", fontSize: 14, fontWeight: 700, maxWidth: "60%", textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v}</span>
@@ -176,20 +178,20 @@ export default function InstallmentEditor({ store, plan, onClose }) {
       </>}
 
       <div className="cta" style={{ display: "flex", gap: 12 }}>
-        {step > 0 && <div className="btn btn-ghost" onClick={back} style={{ flexShrink: 0 }}><Ico name="back" size={17} />Back</div>}
+        {step > 0 && <div className="btn btn-ghost" onClick={back} style={{ flexShrink: 0 }}><Ico name="back" size={17} />{tr("inst.back")}</div>}
         {step < 2
-          ? <div className="btn btn-primary" style={{ flex: 1, opacity: (step === 0 ? step1ok : step2ok) ? 1 : .5 }} onClick={next}>Next<Ico name="chev" size={18} /></div>
-          : <div className="btn btn-primary" style={{ flex: 1, opacity: valid ? 1 : .5 }} onClick={save}><Ico name="check" size={18} />{editing ? "Save plan" : "Add installment"}</div>}
+          ? <div className="btn btn-primary" style={{ flex: 1, opacity: (step === 0 ? step1ok : step2ok) ? 1 : .5 }} onClick={next}>{tr("inst.next")}<Ico name="chev" size={18} /></div>
+          : <div className="btn btn-primary" style={{ flex: 1, opacity: valid ? 1 : .5 }} onClick={save}><Ico name="check" size={18} />{editing ? tr("inst.savePlan") : tr("inst.addInstallment")}</div>}
       </div>
 
-      {sheet === "count" && <StepSheet title="How many months?" suffix="mo" value={count} picks={[6, 12, 24, 36, 48]} min={1} max={120} onConfirm={(v) => { setCountVal(v); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "monthly" && <AmountSheet title="Amount each month" confirmLabel="Set" onConfirm={(v) => { setMonthlyVal(v); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "total" && <AmountSheet title="Total amount" sub="Splits across the months" confirmLabel="Set" onConfirm={(v) => { setTotalVal(v); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "dp" && <AmountSheet title="Down payment" sub="Upfront amount before the monthly plan" confirmLabel="Set" onConfirm={(v) => { setDownPayment(v); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "paid" && <StepSheet title="Months already paid" sub={`Out of ${count}`} value={paidInit} picks={[1, 2, 3, 6]} min={0} max={count} onConfirm={(v) => { setPaidInit(v); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "due" && <DayGridSheet title="Due day" sub="Which day each month it's due." value={clampDay(dueDay)} onConfirm={(v) => { setDueDay(v); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "remind" && <OptionSheet title="Remind me" sub="Before it's due" value={reminderDays} onPick={(v) => { setReminderDays(v); setSheet(null); }} onClose={() => setSheet(null)} options={[{ value: 0, label: "Off" }, { value: 1, label: "1 day before" }, { value: 2, label: "2 days before" }, { value: 3, label: "3 days before" }, { value: 7, label: "1 week before" }]} />}
-      {sheet === "account" && <PickerSheet title="Pay from" selectedId={bankId} onPick={setBankId} onClose={() => setSheet(null)} options={liveBanks.map((b) => ({ id: b.id, label: b.name, bankColor: b.color }))} />}
+      {sheet === "count" && <StepSheet title={tr("inst.howManyMonths")} suffix={tr("inst.mo")} value={count} picks={[6, 12, 24, 36, 48]} min={1} max={120} onConfirm={(v) => { setCountVal(v); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "monthly" && <AmountSheet title={tr("inst.amountEachMonth")} confirmLabel={tr("editor.setGeneric")} onConfirm={(v) => { setMonthlyVal(v); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "total" && <AmountSheet title={tr("inst.totalAmount")} sub={tr("inst.splitsAcross")} confirmLabel={tr("editor.setGeneric")} onConfirm={(v) => { setTotalVal(v); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "dp" && <AmountSheet title={tr("inst.downPayment")} sub={tr("inst.dpUpfront")} confirmLabel={tr("editor.setGeneric")} onConfirm={(v) => { setDownPayment(v); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "paid" && <StepSheet title={tr("inst.monthsAlreadyPaid")} sub={tr("inst.outOf", { n: count })} value={paidInit} picks={[1, 2, 3, 6]} min={0} max={count} onConfirm={(v) => { setPaidInit(v); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "due" && <DayGridSheet title={tr("inst.dueDay")} sub={tr("inst.dueDaySub")} value={clampDay(dueDay)} onConfirm={(v) => { setDueDay(v); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "remind" && <OptionSheet title={tr("sub.remindMe")} sub={tr("sub.beforeDue")} value={reminderDays} onPick={(v) => { setReminderDays(v); setSheet(null); }} onClose={() => setSheet(null)} options={[{ value: 0, label: tr("sub.off") }, { value: 1, label: tr("sub.remind1") }, { value: 2, label: tr("sub.remind2") }, { value: 3, label: tr("sub.remind3") }, { value: 7, label: tr("sub.remind7") }]} />}
+      {sheet === "account" && <PickerSheet title={tr("inst.payFrom")} selectedId={bankId} onPick={setBankId} onClose={() => setSheet(null)} options={liveBanks.map((b) => ({ id: b.id, label: b.name, bankColor: b.color }))} />}
     </div>
   );
 }

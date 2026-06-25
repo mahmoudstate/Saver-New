@@ -1,23 +1,11 @@
 // Saver — Activity date picker: choose a whole month or a custom day range.
 import { useState } from "react";
 import Ico from "../ui/Ico.jsx";
-import { MONTHS, currentMonth, today } from "../lib/format.js";
+import { MONTHS, currentMonth, today, monthLabel, monthName, dayRangeLabel } from "../lib/format.js";
+import { useT } from "../lib/i18n.js";
 
 const pad = (n) => String(n).padStart(2, "0");
 const lastDay = (y, m) => new Date(y, m, 0).getDate(); // m = 1..12
-const monthLabel = (ym) => { const [y, m] = ym.split("-"); return `${MONTHS[+m - 1]} ${y}`; };
-
-function rangeLabel(from, to) {
-  const f = new Date(from + "T12:00:00"), t = new Date((to || from) + "T12:00:00");
-  const full = { day: "numeric", month: "short", year: "numeric" };
-  if (!to || from === to) return f.toLocaleDateString("en-GB", full);
-  const sameMonth = from.slice(0, 7) === to.slice(0, 7);
-  const sameYear = from.slice(0, 4) === to.slice(0, 4);
-  const fL = sameMonth ? f.toLocaleDateString("en-GB", { day: "numeric" })
-    : sameYear ? f.toLocaleDateString("en-GB", { day: "numeric", month: "short" })
-      : f.toLocaleDateString("en-GB", full);
-  return `${fL} – ${t.toLocaleDateString("en-GB", full)}`;
-}
 
 export default function DatePicker({ initial, onApply, back }) {
   const cm = currentMonth();
@@ -27,9 +15,10 @@ export default function DatePicker({ initial, onApply, back }) {
   const [from, setFrom] = useState(initial?.mode === "range" ? initial.from : null);
   const [to, setTo] = useState(initial?.mode === "range" ? initial.to : null);
 
+  const tr = useT();
   const done = (d) => { onApply(d); back(); };
   const pickMonth = (mi) => { const ym = `${year}-${pad(mi + 1)}`; done({ mode: "month", month: ym, from: `${ym}-01`, to: `${ym}-${pad(lastDay(year, mi + 1))}`, label: monthLabel(ym) }); };
-  const clear = () => done({ mode: "all", from: null, to: null, label: "All time" });
+  const clear = () => done({ mode: "all", from: null, to: null, label: tr("date.allTime") });
 
   const [cy, cmo] = cal.split("-").map(Number);
   const startDow = new Date(cy, cmo - 1, 1).getDay();
@@ -43,15 +32,15 @@ export default function DatePicker({ initial, onApply, back }) {
   return (
     <div className="content padnav">
       <div className="hero">
-        <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">Dates</div><div className="grow" /><div className="hchip" onClick={clear} style={{ cursor: "pointer" }}>All time</div></div>
-        <div className="lbl">Show activity for</div>
-        <div className="big" style={{ fontSize: 28 }}>Pick dates</div>
-        <div className="sub">A whole month, or specific days</div>
+        <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">{tr("date.title")}</div><div className="grow" /><div className="hchip" onClick={clear} style={{ cursor: "pointer" }}>{tr("date.allTime")}</div></div>
+        <div className="lbl">{tr("date.showFor")}</div>
+        <div className="big" style={{ fontSize: 28 }}>{tr("date.pickDates")}</div>
+        <div className="sub">{tr("date.monthOrDays")}</div>
       </div>
 
       <div className="seg" style={{ marginBottom: 18 }}>
-        <b className={mode === "month" ? "on" : ""} onClick={() => setMode("month")}>Month</b>
-        <b className={mode === "days" ? "on" : ""} onClick={() => setMode("days")}>Specific days</b>
+        <b className={mode === "month" ? "on" : ""} onClick={() => setMode("month")}>{tr("date.month")}</b>
+        <b className={mode === "days" ? "on" : ""} onClick={() => setMode("days")}>{tr("date.specificDays")}</b>
       </div>
 
       {mode === "month" ? (
@@ -66,7 +55,7 @@ export default function DatePicker({ initial, onApply, back }) {
               const ym = `${year}-${pad(i + 1)}`;
               const on = initial?.mode === "month" && initial.month === ym;
               const isCur = ym === cm;
-              return <div key={m} onClick={() => pickMonth(i)} style={{ textAlign: "center", padding: "14px 0", borderRadius: 13, cursor: "pointer", fontWeight: on ? 800 : 700, fontSize: 14, ...(on ? { background: "var(--acDim)", border: "1px solid var(--ac)", color: "var(--acText)" } : { background: "var(--surface)", border: "var(--cardBorder)", color: isCur ? "var(--acText)" : "var(--text)" }) }}>{m}</div>;
+              return <div key={m} onClick={() => pickMonth(i)} style={{ textAlign: "center", padding: "14px 0", borderRadius: 13, cursor: "pointer", fontWeight: on ? 800 : 700, fontSize: 14, ...(on ? { background: "var(--acDim)", border: "1px solid var(--ac)", color: "var(--acText)" } : { background: "var(--surface)", border: "var(--cardBorder)", color: isCur ? "var(--acText)" : "var(--text)" }) }}>{monthName(i)}</div>;
             })}
           </div>
         </>
@@ -78,7 +67,7 @@ export default function DatePicker({ initial, onApply, back }) {
             <div className="hib" onClick={() => shiftCal(1)} style={{ transform: "scaleX(-1)" }}><Ico name="back" size={18} /></div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginBottom: 6 }}>
-            {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <div key={i} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: "var(--faint)", padding: "4px 0" }}>{d}</div>)}
+            {tr("date.dow").split(",").map((d, i) => <div key={i} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: "var(--faint)", padding: "4px 0" }}>{d}</div>)}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }}>
             {cells.map((d, i) => {
@@ -88,8 +77,8 @@ export default function DatePicker({ initial, onApply, back }) {
               return <div key={i} onClick={() => tapDay(ds)} style={{ aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13.5, fontWeight: sel ? 800 : 600, borderRadius: 11, cursor: "pointer", ...(sel ? { background: "var(--ac)", color: "var(--onacc)" } : mid ? { background: "var(--acDim)", color: "var(--acText)" } : { color: isToday ? "var(--acText)" : "var(--text)", background: isToday ? "var(--surface)" : "transparent" }) }}>{d}</div>;
             })}
           </div>
-          <div style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600, fontSize: 12.5, margin: "16px 0 4px" }}>{from ? rangeLabel(from, to) : "Tap a start day, then an end day"}</div>
-          <div className="cta"><div className="btn btn-primary btn-full" style={{ opacity: from ? 1 : .5 }} onClick={() => from && done({ mode: "range", from, to: to || from, label: rangeLabel(from, to) })}>Apply</div></div>
+          <div style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600, fontSize: 12.5, margin: "16px 0 4px" }}>{from ? dayRangeLabel(from, to) : tr("date.tapStartEnd")}</div>
+          <div className="cta"><div className="btn btn-primary btn-full" style={{ opacity: from ? 1 : .5 }} onClick={() => from && done({ mode: "range", from, to: to || from, label: dayRangeLabel(from, to) })}>{tr("date.apply")}</div></div>
         </>
       )}
     </div>

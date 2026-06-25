@@ -3,9 +3,11 @@ import { useRef } from "react";
 import Ico from "../ui/Ico.jsx";
 import { today } from "../lib/format.js";
 import { KEYS, loadKey } from "../lib/store.js";
+import { useT } from "../lib/i18n.js";
 
 export default function PrivacyBackup({ store, back }) {
   const fileRef = useRef(null);
+  const tr = useT();
 
   const download = () => {
     const payload = { _app: "Saver", _version: 3, _exported: today() };
@@ -14,7 +16,7 @@ export default function PrivacyBackup({ store, back }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = `Saver_Backup_${today()}.json`; a.click();
     URL.revokeObjectURL(url);
-    store.flash({ title: "Backup downloaded", sub: "Saver_Backup.json", color: "var(--success)", icon: "download" });
+    store.flash({ title: tr("privacy.backupDownloaded"), sub: "Saver_Backup.json", color: "var(--success)", icon: "download" });
   };
 
   const onFile = (e) => {
@@ -24,11 +26,11 @@ export default function PrivacyBackup({ store, back }) {
       try {
         const data = JSON.parse(reader.result);
         store.setConfirm({
-          title: "Restore this backup?", message: "This overwrites your current data with the file's contents.",
-          color: "var(--acText)", confirmText: "Restore", icon: "download",
-          onConfirm: () => { if (store.restore(data)) store.flash({ title: "Backup restored", color: "var(--acText)", icon: "check" }); },
+          title: tr("privacy.restoreTitle"), message: tr("privacy.restoreMsg"),
+          color: "var(--acText)", confirmText: tr("privacy.restore"), icon: "download",
+          onConfirm: () => { if (store.restore(data)) store.flash({ title: tr("privacy.backupRestored"), color: "var(--acText)", icon: "check" }); },
         });
-      } catch { store.setAlert({ title: "Couldn't read file", message: "That doesn't look like a Saver backup.", color: "var(--red)" }); }
+      } catch { store.setAlert({ title: tr("privacy.cantRead"), message: tr("privacy.cantReadMsg"), color: "var(--red)" }); }
     };
     reader.readAsText(file);
     e.target.value = "";
@@ -37,9 +39,9 @@ export default function PrivacyBackup({ store, back }) {
   // Factory reset — always exports a backup first, then wipes everything.
   const reset = () => {
     store.setConfirm({
-      title: "Reset all data?",
-      message: "A backup file is saved to your device first, then accounts, categories, transactions and settings are erased and the app starts fresh. This can't be undone.",
-      confirmText: "Back up & reset", danger: true, icon: "trash",
+      title: tr("privacy.resetTitle"),
+      message: tr("privacy.resetMsg"),
+      confirmText: tr("privacy.backupReset"), danger: true, icon: "trash",
       onConfirm: () => { download(); store.resetAll(); },
     });
   };
@@ -55,20 +57,20 @@ export default function PrivacyBackup({ store, back }) {
   return (
     <div className="content padnav">
       <div className="hero">
-        <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">Privacy</div><div className="grow" /></div>
-        <div className="lbl">Your data</div><div className="big" style={{ fontSize: 34 }}>Private</div><div className="sub">Everything stays on this device</div>
+        <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">{tr("privacy.title")}</div><div className="grow" /></div>
+        <div className="lbl">{tr("privacy.yourData")}</div><div className="big" style={{ fontSize: 34 }}>{tr("privacy.private")}</div><div className="sub">{tr("privacy.onDevice")}</div>
       </div>
 
-      <div className="over">Security</div>
-      <Row icon="lock" bg="var(--blueDim)" color="var(--blue)" nm="App lock" mt="Require Face ID to open" />
+      <div className="over">{tr("privacy.security")}</div>
+      <Row icon="lock" bg="var(--blueDim)" color="var(--blue)" nm={tr("privacy.appLock")} mt={tr("privacy.appLockSub")} />
       <div className="frozen" style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8, background: "var(--acDim)", color: "var(--acText)", borderRadius: 14, padding: "12px 14px", fontWeight: 700, fontSize: 13 }}>
-        <Ico name="shield" size={15} color="var(--ac)" />On-device only · No tracking, no ads
+        <Ico name="shield" size={15} color="var(--ac)" />{tr("privacy.onDeviceBadge")}
       </div>
 
-      <div className="over" style={{ marginTop: 16 }}>Backup</div>
-      <Row icon="download" bg="var(--purpleDim)" color="var(--purple)" nm="Download backup" mt="Saver_Backup.json" right={<Ico name="chev" size={18} color="var(--faint)" />} onClick={download} />
-      <Row icon="download" bg="var(--blueDim)" color="var(--blue)" nm="Restore from file" mt="Overwrites current data" right={<Ico name="chev" size={18} color="var(--faint)" />} onClick={() => fileRef.current?.click()} />
-      <Row icon="trash" bg="var(--redDim)" color="var(--red)" nm="Reset all data" mt="Backs up first, then starts fresh" right={<Ico name="chev" size={18} color="var(--faint)" />} onClick={reset} />
+      <div className="over" style={{ marginTop: 16 }}>{tr("privacy.backup")}</div>
+      <Row icon="download" bg="var(--purpleDim)" color="var(--purple)" nm={tr("privacy.downloadBackup")} mt="Saver_Backup.json" right={<Ico name="chev" size={18} color="var(--faint)" />} onClick={download} />
+      <Row icon="download" bg="var(--blueDim)" color="var(--blue)" nm={tr("privacy.restoreFromFile")} mt={tr("privacy.overwrites")} right={<Ico name="chev" size={18} color="var(--faint)" />} onClick={() => fileRef.current?.click()} />
+      <Row icon="trash" bg="var(--redDim)" color="var(--red)" nm={tr("privacy.resetAllData")} mt={tr("privacy.resetSub")} right={<Ico name="chev" size={18} color="var(--faint)" />} onClick={reset} />
       <input ref={fileRef} type="file" accept="application/json,.json" onChange={onFile} style={{ display: "none" }} />
     </div>
   );

@@ -1,12 +1,14 @@
 // Saver — lightweight bottom action sheet. Pass a list of items; destructive ones
 // render in red. Used for secondary detail-screen actions (Edit / Stop / Delete).
 import Ico from "./Ico.jsx";
+import { useT } from "../lib/i18n.js";
 
 export default function MenuSheet({ title, items, onClose }) {
+  const tr = useT();
   return (
     <>
       <div className="dim" onClick={onClose} />
-      <div className="sheet" role="menu" aria-label={title || "Actions"}>
+      <div className="sheet" role="menu" aria-label={title || tr("ui.actions")}>
         <div className="grab" />
         {title && <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: -.3, marginBottom: 10 }}>{title}</div>}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -17,7 +19,7 @@ export default function MenuSheet({ title, items, onClose }) {
             </div>
           ))}
         </div>
-        <div style={{ marginTop: 12 }}><div className="btn btn-secondary btn-full" onClick={onClose}>Cancel</div></div>
+        <div style={{ marginTop: 12 }}><div className="btn btn-secondary btn-full" onClick={onClose}>{tr("ui.cancel")}</div></div>
       </div>
     </>
   );

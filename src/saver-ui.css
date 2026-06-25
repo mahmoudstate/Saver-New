@@ -430,3 +430,21 @@ body{background:var(--bg)}
     transition-duration:.01ms !important;
   }
 }
+
+/* ---------- 21. RTL POLISH (D3) ---------- */
+/* Directional icons mirror under RTL. This composes correctly with the existing
+   inline `transform:scaleX(-1)` on "next month / next year" buttons:
+   – plain Back/Prev/row-chevron → flip once → point the RTL-correct way.
+   – Next buttons (wrapper already scaleX(-1)) → wrapper × icon flip → net correct. */
+[dir="rtl"] .dirico{transform:scaleX(-1)}
+
+/* Amounts hug the inline-END side and align to text END — auto-flips per direction
+   (LTR: right · RTL: left), replacing the physical margin-left:auto / text-align:right. */
+.amt,.amtb{margin-left:0;margin-inline-start:auto;text-align:end}
+
+/* Stacked avatars overlap toward the inline-start side. */
+.avstack .avatar+.avatar{margin-left:0;margin-inline-start:-12px}
+
+/* Numerals always render left-to-right even inside RTL text, so amounts, dates and
+   percentages never get reordered by the bidi algorithm (digits stay Western). */
+[dir="rtl"] .tnum{direction:ltr;unicode-bidi:isolate}

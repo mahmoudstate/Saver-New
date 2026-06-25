@@ -7,6 +7,7 @@ import { fmt, currentMonth, MONTHS, cardGradient } from "../lib/format.js";
 import { calcBankBalance, calcGoalSaved, calcFrozenForBank, totalBalance, totalSafe, totalFrozen, monthTxns, sumIncome, sumExpense, projectSpent, budgetSpentMonth } from "../lib/calc.js";
 import { DASH_SECTIONS, DASH_DEFAULT } from "../lib/store.js";
 import { unreadCount } from "../lib/notifications.js";
+import { useT } from "../lib/i18n.js";
 
 const KNOWN_SECTIONS = DASH_SECTIONS.map((s) => s.id);
 
@@ -22,6 +23,7 @@ const Contactless = ({ s = 20 }) => <svg width={s} height={s} viewBox="0 0 24 24
 
 export function BankCard({ bank, available, frozen, low, money, masked, onClick, wide, grid }) {
   const col = bank.color || "#0e9f6e";
+  const t = useT();
   return (
     <div className="bankcard" onClick={onClick} style={{ background: cardGradient(col), cursor: "pointer", ...(wide ? { width: "100%", height: 168 } : {}), ...(grid ? { minWidth: 0, width: "100%", height: 152 } : {}), ...(low ? { boxShadow: "0 12px 24px -10px rgba(0,0,0,.45), inset 0 0 0 2px #F8B53D" } : {}) }}>
       <span className="bc-orb" style={{ width: 98, height: 98, top: -34, right: -26 }} />
@@ -34,13 +36,13 @@ export function BankCard({ bank, available, frozen, low, money, masked, onClick,
             : <Contactless />}
       </div>
       <div style={{ position: "relative", zIndex: 2 }}>
-        <div style={{ fontSize: 10, opacity: .85, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".09em" }}>{low && frozen <= 0 ? "Available · low" : "Available"}</div>
+        <div style={{ fontSize: 10, opacity: .85, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".09em" }}>{low && frozen <= 0 ? t("home.availableLow") : t("home.available")}</div>
         <Money className="tnum" style={{ fontSize: grid ? 22 : 27, fontWeight: 800, letterSpacing: -.6, lineHeight: 1.08 }} v={available} masked={masked} curSize={0.5} />
         {frozen > 0
-          ? <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6 }}><Ico name="lock" size={11} color="#fff" /><span className="tnum" style={{ fontSize: 11.5, fontWeight: 700, opacity: .92 }}>{money(frozen)} locked · goals</span></div>
+          ? <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6 }}><Ico name="lock" size={11} color="#fff" /><span className="tnum" style={{ fontSize: 11.5, fontWeight: 700, opacity: .92 }}>{t("home.lockedGoals", { amt: money(frozen) })}</span></div>
           : low
-            ? <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6 }}><Ico name="bell" size={11} color="#fff" /><span style={{ fontSize: 11.5, fontWeight: 700, opacity: .95 }}>Below your {fmt(bank.lowBalanceThreshold)} alert</span></div>
-            : <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6, opacity: .9 }}><Ico name="check" size={12} color="#fff" /><span style={{ fontSize: 11.5, fontWeight: 700 }}>Fully available</span></div>}
+            ? <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6 }}><Ico name="bell" size={11} color="#fff" /><span style={{ fontSize: 11.5, fontWeight: 700, opacity: .95 }}>{t("home.belowAlert", { amt: fmt(bank.lowBalanceThreshold) })}</span></div>
+            : <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6, opacity: .9 }}><Ico name="check" size={12} color="#fff" /><span style={{ fontSize: 11.5, fontWeight: 700 }}>{t("home.fullyAvailable")}</span></div>}
       </div>
     </div>
   );
@@ -51,6 +53,7 @@ const ordinal = (n) => { if (!n) return ""; const s = ["th", "st", "nd", "rd"], 
 
 export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onAddGoal, onOpenBank, onOpenGoals, onOpenGoal, onOpenBudgets, onOpenBudget, onOpenProjects, onOpenProject, onOpenInstallments, onOpenInst, onOpenBill, onOpenNotifications, onOpenAllAccounts, onOpenBreakdown, onCustomize, initialScroll = 0, onScrollChange }) {
   const { banks, txns, savings, bills = [], budgets = [], installments = [], username } = store;
+  const t = useT();
   const notifUnread = unreadCount(store);
   const scrollRef = useRef(null);
   // restore the scroll position from when Home was last left (tab-switch memory)
@@ -102,20 +105,20 @@ export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onA
     const projLimit = activeProj.reduce((s, p) => s + (p.amount || 0), 0);
     const budgetsList = mb.map((b) => ({ id: b.id, name: b.name, amount: b.amount || 0, spent: budgetSpentMonth(b, txns, cm) }));
     const goalsTarget = goals.reduce((a, g) => a + (g.goal || 0), 0);
-    const instList = activeInst.map((i) => { const paidCount = paidOf(i), paid = paidCount * i.installmentAmount; return { id: i.id, name: i.name || i.company || i.itemType || "Plan", paidCount, total: i.totalInstallments, paid, remaining: Math.max(0, i.totalAmount - paid), totalAmount: i.totalAmount }; });
+    const instList = activeInst.map((i) => { const paidCount = paidOf(i), paid = paidCount * i.installmentAmount; return { id: i.id, name: i.name || i.company || i.itemType || t("home.planFallback"), paidCount, total: i.totalInstallments, paid, remaining: Math.max(0, i.totalAmount - paid), totalAmount: i.totalAmount }; });
     const billsList = mBills.map((b) => ({ id: b.id, name: b.name, amount: b.amount, paid: billPaid(b), dueDay: b.dueDay, color: b.color, note: b.note })).sort((a, b) => (a.paid === b.paid ? 0 : a.paid ? 1 : -1));
     const projList = activeProj.map((p) => ({ id: p.id, name: p.name, amount: p.amount || 0, spent: projectSpent(p, txns) }));
     return { tb, ts, tf, inc, exp, net: inc - exp, goals, goalsSaved, goalsTarget, billsDue: unpaid.reduce((s, b) => s + b.amount, 0), unpaid: unpaid.length, paid: mBills.length - unpaid.length, limit, spent, budgetsList, instCount: activeInst.length, instRemaining, instDue, instList, billsList, projCount: activeProj.length, projSpent, projLimit, projList };
   }, [banks, txns, savings, bills, budgets, installments, cm]);
 
   const hh = new Date().getHours();
-  const greet = hh < 12 ? "Good morning" : hh < 18 ? "Good afternoon" : "Good evening";
+  const greet = hh < 12 ? t("home.greetMorning") : hh < 18 ? t("home.greetAfternoon") : t("home.greetEvening");
   const money = (v) => (hide ? "••••" : fmt(v));
   const onScroll = () => { const el = pagerRef.current; if (el) setPage(Math.round(el.scrollLeft / el.clientWidth)); };
   // shared "Show all N / Show less" disclosure footer used by every expandable section card
   const Disclosure = ({ open, n, set, label }) => (
     <div onClick={() => set((o) => !o)} role="button" aria-label={label} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 13, paddingTop: 12, borderTop: "1px solid var(--line)", cursor: "pointer", color: "var(--acText)", fontSize: 12.5, fontWeight: 800 }}>
-      {open ? "Show less" : `Show all ${n}`}
+      {open ? t("home.showLess") : t("home.showAll", { n })}
       <Ico name="chev" size={14} color="var(--acText)" style={{ transform: open ? "rotate(-90deg)" : "rotate(90deg)", transition: "transform .2s" }} />
     </div>
   );
@@ -124,18 +127,18 @@ export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onA
     <div className="content padnav" ref={scrollRef} onScroll={(e) => onScrollChange?.(e.currentTarget.scrollTop)}>
       <div className="hero">
         <div className="toprow">
-          <div><div style={{ fontSize: 11, letterSpacing: ".05em", textTransform: "uppercase", opacity: .72, fontWeight: 700 }}>{greet}</div><div style={{ fontSize: 15, fontWeight: 800, marginTop: 1 }}>{username || "there"}</div></div>
+          <div><div style={{ fontSize: 11, letterSpacing: ".05em", textTransform: "uppercase", opacity: .72, fontWeight: 700 }}>{greet}</div><div style={{ fontSize: 15, fontWeight: 800, marginTop: 1 }}>{username || t("home.nameFallback")}</div></div>
           <div className="grow" />
           <div className="hib" onClick={toggleHide}><Ico name={hide ? "eyeOff" : "eye"} size={20} /></div>
           <div className="hib" onClick={() => onOpenNotifications?.()} style={{ position: "relative" }}><Ico name="bell" size={20} />{notifUnread > 0 && <span className="notifDot" />}</div>
         </div>
         <div className="hscroll" ref={pagerRef} onScroll={onScroll} style={{ overflow: "hidden", marginTop: 2, display: "flex", overflowX: "auto", scrollSnapType: "x mandatory" }}>
           <div style={{ minWidth: "100%", scrollSnapAlign: "start", display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 124 }}>
-            <div className="lbl">Safe to spend</div><Money className="big tnum" v={d.ts} masked={hide} />
-            <div className="sub">{d.tf > 0 ? `${money(d.tf)} frozen in goals` : "Nothing frozen"}</div>
+            <div className="lbl">{t("home.safeToSpend")}</div><Money className="big tnum" v={d.ts} masked={hide} />
+            <div className="sub">{d.tf > 0 ? t("home.frozenInGoals", { amt: money(d.tf) }) : t("home.nothingFrozen")}</div>
           </div>
           <div style={{ minWidth: "100%", scrollSnapAlign: "start", display: "flex", flexDirection: "column", justifyContent: "center", minHeight: 124 }}>
-            <div className="lbl">Total balance</div><Money className="big tnum" v={d.tb} masked={hide} />
+            <div className="lbl">{t("home.totalBalance")}</div><Money className="big tnum" v={d.tb} masked={hide} />
           </div>
         </div>
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 16, display: "flex", justifyContent: "center", gap: 6, zIndex: 1 }}>
@@ -167,22 +170,22 @@ export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onA
       SEC.income = (<Fragment key="income">
       <div className="tile" style={{ marginBottom: 13, cursor: "pointer", minHeight: 146, display: "flex", flexDirection: "column", justifyContent: "center" }} onClick={() => onOpenBreakdown?.()}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-          <div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>{mName} · this month</div>
+          <div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>{t("home.thisMonth", { month: mName })}</div>
           <div style={{ flex: 1 }} />
-          <span className="tnum" style={{ fontSize: 11.5, fontWeight: 800, padding: "4px 10px", borderRadius: 999, background: d.net < 0 ? "var(--redDim)" : "color-mix(in srgb,var(--success) 14%,transparent)", color: d.net < 0 ? "var(--red)" : "var(--success)" }}>Net {hide ? "••••" : (d.net < 0 ? "−" : "+") + fmt(Math.abs(d.net))}</span>
+          <span className="tnum" style={{ fontSize: 11.5, fontWeight: 800, padding: "4px 10px", borderRadius: 999, background: d.net < 0 ? "var(--redDim)" : "color-mix(in srgb,var(--success) 14%,transparent)", color: d.net < 0 ? "var(--red)" : "var(--success)" }}>{t("home.net")} {hide ? "••••" : (d.net < 0 ? "−" : "+") + fmt(Math.abs(d.net))}</span>
           <Ico name="chev" size={16} color="var(--faint)" />
         </div>
         <div style={{ display: "flex", alignItems: "center" }}>
-          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10 }}><span style={circ(34, 11, "rgba(16,185,129,.15)", "var(--success)")}><Ico name="arrowUp" size={16} stroke={2.5} /></span><div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700 }}>Income</div><Money className="tnum" style={{ fontSize: 17.5, fontWeight: 800, color: "var(--success)" }} v={d.inc} sign="+" masked={hide} curSize={0.62} /></div></div>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10 }}><span style={circ(34, 11, "rgba(16,185,129,.15)", "var(--success)")}><Ico name="arrowUp" size={16} stroke={2.5} /></span><div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700 }}>{t("home.income")}</div><Money className="tnum" style={{ fontSize: 17.5, fontWeight: 800, color: "var(--success)" }} v={d.inc} sign="+" masked={hide} curSize={0.62} /></div></div>
           <div style={{ width: 1, background: "var(--line)", alignSelf: "stretch", margin: "2px 14px" }} />
-          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10 }}><span style={circ(34, 11, "rgba(229,84,78,.15)", "var(--red)")}><Ico name="arrowDown" size={16} stroke={2.5} /></span><div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700 }}>Spent</div><Money className="tnum" style={{ fontSize: 17.5, fontWeight: 800, color: "var(--red)" }} v={d.exp} sign="−" masked={hide} curSize={0.62} /></div></div>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10 }}><span style={circ(34, 11, "rgba(229,84,78,.15)", "var(--red)")}><Ico name="arrowDown" size={16} stroke={2.5} /></span><div><div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700 }}>{t("home.spent")}</div><Money className="tnum" style={{ fontSize: 17.5, fontWeight: 800, color: "var(--red)" }} v={d.exp} sign="−" masked={hide} curSize={0.62} /></div></div>
         </div>
       </div>
 
       </Fragment>);
       SEC.bills = (<Fragment key="bills">{bills.length > 0 && (
         <div className="tile" style={{ marginBottom: 13 }}>
-          <div onClick={() => onTab?.("bills")} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}><div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}><span style={circ(42, 13, "var(--blueDim)", "var(--blue)")}><Ico name="bills" size={21} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Bills · {mName}</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.billsDue)} <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 700 }}>due</span></div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
+          <div onClick={() => onTab?.("bills")} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}><div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}><span style={circ(42, 13, "var(--blueDim)", "var(--blue)")}><Ico name="bills" size={21} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>{t("home.billsDue", { month: mName })}</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.billsDue)} <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 700 }}>{t("home.due")}</span></div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
           {billsOpen ? (
             <div style={{ marginTop: 6 }}>
               {d.billsList.map((b, i) => (
@@ -312,12 +315,12 @@ export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onA
                   <div key={p.id} onClick={() => onOpenProject?.(p)} style={{ cursor: "pointer", display: "flex", flexDirection: "column", gap: 6 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
-                      <span className="tnum" style={{ fontSize: 12.5, fontWeight: 800, color: p.amount > 0 ? (over ? "var(--red)" : "var(--purple)") : "var(--muted)", flexShrink: 0 }}>{p.amount > 0 ? `${pct}%` : "Open"}</span>
+                      <span className="tnum" style={{ fontSize: 12.5, fontWeight: 800, color: p.amount > 0 ? (over ? "var(--red)" : "var(--purple)") : "var(--muted)", flexShrink: 0 }}>{p.amount > 0 ? `${pct}%` : t("home.open")}</span>
                     </div>
                     <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)", overflow: "hidden" }}>{p.amount > 0
                       ? <i style={{ display: "block", width: `${Math.min(100, pct)}%`, height: "100%", borderRadius: 4, background: over ? "var(--red)" : "var(--purple)" }} />
                       : <i className="bar-flow" style={{ display: "block", height: "100%", borderRadius: 4, "--c": "var(--purple)" }} />}</div>
-                    <div className="tnum" style={{ fontSize: 11.5, fontWeight: 600, color: "var(--muted)" }}>{money(p.spent)} spent{p.amount > 0 ? ` · ${over ? `${money(-left)} over` : `${money(left)} left`} · of ${fmt(p.amount)}` : ""}</div>
+                    <div className="tnum" style={{ fontSize: 11.5, fontWeight: 600, color: "var(--muted)" }}>{t("home.spentLabel", { amt: money(p.spent) })}{p.amount > 0 ? ` · ${over ? t("home.over", { amt: money(-left) }) : t("home.left", { amt: money(left) })} · ${t("home.ofTotal", { amt: fmt(p.amount) })}` : ""}</div>
                   </div>
                 );
               })}
@@ -335,7 +338,7 @@ export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onA
 
       <div className="customize-cta" onClick={() => onCustomize?.()}>
         <span className="g"><Ico name="grip" size={16} /></span>
-        Customize home
+        {t("home.customize")}
       </div>
     </div>
   );

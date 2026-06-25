@@ -8,11 +8,13 @@ import Ico from "../ui/Ico.jsx";
 import GuideDemo from "../ui/GuideDemo.jsx";
 import GuideSteps from "../ui/GuideSteps.jsx";
 import { findTopic } from "../lib/guide.js";
+import { useT } from "../lib/i18n.js";
 
 const REDUCED = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 export default function GuideTopic({ topicId, back }) {
   const scope = useRef(null);
+  const tr = useT();
   const topic = findTopic(topicId);
 
   useGSAP(() => {
@@ -32,7 +34,7 @@ export default function GuideTopic({ topicId, back }) {
   return (
     <div ref={scope} className="content padnav">
       <div className="hero">
-        <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">Guide</div><div className="grow" /></div>
+        <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">{tr("gd.title")}</div><div className="grow" /></div>
         <div style={{ display: "flex", alignItems: "center", gap: 13, position: "relative", zIndex: 1 }}>
           <span style={{ width: 50, height: 50, borderRadius: 16, background: "var(--heroChip)", display: "flex", alignItems: "center", justifyContent: "center" }}><Ico name={topic.icon} size={24} /></span>
           <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: -.5 }}>{topic.title}</div>
@@ -43,7 +45,7 @@ export default function GuideTopic({ topicId, back }) {
 
       <GuideDemo demo={topic.demo} />
 
-      <div className="gsap-title over" style={{ marginTop: 24 }}>Step by step</div>
+      <div className="gsap-title over" style={{ marginTop: 24 }}>{tr("gd.stepByStep")}</div>
       <GuideSteps steps={topic.steps} color={topic.color} />
 
       {topic.tip && (

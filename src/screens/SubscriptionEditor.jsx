@@ -14,6 +14,7 @@ import CustomIconSheet from "../ui/CustomIconSheet.jsx";
 import { loadColors } from "../ui/ColorSheet.jsx";
 import { fmt, currentMonth, cardGradient } from "../lib/format.js";
 import { SERVICE_CAT_TO_TYPE, BILL_TYPES } from "../lib/services.js";
+import { useT } from "../lib/i18n.js";
 
 const clampDay = (d) => Math.min(28, Math.max(1, d || 1));
 
@@ -26,6 +27,7 @@ function Brand({ domain, glyph, name, color, size = 42 }) {
 
 export default function SubscriptionEditor({ store, bill, onClose }) {
   const { banks = [] } = store;
+  const tr = useT();
   const editing = !!bill;
   const [name, setName] = useState(bill?.name || "");
   const [amount, setAmount] = useState(bill?.amount || 0);
@@ -51,80 +53,80 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
     const base = { name: name.trim(), amount, dueDay: clampDay(dueDay), reminderDays: Math.min(7, Math.max(0, reminderDays | 0)), bankId, color, domain: custom ? "" : domain, glyph: custom ? glyph : "", typeId };
     if (editing) store.set("bills", (list) => list.map((b) => (b.id === bill.id ? { ...b, ...base } : b)));
     else store.set("bills", (list) => [...list, { id: Date.now().toString(), ...base, payments: [], startMonth: currentMonth() }]);
-    store.flash({ title: editing ? "Subscription saved" : "Subscription added", sub: name.trim(), color: "var(--success)", icon: "check" });
+    store.flash({ title: editing ? tr("sub.subscriptionSaved") : tr("sub.subscriptionAdded"), sub: name.trim(), color: "var(--success)", icon: "check" });
     onClose();
   };
 
   return (
     <div className="content padnav">
       <div className="hero" style={{ background: cardGradient(color), color: "#fff" }}>
-        <div className="toprow"><div className="ttl">{editing ? "Edit subscription" : "New subscription"}</div><div className="grow" /><div className="hib" style={{ background: "rgba(255,255,255,.2)", color: "#fff" }} onClick={onClose}><Ico name="close" size={20} /></div></div>
+        <div className="toprow"><div className="ttl">{editing ? tr("sub.editSubscription") : tr("sub.newSubscription")}</div><div className="grow" /><div className="hib" style={{ background: "rgba(255,255,255,.2)", color: "#fff" }} onClick={onClose}><Ico name="close" size={20} /></div></div>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 4 }}>
           <span style={{ display: "inline-flex", borderRadius: 15, boxShadow: "0 0 0 1px rgba(255,255,255,.55), 0 8px 18px rgba(0,0,0,.22)" }}>
             <Brand domain={custom ? "" : domain} glyph={custom ? glyph : ""} name={name} color={color} size={48} />
           </span>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 19, letterSpacing: -.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name.trim() || "Name the service"}</div>
-            <div className="lbl" style={{ color: "rgba(255,255,255,.82)", marginTop: 2 }}>Monthly · {store.currency}</div>
+            <div style={{ fontWeight: 800, fontSize: 19, letterSpacing: -.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name.trim() || tr("sub.nameTheService")}</div>
+            <div className="lbl" style={{ color: "rgba(255,255,255,.82)", marginTop: 2 }}>{tr("sub.monthlyCurrency", { cur: store.currency })}</div>
           </div>
         </div>
         <div className="big tnum" onClick={() => setSheet("amount")} style={{ cursor: "pointer", color: "#fff", marginTop: 12 }}><span style={{ opacity: amount > 0 ? 1 : .6 }}>{fmt(amount)}</span></div>
       </div>
 
       {/* ── Custom icon (above companies) ── */}
-      <div className="over">Make your own</div>
+      <div className="over">{tr("sub.makeYourOwn")}</div>
       <div className="field" onClick={() => { if (domain) setName(""); setSheet("custom"); }} style={{ cursor: "pointer", border: custom ? "1.5px solid var(--ac)" : undefined }}>
         <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: custom ? color : "var(--acDim)", color: custom ? "#fff" : "var(--acText)" }}>{custom ? <CatTile cat={glyph} color={color} size={42} /> : <Ico name="pencil" size={19} />}</span>
-        <div style={{ flex: 1 }}><div className="fl">Custom icon</div><div className="fv">{custom ? "Your icon & colour" : "Build your own icon & colour"}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
+        <div style={{ flex: 1 }}><div className="fl">{tr("sub.customIcon")}</div><div className="fv">{custom ? tr("sub.yourIconColour") : tr("sub.buildYourOwn")}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
       </div>
 
       {/* ── Companies ── */}
-      <div className="over" style={{ marginTop: 18 }}>Or pick a service</div>
+      <div className="over" style={{ marginTop: 18 }}>{tr("sub.orPickService")}</div>
       <ServicePicker activeDomain={custom ? "" : domain} onPick={pickService} onCustom={() => setSheet("custom")} />
 
       <label className="field" style={{ marginTop: 12 }}>
         <Brand domain={custom ? "" : domain} glyph={custom ? glyph : ""} name={name} color={color} size={42} />
-        <div style={{ flex: 1 }}><div className="fl">Name</div>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Netflix" style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700, marginTop: 2, width: "100%" }} />
+        <div style={{ flex: 1 }}><div className="fl">{tr("editor.name")}</div>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={tr("sub.serviceNamePlaceholder")} style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700, marginTop: 2, width: "100%" }} />
         </div>
       </label>
 
       {/* ── Plan ── */}
-      <div className="over" style={{ marginTop: 20 }}>Plan</div>
+      <div className="over" style={{ marginTop: 20 }}>{tr("sub.plan")}</div>
       <div className="field" onClick={() => setSheet("amount")} style={{ cursor: "pointer" }}>
-        <div style={{ flex: 1 }}><div className="fl">Monthly amount</div><div className="fv tnum">{amount > 0 ? fmt(amount) : "Set"}</div></div><span className="chev"><Ico name="pencil" size={17} /></span>
+        <div style={{ flex: 1 }}><div className="fl">{tr("sub.monthlyAmount")}</div><div className="fv tnum">{amount > 0 ? fmt(amount) : tr("editor.setGeneric")}</div></div><span className="chev"><Ico name="pencil" size={17} /></span>
       </div>
       <div className="field" onClick={() => setSheet("day")} style={{ cursor: "pointer", marginTop: 10 }}>
-        <div style={{ flex: 1 }}><div className="fl">Billing day</div><div className="fv tnum">Day {clampDay(dueDay)}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
+        <div style={{ flex: 1 }}><div className="fl">{tr("sub.billingDay")}</div><div className="fv tnum">{tr("sub.dayN", { n: clampDay(dueDay) })}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
       </div>
       <div className="field" onClick={() => setSheet("remind")} style={{ cursor: "pointer", marginTop: 10 }}>
-        <div style={{ flex: 1 }}><div className="fl">Remind me</div><div className="fv tnum">{reminderDays === 0 ? "Off" : `${reminderDays} day${reminderDays === 1 ? "" : "s"} before`}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
+        <div style={{ flex: 1 }}><div className="fl">{tr("sub.remindMe")}</div><div className="fv tnum">{reminderDays === 0 ? tr("sub.off") : tr(reminderDays === 1 ? "sub.dayBefore" : "sub.daysBefore", { n: reminderDays })}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
       </div>
       <div className="field" onClick={() => setSheet("account")} style={{ cursor: "pointer", marginTop: 10 }}>
         <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: bank?.color || "var(--muted)", color: "#fff", fontWeight: 800, fontSize: 14 }}>{(bank?.name || "?").slice(0, 1).toUpperCase()}</span>
-        <div><div className="fl">Pays from</div><div className="fv">{bank?.name || "Pick"}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
+        <div><div className="fl">{tr("sub.paysFrom")}</div><div className="fv">{bank?.name || tr("sub.pick")}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
       </div>
 
       {/* ── Category (last) — a row that opens the picker ── */}
-      <div className="over" style={{ marginTop: 20 }}>Category</div>
+      <div className="over" style={{ marginTop: 20 }}>{tr("add.category")}</div>
       <div className="field" onClick={() => setSheet("cat")} style={{ cursor: "pointer" }}>
         <CatTile cat={selType.glyph} color="var(--ac)" size={42} />
-        <div style={{ flex: 1 }}><div className="fl">Category</div><div className="fv">{selType.name}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
+        <div style={{ flex: 1 }}><div className="fl">{tr("add.category")}</div><div className="fv">{tr("billtype." + selType.id)}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
       </div>
 
-      <div className="cta"><div className="btn btn-primary btn-full" style={{ opacity: canSave ? 1 : .5 }} onClick={save}><Ico name="check" size={18} />{editing ? "Save subscription" : "Add subscription"}</div></div>
+      <div className="cta"><div className="btn btn-primary btn-full" style={{ opacity: canSave ? 1 : .5 }} onClick={save}><Ico name="check" size={18} />{editing ? tr("sub.saveSubscription") : tr("sub.addSubscription")}</div></div>
 
       {sheet === "cat" && (
         <>
           <div className="dim" onClick={() => setSheet(null)} />
-          <div className="sheet" role="dialog" aria-label="Category">
+          <div className="sheet" role="dialog" aria-label={tr("add.category")}>
             <div className="grab" />
-            <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: -.3, marginBottom: 12 }}>Category</div>
+            <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: -.3, marginBottom: 12 }}>{tr("add.category")}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: "52vh", overflowY: "auto", paddingBottom: 4 }}>
               {allTypes.map((t) => (
                 <div key={t.id} className="icard" onClick={() => { setTypeId(t.id); setSheet(null); }} style={{ cursor: "pointer", border: typeId === t.id ? "1.5px solid var(--ac)" : undefined }}>
                   <CatTile cat={t.glyph} color="var(--ac)" size={40} />
-                  <div className="nm" style={{ flex: 1 }}>{t.name}</div>
+                  <div className="nm" style={{ flex: 1 }}>{tr("billtype." + t.id)}</div>
                   {typeId === t.id && <span style={{ color: "var(--ac)" }}><Ico name="check" size={18} /></span>}
                 </div>
               ))}
@@ -132,11 +134,11 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
           </div>
         </>
       )}
-      {sheet === "custom" && <CustomIconSheet title="Custom icon" glyph={glyph || "subscription"} color={color} onDone={({ glyph, color }) => { setGlyph(glyph); setColor(color); setDomain(""); setCustom(true); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "amount" && <AmountSheet title="Monthly amount" confirmLabel="Set" onConfirm={(v) => { setAmount(v); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "day" && <DayGridSheet title="Billing day" sub="Which day each month it's charged." value={clampDay(dueDay)} onConfirm={(v) => { setDueDay(v); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "remind" && <OptionSheet title="Remind me" sub="Before it's due" value={reminderDays} onPick={(v) => { setReminderDays(v); setSheet(null); }} onClose={() => setSheet(null)} options={[{ value: 0, label: "Off" }, { value: 1, label: "1 day before" }, { value: 2, label: "2 days before" }, { value: 3, label: "3 days before" }, { value: 7, label: "1 week before" }]} />}
-      {sheet === "account" && <PickerSheet title="Pays from" selectedId={bankId} onPick={setBankId} onClose={() => setSheet(null)} options={banks.filter((b) => !b.archived).map((b) => ({ id: b.id, label: b.name, bankColor: b.color }))} />}
+      {sheet === "custom" && <CustomIconSheet title={tr("sub.customIcon")} glyph={glyph || "subscription"} color={color} onDone={({ glyph, color }) => { setGlyph(glyph); setColor(color); setDomain(""); setCustom(true); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "amount" && <AmountSheet title={tr("sub.monthlyAmount")} confirmLabel={tr("editor.setGeneric")} onConfirm={(v) => { setAmount(v); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "day" && <DayGridSheet title={tr("sub.billingDay")} sub={tr("sub.billingDaySub")} value={clampDay(dueDay)} onConfirm={(v) => { setDueDay(v); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "remind" && <OptionSheet title={tr("sub.remindMe")} sub={tr("sub.beforeDue")} value={reminderDays} onPick={(v) => { setReminderDays(v); setSheet(null); }} onClose={() => setSheet(null)} options={[{ value: 0, label: tr("sub.off") }, { value: 1, label: tr("sub.remind1") }, { value: 2, label: tr("sub.remind2") }, { value: 3, label: tr("sub.remind3") }, { value: 7, label: tr("sub.remind7") }]} />}
+      {sheet === "account" && <PickerSheet title={tr("sub.paysFrom")} selectedId={bankId} onPick={setBankId} onClose={() => setSheet(null)} options={banks.filter((b) => !b.archived).map((b) => ({ id: b.id, label: b.name, bankColor: b.color }))} />}
     </div>
   );
 }

@@ -4,10 +4,12 @@
 import { useState, useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import Ico from "./Ico.jsx";
+import { useT } from "../lib/i18n.js";
 
 const REDUCED = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 export default function Tour({ steps = [], onClose, onNavigate }) {
+  const tr = useT();
   const [i, setI] = useState(0);
   const holeRef = useRef(null);
   const tipRef = useRef(null);
@@ -44,17 +46,17 @@ export default function Tour({ steps = [], onClose, onNavigate }) {
       <div ref={tipRef} style={{ position: "fixed", left: 16, right: 16, background: "var(--card)", borderRadius: 20, padding: 18, boxShadow: "0 20px 50px rgba(0,0,0,.35)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
           <span style={{ width: 32, height: 32, borderRadius: 10, background: "var(--acDim)", color: "var(--ac)", display: "flex", alignItems: "center", justifyContent: "center" }}><Ico name={step.icon || "sparkles"} size={17} /></span>
-          <div style={{ fontSize: 15.5, fontWeight: 800, letterSpacing: -.2 }}>{step.title}</div>
+          <div style={{ fontSize: 15.5, fontWeight: 800, letterSpacing: -.2 }}>{tr(step.title)}</div>
         </div>
-        <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--muted)", fontWeight: 600 }}>{step.text}</div>
+        <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--muted)", fontWeight: 600 }}>{tr(step.text)}</div>
 
         <div style={{ display: "flex", alignItems: "center", marginTop: 16, gap: 10 }}>
           <div style={{ display: "flex", gap: 5 }}>
             {steps.map((_, n) => <span key={n} style={{ width: n === i ? 16 : 6, height: 6, borderRadius: 3, background: n === i ? "var(--ac)" : "var(--line)", transition: "width .2s" }} />)}
           </div>
           <div style={{ flex: 1 }} />
-          <div onClick={onClose} style={{ fontSize: 13, fontWeight: 700, color: "var(--muted)", cursor: "pointer", padding: "8px 6px" }}>Skip</div>
-          <div className="btn btn-primary" style={{ padding: "10px 18px", height: "auto" }} onClick={() => (last ? onClose?.() : setI((n) => n + 1))}>{last ? "Done" : "Next"}</div>
+          <div onClick={onClose} style={{ fontSize: 13, fontWeight: 700, color: "var(--muted)", cursor: "pointer", padding: "8px 6px" }}>{tr("tour.skip")}</div>
+          <div className="btn btn-primary" style={{ padding: "10px 18px", height: "auto" }} onClick={() => (last ? onClose?.() : setI((n) => n + 1))}>{last ? tr("tour.done") : tr("tour.next")}</div>
         </div>
       </div>
     </div>
@@ -64,13 +66,13 @@ export default function Tour({ steps = [], onClose, onNavigate }) {
 // A full walk across the app for a first-time user. Each step can switch tab
 // first (goto), then spotlight a live element on that screen.
 export const APP_TOUR = [
-  { goto: { tab: "home" }, selector: ".tabhost .hero", icon: "wallet", pad: 4, title: "Your money at a glance", text: "The top shows your balance and what is safe to spend after the money you set aside. Swipe it to switch between them." },
-  { selector: ".tabhost .hero .hib", icon: "eye", pad: 6, title: "Hide your numbers", text: "Tap the eye and every amount turns into dots. Tap again to bring them back." },
-  { selector: ".tabhost .bankcard", icon: "wallet", pad: 6, title: "Your accounts", text: "Each account is a card with its balance. Tap one to open it or move money between them." },
-  { selector: ".tabhost .tile", icon: "target", pad: 6, title: "This month so far", text: "Your income and spending for the month. Tap it for the full breakdown by category." },
-  { selector: '[aria-label="Add"]', icon: "plus", pad: 10, title: "Add anything", text: "The plus is where you record money in, money out, and savings. That is the whole loop." },
-  { goto: { tab: "bills" }, selector: ".tabhost .segx", icon: "bills", pad: 6, title: "Bills and installments", text: "Keep every subscription and installment here. Saver reminds you before each one is due." },
-  { goto: { tab: "activity" }, selector: '.tabhost [aria-label="filter"]', icon: "funnel", pad: 8, title: "Find anything", text: "Activity lists every transaction. Search, pick a date, or use the filter to narrow it down." },
-  { goto: { tab: "profile" }, selector: ".tabhost .icard", icon: "layers", pad: 6, title: "All your tools", text: "Accounts, categories, goals, budgets, privacy and more all live under Profile." },
-  { selector: '[aria-label="profile"]', icon: "book", pad: 10, title: "You are all set", text: "Come back to Profile anytime for the full Guide, where you can replay this tour whenever you like." },
+  { goto: { tab: "home" }, selector: ".tabhost .hero", icon: "wallet", pad: 4, title: "tour.s1t", text: "tour.s1x" },
+  { selector: ".tabhost .hero .hib", icon: "eye", pad: 6, title: "tour.s2t", text: "tour.s2x" },
+  { selector: ".tabhost .bankcard", icon: "wallet", pad: 6, title: "tour.s3t", text: "tour.s3x" },
+  { selector: ".tabhost .tile", icon: "target", pad: 6, title: "tour.s4t", text: "tour.s4x" },
+  { selector: '[aria-label="Add"]', icon: "plus", pad: 10, title: "tour.s5t", text: "tour.s5x" },
+  { goto: { tab: "bills" }, selector: ".tabhost .segx", icon: "bills", pad: 6, title: "tour.s6t", text: "tour.s6x" },
+  { goto: { tab: "activity" }, selector: '.tabhost [aria-label="filter"]', icon: "funnel", pad: 8, title: "tour.s7t", text: "tour.s7x" },
+  { goto: { tab: "profile" }, selector: ".tabhost .icard", icon: "layers", pad: 6, title: "tour.s8t", text: "tour.s8x" },
+  { selector: '[aria-label="profile"]', icon: "book", pad: 10, title: "tour.s9t", text: "tour.s9x" },
 ];

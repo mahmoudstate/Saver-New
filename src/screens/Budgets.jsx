@@ -11,14 +11,16 @@ import { resolveCat } from "../ui/cats.js";
 import Money from "../ui/Money.jsx";
 import { fmt, currentMonth, today, MONTHS } from "../lib/format.js";
 import { budgetSpentMonth, projectSpent, budgetTxns, daysLeftInMonth, spentPerActiveDay } from "../lib/calc.js";
+import { useT } from "../lib/i18n.js";
 
 const budgetCat = (b) => b.glyph || resolveCat({ catId: b.cats?.[0], catName: b.name }) || "income";
 const rangeLabel = (start, end) => `${MONTHS[+(start || end).split("-")[1] - 1]}–${MONTHS[+end.split("-")[1] - 1]}`;
-const monthChip = (m, cm) => { const [y, mo] = m.split("-"); return m === cm ? "This month" : `${MONTHS[+mo - 1]}${y !== cm.slice(0, 4) ? " " + y : ""}`; };
+const monthChip = (m, cm, tr) => { const [y, mo] = m.split("-"); return m === cm ? tr("budget.thisMonth") : `${MONTHS[+mo - 1]}${y !== cm.slice(0, 4) ? " " + y : ""}`; };
 const barColor = (pct) => (pct >= 100 ? "var(--red)" : pct >= 80 ? "var(--yellow)" : "var(--ac)");
 
 export default function Budgets({ store, back, onAdd, onOpenBudget, onOpenProject, initialSeg, onSegChange }) {
   const { budgets = [], txns = [] } = store;
+  const tr = useT();
   const [seg, setSeg] = useState(initialSeg || "monthly");
   const changeSeg = (v) => { setSeg(v); onSegChange?.(v); };
   const [projView, setProjView] = useState("active"); // active | completed
@@ -54,18 +56,18 @@ export default function Budgets({ store, back, onAdd, onOpenBudget, onOpenProjec
   return (
     <div className="content padnav">
       <div className="hero">
-        <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">{isMonthly ? "Budgets" : "Projects"}</div><div className="grow" />{isMonthly && <div className="hchip" onClick={() => setMonthSheet(true)} style={{ cursor: "pointer", marginRight: 8 }}><Ico name="cal" size={14} />{monthChip(vm, cm)}</div>}<div className="hib" onClick={() => onAdd?.(seg)}><Ico name="plus" size={20} /></div></div>
+        <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">{isMonthly ? tr("budget.titleMonthly") : tr("budget.projects")}</div><div className="grow" />{isMonthly && <div className="hchip" onClick={() => setMonthSheet(true)} style={{ cursor: "pointer", marginRight: 8 }}><Ico name="cal" size={14} />{monthChip(vm, cm, tr)}</div>}<div className="hib" onClick={() => onAdd?.(seg)}><Ico name="plus" size={20} /></div></div>
         {isMonthly ? <>
-          <div className="lbl">Spent</div><Money className="big tnum" v={mSpent} /><div className="sub">of {fmt(mLimit)} budget &nbsp;·&nbsp; {mLimit > 0 ? Math.round((mSpent / mLimit) * 100) : 0}% used</div>
+          <div className="lbl">{tr("budget.spent")}</div><Money className="big tnum" v={mSpent} /><div className="sub">{tr("budget.ofBudget", { amt: fmt(mLimit) })} &nbsp;·&nbsp; {tr("budget.pctUsed", { pct: mLimit > 0 ? Math.round((mSpent / mLimit) * 100) : 0 })}</div>
         </> : <>
-          <div className="lbl">Projects · spent so far</div><Money className="big tnum" v={pSpent} /><div className="sub">{active.length} active{completed.length ? ` · ${completed.length} completed` : ""}</div>
+          <div className="lbl">{tr("budget.projSpentSoFar")}</div><Money className="big tnum" v={pSpent} /><div className="sub">{tr("budget.activeCount", { n: active.length })}{completed.length ? ` · ${tr("budget.completedCount", { n: completed.length })}` : ""}</div>
         </>}
       </div>
 
-      <SegToggle style={{ marginBottom: 18 }} value={seg} onChange={changeSeg} options={[{ id: "monthly", label: "Monthly" }, { id: "projects", label: "Projects" }]} />
+      <SegToggle style={{ marginBottom: 18 }} value={seg} onChange={changeSeg} options={[{ id: "monthly", label: tr("budget.monthly") }, { id: "projects", label: tr("budget.projects") }]} />
 
       {isMonthly ? (
-        monthly.length === 0 ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px", fontWeight: 600 }}>No budgets for {monthChip(vm, cm)}. Tap + to set a limit.</div> : <>
+        monthly.length === 0 ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px", fontWeight: 600 }}>{tr("budget.noBudgets", { month: monthChip(vm, cm, tr) })}</div> : <>
           {/* infographic: animated donut + at-a-glance totals */}
           <div className="tile" style={{ display: "flex", alignItems: "center", gap: 18, padding: 16, marginBottom: 16 }}>
             <BudgetRing spent={mSpent} total={mLimit} size={120} />
@@ -102,10 +104,10 @@ export default function Budgets({ store, back, onAdd, onOpenBudget, onOpenProjec
           ))}
         </>
       ) : (
-        active.length === 0 && completed.length === 0 ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px", fontWeight: 600 }}>No projects yet. Track a long-term cost with +.</div> : <>
-          {completed.length > 0 && <SegToggle style={{ marginBottom: 16 }} value={projView} onChange={setProjView} options={[{ id: "active", label: "Active" }, { id: "completed", label: "Completed" }]} />}
+        active.length === 0 && completed.length === 0 ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px", fontWeight: 600 }}>{tr("budget.noProjects")}</div> : <>
+          {completed.length > 0 && <SegToggle style={{ marginBottom: 16 }} value={projView} onChange={setProjView} options={[{ id: "active", label: tr("budget.active") }, { id: "completed", label: tr("budget.completed") }]} />}
           {(projView === "active" ? active : completed).length === 0
-            ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "30px", fontWeight: 600 }}>{projView === "active" ? "No active projects." : "Nothing completed yet."}</div>
+            ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "30px", fontWeight: 600 }}>{projView === "active" ? tr("budget.noActiveProjects") : tr("budget.nothingCompleted")}</div>
             : (projView === "active" ? active : completed).map((p) => {
               const spent = p.spent ?? projectSpent(p, txns);
               const hasLimit = p.amount > 0;
@@ -113,8 +115,8 @@ export default function Budgets({ store, back, onAdd, onOpenBudget, onOpenProjec
               const isDone = projView === "completed";
               return (
                 <div className="bcard" key={p.id} onClick={() => onOpenProject?.(p)} style={{ cursor: "pointer", opacity: isDone ? .75 : 1 }}>
-                  <div className="top"><CatTile cat={budgetCat(p)} color={p.color} name={p.name} size={40} /><div className="nm">{p.name}</div><div className="pct">{isDone ? "Done" : hasLimit ? `${Math.round(pct)}%` : "Open"}</div></div>
-                  <div className="nums"><div className="a tnum">{fmt(spent)}</div><div className="b tnum">{isDone ? `Completed${hasLimit ? ` · ${fmt(p.amount)}` : ""}` : (spent > 0 ? rangeLabel(p.startMonth, cm) : "No spending yet") + (hasLimit ? ` · ${fmt(p.amount)}` : "")}</div></div>
+                  <div className="top"><CatTile cat={budgetCat(p)} color={p.color} name={p.name} size={40} /><div className="nm">{p.name}</div><div className="pct">{isDone ? tr("budget.done") : hasLimit ? `${Math.round(pct)}%` : tr("budget.open")}</div></div>
+                  <div className="nums"><div className="a tnum">{fmt(spent)}</div><div className="b tnum">{isDone ? `${tr("budget.completed")}${hasLimit ? ` · ${fmt(p.amount)}` : ""}` : (spent > 0 ? rangeLabel(p.startMonth, cm) : tr("budget.noSpendingYet")) + (hasLimit ? ` · ${fmt(p.amount)}` : "")}</div></div>
                   <div className="pbar bar" style={{ overflow: "hidden" }}>{hasLimit
                     ? <i style={{ width: `${anim ? pct : 0}%`, background: isDone ? "var(--muted)" : "var(--ac)", transition: "width .85s cubic-bezier(.3,.8,.3,1)" }} />
                     : <i className="bar-flow" />}</div>

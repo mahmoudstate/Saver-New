@@ -5,6 +5,7 @@ import CatTile from "../ui/CatTile.jsx";
 import { CATS } from "../ui/cats.js";
 import ColorField from "../ui/ColorField.jsx";
 import { loadColors } from "../ui/ColorSheet.jsx";
+import { useT } from "../lib/i18n.js";
 
 // Icons are split by type: expense icons show for an expense category, income icons for income.
 const EXPENSE_ICONS = ["food", "coffee", "drinks", "groceries", "shopping", "clothing", "jewelry", "beauty", "transport", "car", "fuel", "parking", "ticket", "travel", "hotel", "bill", "utilities", "electricity", "water", "wifi", "phone", "electronics", "home", "furniture", "repairs", "garden", "laundry", "health", "pharmacy", "fitness", "sports", "education", "books", "entertainment", "movie", "music", "gaming", "kids", "pet", "subscription", "insurance", "creditcard", "bank", "taxes", "charity", "gift"];
@@ -27,17 +28,18 @@ function Glyph({ g, selected, color, onPick }) {
 
 // Bottom sheet with every icon for this type (app-styled, same as ColorSheet).
 function IconSheet({ icons, kind, glyph, color, onPick, onClose }) {
+  const tr = useT();
   return (
     <>
       <div className="dim" onClick={onClose} />
       <div className="sheet">
         <div className="grab" />
-        <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: -.3 }}>{kind === "income" ? "Income icons" : "Expense icons"}</div>
-        <div style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, margin: "3px 0 16px" }}>Tap an icon to use it.</div>
+        <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: -.3 }}>{kind === "income" ? tr("editor.incomeIcons") : tr("editor.expenseIcons")}</div>
+        <div style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, margin: "3px 0 16px" }}>{tr("editor.tapIcon")}</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 10, maxHeight: "46vh", overflowY: "auto", paddingBottom: 4 }}>
           {icons.map((g) => <Glyph key={g} g={g} selected={glyph === g} color={color} onPick={(x) => { onPick(x); onClose(); }} />)}
         </div>
-        <div style={{ marginTop: 16 }}><div className="btn btn-secondary btn-full" onClick={onClose}>Done</div></div>
+        <div style={{ marginTop: 16 }}><div className="btn btn-secondary btn-full" onClick={onClose}>{tr("editor.done")}</div></div>
       </div>
     </>
   );
@@ -45,6 +47,7 @@ function IconSheet({ icons, kind, glyph, color, onPick, onClose }) {
 
 export default function CategoryEditor({ store, category, kind: initialKind, onClose }) {
   const editing = !!category;
+  const tr = useT();
   const initKind = category?._kind || initialKind || "expense";
   const [kind, setKind] = useState(initKind);
   const [name, setName] = useState(category?.name || "");
@@ -68,7 +71,7 @@ export default function CategoryEditor({ store, category, kind: initialKind, onC
     const entry = { name: name.trim(), glyph, color, group: category?.group || "daily" };
     if (editing) store.set(listKey, (list) => list.map((c) => (c.id === category.id ? { ...c, ...entry } : c)));
     else store.set(listKey, (list) => [...list, { id: Date.now().toString(), ...entry }]);
-    store.flash({ title: editing ? "Category saved" : "Category added", sub: name.trim(), color: "var(--success)", icon: "check" });
+    store.flash({ title: editing ? tr("editor.categorySaved") : tr("editor.categoryAdded"), sub: name.trim(), color: "var(--success)", icon: "check" });
     onClose();
   };
 
@@ -76,12 +79,12 @@ export default function CategoryEditor({ store, category, kind: initialKind, onC
   // snapshot of the icon/name/colour, so they stay recorded and look exactly the same.
   const del = () => {
     store.setConfirm({
-      title: `Delete ${category.name}?`,
-      message: "This removes the category from your list. Transactions already in it keep their look and stay in your history.",
-      confirmText: "Delete category", danger: true, icon: "trash",
+      title: tr("editor.deleteCategoryTitle", { name: category.name }),
+      message: tr("editor.deleteCategoryMsg"),
+      confirmText: tr("editor.deleteCategory"), danger: true, icon: "trash",
       onConfirm: () => {
         store.set(listKey, (list) => list.filter((c) => c.id !== category.id));
-        store.flash({ title: "Category deleted", sub: category.name, color: "var(--muted)" });
+        store.flash({ title: tr("editor.categoryDeleted"), sub: category.name, color: "var(--muted)" });
         onClose();
       },
     });
@@ -90,39 +93,39 @@ export default function CategoryEditor({ store, category, kind: initialKind, onC
   return (
     <div className="content padnav">
       <div className="hero">
-        <div className="toprow"><div className="ttl">{editing ? "Edit category" : "New category"}</div><div className="grow" /><div className="hib" onClick={onClose}><Ico name="close" size={20} /></div></div>
-        <div className="lbl">Category</div>
-        <div className="big" style={{ fontSize: 34 }}>{name.trim() || "Name it"}</div>
-        <div className="sub" style={{ textTransform: "capitalize" }}>{kind} category</div>
+        <div className="toprow"><div className="ttl">{editing ? tr("editor.editCategory") : tr("editor.newCategory")}</div><div className="grow" /><div className="hib" onClick={onClose}><Ico name="close" size={20} /></div></div>
+        <div className="lbl">{tr("add.category")}</div>
+        <div className="big" style={{ fontSize: 34 }}>{name.trim() || tr("editor.nameIt")}</div>
+        <div className="sub" style={{ textTransform: "capitalize" }}>{kind === "income" ? tr("editor.incomeCategory") : tr("editor.expenseCategory")}</div>
       </div>
 
       {!editing && (
         <div className="seg" style={{ marginBottom: 16 }}>
-          <b className={kind === "expense" ? "on" : ""} onClick={() => changeKind("expense")}>Expense</b>
-          <b className={kind === "income" ? "on" : ""} onClick={() => changeKind("income")}>Income</b>
+          <b className={kind === "expense" ? "on" : ""} onClick={() => changeKind("expense")}>{tr("edit.type_expense")}</b>
+          <b className={kind === "income" ? "on" : ""} onClick={() => changeKind("income")}>{tr("edit.type_income")}</b>
         </div>
       )}
 
       <label className="field" style={{ marginBottom: 16 }}>
         <CatTile cat={CATS[glyph] ? glyph : null} name={name} color={color} size={42} />
-        <div style={{ flex: 1 }}><div className="fl">Name</div>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Coffee" style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700, marginTop: 2, width: "100%" }} />
+        <div style={{ flex: 1 }}><div className="fl">{tr("editor.name")}</div>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={tr("editor.catNamePlaceholder")} style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700, marginTop: 2, width: "100%" }} />
         </div><span className="chev"><Ico name="pencil" size={17} /></span>
       </label>
 
-      <div className="over">{kind === "income" ? "Income icon" : "Expense icon"}</div>
+      <div className="over">{kind === "income" ? tr("editor.incomeIcon") : tr("editor.expenseIcon")}</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 10, marginBottom: 18 }}>
         {inline.map((g) => <Glyph key={g} g={g} selected={glyph === g} color={color} onPick={setGlyph} />)}
         <span onClick={() => setIconsOpen(true)} className="circ" style={{ aspectRatio: "1", borderRadius: 14, background: "var(--surface2)", border: "1px dashed var(--border)", cursor: "pointer", flexDirection: "column", gap: 1, color: "var(--muted)" }}>
-          <Ico name="layers" size={17} /><span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: ".02em" }}>All</span>
+          <Ico name="layers" size={17} /><span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: ".02em" }}>{tr("editor.all")}</span>
         </span>
       </div>
 
       <ColorField value={color} onChange={setColor} />
 
-      <div className="cta"><div className="btn btn-primary btn-full" style={{ opacity: canSave ? 1 : .5 }} onClick={save}><Ico name="check" size={18} />{editing ? "Save category" : "Add category"}</div></div>
+      <div className="cta"><div className="btn btn-primary btn-full" style={{ opacity: canSave ? 1 : .5 }} onClick={save}><Ico name="check" size={18} />{editing ? tr("editor.saveCategory") : tr("editor.addCategory")}</div></div>
 
-      {editing && <div className="btn btn-full" style={{ marginTop: 12, background: "transparent", color: "var(--red)", border: "1px solid color-mix(in srgb, var(--red) 40%, transparent)" }} onClick={del}><Ico name="trash" size={17} />Delete category</div>}
+      {editing && <div className="btn btn-full" style={{ marginTop: 12, background: "transparent", color: "var(--red)", border: "1px solid color-mix(in srgb, var(--red) 40%, transparent)" }} onClick={del}><Ico name="trash" size={17} />{tr("editor.deleteCategory")}</div>}
 
       {iconsOpen && <IconSheet icons={iconsFor(kind)} kind={kind} glyph={glyph} color={color} onPick={setGlyph} onClose={() => setIconsOpen(false)} />}
     </div>

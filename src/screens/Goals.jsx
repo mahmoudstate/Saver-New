@@ -7,11 +7,13 @@ import { resolveCat } from "../ui/cats.js";
 import Money from "../ui/Money.jsx";
 import { fmt } from "../lib/format.js";
 import { calcGoalSaved, totalFrozen } from "../lib/calc.js";
+import { useT } from "../lib/i18n.js";
 
 const goalCat = (g) => resolveCat({ catGlyph: g.glyph, catName: g.name }) || "goal";
 
 export default function Goals({ store, back, onAdd, onOpenGoal }) {
   const { savings = [], banks = [], txns = [] } = store;
+  const tr = useT();
   const [view, setView] = useState("active"); // active | archived
   const withSaved = (s) => ({ ...s, saved: Math.max(0, calcGoalSaved(s.id, txns)) });
   const goals = savings.filter((s) => s.status !== "archived").map(withSaved);
@@ -23,24 +25,24 @@ export default function Goals({ store, back, onAdd, onOpenGoal }) {
   return (
     <div className="content padnav">
       <div className="hero">
-        <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">Goals</div><div className="grow" /><div className="hib" onClick={onAdd}><Ico name="plus" size={20} /></div></div>
-        <div className="lbl">Saved toward goals</div>
+        <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">{tr("goal.title")}</div><div className="grow" /><div className="hib" onClick={onAdd}><Ico name="plus" size={20} /></div></div>
+        <div className="lbl">{tr("goal.savedToward")}</div>
         <Money className="big tnum" v={totalSaved} />
-        <div className="sub">{goals.length} active &nbsp;·&nbsp; frozen &amp; safe</div>
+        <div className="sub">{tr("goal.activeCount", { n: goals.length })} &nbsp;·&nbsp; {tr("goal.frozenSafe")}</div>
       </div>
 
-      {archived.length > 0 && <SegToggle style={{ marginBottom: 16 }} value={view} onChange={setView} options={[{ id: "active", label: "Active" }, { id: "archived", label: `Archived` }]} />}
+      {archived.length > 0 && <SegToggle style={{ marginBottom: 16 }} value={view} onChange={setView} options={[{ id: "active", label: tr("goal.active") }, { id: "archived", label: tr("goal.archived") }]} />}
 
       {list.length === 0 ? (
-        <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px", fontWeight: 600 }}>{view === "active" ? "No goals yet. Tap + to start saving." : "No archived goals."}</div>
+        <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px", fontWeight: 600 }}>{view === "active" ? tr("goal.noGoals") : tr("goal.noArchived")}</div>
       ) : list.map((g) => {
         const pct = g.goal > 0 ? Math.min(100, (g.saved / g.goal) * 100) : 0;
         const left = Math.max(0, g.goal - g.saved);
         const isArch = view === "archived";
         return (
           <div className="bcard" key={g.id} onClick={() => onOpenGoal?.(g)} style={{ cursor: "pointer", opacity: isArch ? .75 : 1 }}>
-            <div className="top"><CatTile cat={goalCat(g)} color={g.color} name={g.name} size={42} /><div className="nm">{g.name}</div><div className="pct">{isArch ? "Done" : `${Math.round(pct)}%`}</div></div>
-            <div className="nums"><div className="a tnum">{fmt(g.saved)}</div><div className="b tnum">{isArch ? `Archived · ${fmt(g.goal)}` : left > 0 ? `${fmt(left)} left · ${fmt(g.goal)}` : `Reached · ${fmt(g.goal)}`}</div></div>
+            <div className="top"><CatTile cat={goalCat(g)} color={g.color} name={g.name} size={42} /><div className="nm">{g.name}</div><div className="pct">{isArch ? tr("goal.done") : `${Math.round(pct)}%`}</div></div>
+            <div className="nums"><div className="a tnum">{fmt(g.saved)}</div><div className="b tnum">{isArch ? tr("goal.archivedOf", { amt: fmt(g.goal) }) : left > 0 ? tr("goal.leftOf", { left: fmt(left), target: fmt(g.goal) }) : tr("goal.reached", { amt: fmt(g.goal) })}</div></div>
             <div className="pbar bar"><i style={{ width: `${pct}%`, background: isArch ? "var(--muted)" : "linear-gradient(90deg,var(--ac),var(--ac2))" }} /></div>
           </div>
         );

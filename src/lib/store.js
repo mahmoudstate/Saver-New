@@ -13,6 +13,7 @@ export const KEYS = {
   budgets: "et_budgets", quickActions: "et_quick_actions", seenWelcome: "et_seenWelcome",
   theme: "et_theme", installments: "et_installments", accent: "et_accent", dashboard: "et_dashboard",
   avatar: "et_avatar", billTypes: "et_billTypes", notifReadKeys: "et_notifReadKeys",
+  lang: "et_lang",
 };
 
 export const DASH_SECTIONS = [
@@ -53,7 +54,7 @@ const ENTITIES = {
   txns: [], banks: [], expCats: [], incCats: [], groups: [], savings: [],
   bills: [], budgets: [], installments: [], quickActions: [], billTypes: [],
 };
-const SCALARS = { currency: "EGP", username: "", avatar: "", theme: "system", accent: "mint", dashboard: DASH_DEFAULT, seenWelcome: false, notifReadKeys: [] };
+const SCALARS = { currency: "EGP", username: "", avatar: "", theme: "system", accent: "mint", dashboard: DASH_DEFAULT, seenWelcome: false, notifReadKeys: [], lang: "en" };
 
 // Validate a backup payload before restoring — never mutates state.
 const validateBackup = (p) => {
@@ -264,6 +265,7 @@ export function useStore() {
       for (const k in SCALARS) if (payload[k] != null) { next[k] = payload[k]; saveKey(KEYS[k], payload[k]); }
       return next;
     });
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("saver:langsync"));
     return true;
   }, []);
 
@@ -276,6 +278,7 @@ export function useStore() {
     for (const k in SCALARS) fresh[k] = SCALARS[k];
     setCurrency(fresh.currency); // re-sync formatter to the default currency
     setData(fresh);
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("saver:langsync"));
   }, []);
 
   return {

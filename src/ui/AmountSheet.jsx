@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Ico from "./Ico.jsx";
 import { fmt } from "../lib/format.js";
+import { useT } from "../lib/i18n.js";
 
 export default function AmountSheet({ title, sub, confirmLabel = "Confirm", max, banks, onConfirm, onClose }) {
   const [amt, setAmt] = useState("");
@@ -10,6 +11,7 @@ export default function AmountSheet({ title, sub, confirmLabel = "Confirm", max,
   const val = parseFloat(amt) || 0;
   const over = max != null && val > max;
   const ok = val > 0 && !over;
+  const tr = useT();
 
   const press = (k) => {
     setAmt((s) => {
@@ -33,7 +35,7 @@ export default function AmountSheet({ title, sub, confirmLabel = "Confirm", max,
 
         <div style={{ textAlign: "center", padding: "14px 0 6px" }}>
           <div className="tnum" style={{ fontSize: 44, fontWeight: 800, letterSpacing: -1.5, color: over ? "var(--red)" : "var(--text)" }}>{amt ? fmt(val) : fmt(0)}</div>
-          {max != null && <div className="caption" style={{ marginTop: 4, color: over ? "var(--red)" : "var(--muted)" }}>{over ? `Max ${fmt(max)}` : `Available ${fmt(max)}`}</div>}
+          {max != null && <div className="caption" style={{ marginTop: 4, color: over ? "var(--red)" : "var(--muted)" }}>{over ? tr("ui.max", { amt: fmt(max) }) : tr("ui.available", { amt: fmt(max) })}</div>}
         </div>
 
         {banks && (

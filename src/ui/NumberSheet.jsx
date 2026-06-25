@@ -3,6 +3,7 @@
 // Already paid / Remind me — anywhere a stepper isn't enough and you want to type.
 import { useState } from "react";
 import Ico from "./Ico.jsx";
+import { useT } from "../lib/i18n.js";
 
 export default function NumberSheet({ title, sub, value, picks = [], min = 0, max = 9999, suffix, onConfirm, onClose }) {
   const [s, setS] = useState(value != null && value !== "" ? String(value) : "");
@@ -16,6 +17,7 @@ export default function NumberSheet({ title, sub, value, picks = [], min = 0, ma
     return parseInt(nx) > max ? String(max) : nx;
   });
   const done = () => onConfirm(clamp(n));
+  const tr = useT();
 
   return (
     <>
@@ -39,7 +41,7 @@ export default function NumberSheet({ title, sub, value, picks = [], min = 0, ma
           <button onClick={() => press("0")}>0</button>
           <button onClick={() => press("del")}><Ico name="back" size={20} /></button>
         </div>
-        <div className="btn btn-primary btn-full" onClick={done}>Done</div>
+        <div className="btn btn-primary btn-full" onClick={done}>{tr("ui.done")}</div>
       </div>
     </>
   );

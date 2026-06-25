@@ -1,9 +1,11 @@
 // Saver — generic option picker bottom sheet (account / category / goal).
 import Ico from "./Ico.jsx";
 import CatTile from "./CatTile.jsx";
+import { useT } from "../lib/i18n.js";
 
 // option: { id, label, sub, catKey, bankColor }
 export default function PickerSheet({ title, options, selectedId, onPick, onClose }) {
+  const tr = useT();
   return (
     <>
       <div className="dim" onClick={onClose} />
@@ -14,7 +16,7 @@ export default function PickerSheet({ title, options, selectedId, onPick, onClos
           <div style={{ flex: 1 }} />
           <div className="hib" style={{ background: "var(--surface2)", color: "var(--muted)" }} onClick={onClose}><Ico name="close" size={18} /></div>
         </div>
-        {options.length === 0 ? <div style={{ color: "var(--muted)", fontWeight: 600, padding: "8px 2px 16px" }}>Nothing to pick yet.</div>
+        {options.length === 0 ? <div style={{ color: "var(--muted)", fontWeight: 600, padding: "8px 2px 16px" }}>{tr("ui.nothingToPick")}</div>
           : options.map((o) => (
             <div className="icard" key={o.id} onClick={() => { onPick(o.id); onClose(); }} style={{ cursor: "pointer", ...(o.id === selectedId ? { borderColor: "var(--ac)", boxShadow: "inset 0 0 0 1.5px var(--ac)" } : {}) }}>
               {o.bankColor != null

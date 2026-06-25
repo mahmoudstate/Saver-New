@@ -2,10 +2,12 @@
 // Ported 1:1 from the showcase .dialog / .toast helpers. Friendly hybrid messaging.
 import Ico from "./Ico.jsx";
 import ConfettiBurst from "./ConfettiBurst.jsx";
+import { useT } from "../lib/i18n.js";
 
 const tile = (color) => ({ background: `color-mix(in srgb, ${color} 16%, transparent)`, color });
 
 export function AlertModal({ data, onClose }) {
+  const tr = useT();
   if (!data) return null;
   const color = data.color || "var(--ac)";
   return (
@@ -16,7 +18,7 @@ export function AlertModal({ data, onClose }) {
         <div className="dttl">{data.title}</div>
         <div className="dmsg">{data.message}</div>
         <div className="drow">
-          <button className="btn btn-primary btn-full" onClick={onClose}>{data.okText || "Got it"}</button>
+          <button className="btn btn-primary btn-full" onClick={onClose}>{data.okText || tr("ui.gotIt")}</button>
         </div>
       </div>
     </>
@@ -24,6 +26,7 @@ export function AlertModal({ data, onClose }) {
 }
 
 export function ConfirmModal({ data, onClose }) {
+  const tr = useT();
   if (!data) return null;
   const color = data.color || "var(--red)";
   const run = () => { data.onConfirm?.(); onClose(); };
@@ -35,8 +38,8 @@ export function ConfirmModal({ data, onClose }) {
         <div className="dttl">{data.title}</div>
         <div className="dmsg">{data.message}</div>
         <div className="drow">
-          <button className="btn btn-ghost btn-full" onClick={onClose}>{data.cancelText || "Cancel"}</button>
-          <button className={`btn btn-full ${data.danger ? "btn-danger" : "btn-primary"}`} onClick={run}>{data.confirmText || "Confirm"}</button>
+          <button className="btn btn-ghost btn-full" onClick={onClose}>{data.cancelText || tr("ui.cancel")}</button>
+          <button className={`btn btn-full ${data.danger ? "btn-danger" : "btn-primary"}`} onClick={run}>{data.confirmText || tr("ui.confirm")}</button>
         </div>
       </div>
     </>

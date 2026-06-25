@@ -10,14 +10,15 @@ import ColorField from "../ui/ColorField.jsx";
 import IconField from "../ui/IconField.jsx";
 import { resolveCat } from "../ui/cats.js";
 import { loadColors } from "../ui/ColorSheet.jsx";
-import { fmt, currentMonth, MONTHS } from "../lib/format.js";
+import { fmt, currentMonth, monthLabel } from "../lib/format.js";
+import { useT } from "../lib/i18n.js";
 
 const catKeyOf = (c) => resolveCat({ catId: c.id, catGlyph: c.glyph, catName: c.name }) || null;
-const monthLabel = (m) => `${MONTHS[+m.split("-")[1] - 1]} ${m.split("-")[0]}`;
 const shift = (m, d) => { const [y, mo] = m.split("-").map(Number); const nd = new Date(y, mo - 1 + d, 1); return `${nd.getFullYear()}-${String(nd.getMonth() + 1).padStart(2, "0")}`; };
 
 export default function BudgetEditor({ store, budget, initialKind, onClose }) {
   const { expCats = [] } = store;
+  const tr = useT();
   const editing = !!budget;
   const [kind, setKind] = useState(budget?.kind === "project" || initialKind === "project" ? "project" : "monthly");
   const [name, setName] = useState(budget?.name || "");
@@ -34,7 +35,7 @@ export default function BudgetEditor({ store, budget, initialKind, onClose }) {
   const toggle = (id) => setCats((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
   const stepMonth = (d) => { const ns = shift(month, d); if (ns <= currentMonth()) setMonth(ns); };
   const oneMonth = !isProject && !recurring;
-  const monthLbl = isProject || recurring ? "Starts" : "Month";
+  const monthLbl = isProject || recurring ? tr("editor.starts") : tr("editor.month");
 
   const save = () => {
     if (!canSave) return;
@@ -44,33 +45,33 @@ export default function BudgetEditor({ store, budget, initialKind, onClose }) {
         : { kind: undefined, startMonth: undefined, month };
     if (editing) store.set("budgets", (list) => list.map((b) => (b.id === budget.id ? { ...b, ...base, ...extra } : b)));
     else store.set("budgets", (list) => [...list, { id: Date.now().toString(), ...base, ...extra }]);
-    store.flash({ title: editing ? "Saved" : isProject ? "Project created" : "Budget created", sub: name.trim(), color: "var(--purple)", icon: "check" });
+    store.flash({ title: editing ? tr("edit.saved") : isProject ? tr("editor.projectCreated") : tr("editor.budgetCreated"), sub: name.trim(), color: "var(--purple)", icon: "check" });
     onClose();
   };
 
   return (
     <div className="content padnav">
       <div className="hero">
-        <div className="toprow"><div className="ttl">{editing ? (isProject ? "Edit project" : "Edit budget") : isProject ? "New project" : "New budget"}</div><div className="grow" /><div className="hib" onClick={onClose}><Ico name="close" size={20} /></div></div>
-        <div className="lbl">{isProject ? "Total budget · optional" : "Monthly limit"}</div>
-        <div className="big tnum" onClick={() => setSheet(true)} style={{ cursor: "pointer" }}>{amount > 0 ? fmt(amount) : <span style={{ opacity: .6 }}>{isProject ? "Optional" : fmt(0)}</span>}</div>
-        <div className="sub">{name.trim() || (isProject ? "Name your project" : "Name your budget")}</div>
+        <div className="toprow"><div className="ttl">{editing ? (isProject ? tr("editor.editProject") : tr("editor.editBudget")) : isProject ? tr("editor.newProject") : tr("editor.newBudget")}</div><div className="grow" /><div className="hib" onClick={onClose}><Ico name="close" size={20} /></div></div>
+        <div className="lbl">{isProject ? tr("editor.totalBudgetOptional") : tr("editor.monthlyLimit")}</div>
+        <div className="big tnum" onClick={() => setSheet(true)} style={{ cursor: "pointer" }}>{amount > 0 ? fmt(amount) : <span style={{ opacity: .6 }}>{isProject ? tr("editor.optional") : fmt(0)}</span>}</div>
+        <div className="sub">{name.trim() || (isProject ? tr("editor.nameYourProject") : tr("editor.nameYourBudget"))}</div>
       </div>
 
-      {!editing && <SegToggle style={{ marginBottom: 16 }} value={kind} onChange={setKind} options={[{ id: "monthly", label: "Monthly budget" }, { id: "project", label: "Project" }]} />}
+      {!editing && <SegToggle style={{ marginBottom: 16 }} value={kind} onChange={setKind} options={[{ id: "monthly", label: tr("editor.monthlyBudget") }, { id: "project", label: tr("editor.project") }]} />}
 
       <label className="field">
         <CatTile cat={glyph} color={color} name={name} size={42} />
-        <div style={{ flex: 1 }}><div className="fl">Name</div>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={isProject ? "e.g. Kitchen renovation" : "e.g. Everyday spending"} style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700, marginTop: 2, width: "100%" }} />
+        <div style={{ flex: 1 }}><div className="fl">{tr("editor.name")}</div>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={isProject ? tr("editor.projectNamePlaceholder") : tr("editor.budgetNamePlaceholder")} style={{ border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700, marginTop: 2, width: "100%" }} />
         </div><span className="chev"><Ico name="pencil" size={17} /></span>
       </label>
 
-      {!isProject && <SegToggle style={{ margin: "12px 0" }} value={recurring ? "rec" : "one"} onChange={(v) => setRecurring(v === "rec")} options={[{ id: "rec", label: "Every month" }, { id: "one", label: "One month" }]} />}
+      {!isProject && <SegToggle style={{ margin: "12px 0" }} value={recurring ? "rec" : "one"} onChange={(v) => setRecurring(v === "rec")} options={[{ id: "rec", label: tr("editor.everyMonth") }, { id: "one", label: tr("editor.oneMonth") }]} />}
 
       <div className="field" style={{ marginTop: 12 }}>
         <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: "var(--purpleDim)", color: "var(--purple)" }}><Ico name="cal" size={19} /></span>
-        <div style={{ flex: 1 }}><div className="fl">{monthLbl}</div><div className="fv tnum">{monthLabel(month)}{!isProject && recurring ? " · repeats" : ""}</div></div>
+        <div style={{ flex: 1 }}><div className="fl">{monthLbl}</div><div className="fv tnum">{monthLabel(month)}{!isProject && recurring ? tr("editor.repeats") : ""}</div></div>
         <div style={{ display: "flex", gap: 8 }}>
           <div className="hib" onClick={() => stepMonth(-1)}><Ico name="back" size={16} /></div>
           <div className="hib" onClick={() => stepMonth(1)} style={{ transform: "scaleX(-1)", opacity: month >= currentMonth() ? .3 : 1 }}><Ico name="back" size={16} /></div>
@@ -80,7 +81,7 @@ export default function BudgetEditor({ store, budget, initialKind, onClose }) {
       <ColorField value={color} onChange={setColor} style={{ margin: "13px 0" }} />
       <div style={{ marginBottom: 4 }}><IconField glyph={glyph} color={color} onPick={setGlyph} /></div>
 
-      <div className="over" style={{ marginTop: 14 }}>Categories covered</div>
+      <div className="over" style={{ marginTop: 14 }}>{tr("editor.categoriesCovered")}</div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {expCats.map((c) => {
           const on = cats.includes(c.id);
@@ -92,9 +93,9 @@ export default function BudgetEditor({ store, budget, initialKind, onClose }) {
         })}
       </div>
 
-      <div className="cta"><div className="btn btn-primary btn-full" style={{ opacity: canSave ? 1 : .5 }} onClick={save}><Ico name="check" size={18} />{editing ? "Save" : isProject ? "Create project" : "Create budget"}</div></div>
+      <div className="cta"><div className="btn btn-primary btn-full" style={{ opacity: canSave ? 1 : .5 }} onClick={save}><Ico name="check" size={18} />{editing ? tr("editor.saveShort") : isProject ? tr("editor.createProject") : tr("editor.createBudget")}</div></div>
 
-      {sheet && <AmountSheet title={isProject ? "Total budget" : "Monthly limit"} confirmLabel={isProject ? "Set total" : "Set limit"} onConfirm={(v) => { setAmount(v); setSheet(false); }} onClose={() => setSheet(false)} />}
+      {sheet && <AmountSheet title={isProject ? tr("editor.totalBudget") : tr("editor.monthlyLimit")} confirmLabel={isProject ? tr("editor.setTotal") : tr("editor.setLimit")} onConfirm={(v) => { setAmount(v); setSheet(false); }} onClose={() => setSheet(false)} />}
     </div>
   );
 }

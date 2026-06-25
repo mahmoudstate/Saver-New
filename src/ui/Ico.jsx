@@ -52,8 +52,11 @@ export const MARKS = {
   info: `<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>`,
 };
 
+// Horizontal/directional glyphs that must mirror under RTL (back arrow + row chevron).
+const DIR_ICONS = new Set(["back", "chev"]);
+
 export default function Ico({ name, size = 18, color = "currentColor", stroke = 2, style = {} }) {
   const d = MARKS[name];
   if (!d) return null;
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, display: "block", ...style }} dangerouslySetInnerHTML={{ __html: d }} />;
+  return <svg className={DIR_ICONS.has(name) ? "dirico" : undefined} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, display: "block", ...style }} dangerouslySetInnerHTML={{ __html: d }} />;
 }

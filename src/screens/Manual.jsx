@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import Ico from "../ui/Ico.jsx";
 import { GUIDE, FAQ } from "../lib/guide.js";
+import { useT } from "../lib/i18n.js";
 
 const REDUCED = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
@@ -12,6 +13,7 @@ export default function Manual({ back, onOpenTopic, onStartTour }) {
   const scope = useRef(null);
   const [q, setQ] = useState("");
   const [faq, setFaq] = useState(-1);
+  const tr = useT();
 
   const groups = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -27,22 +29,22 @@ export default function Manual({ back, onOpenTopic, onStartTour }) {
   return (
     <div ref={scope} className="content padnav">
       <div className="hero">
-        <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">Guide</div><div className="grow" /></div>
-        <div className="lbl">How Saver works</div><div className="big" style={{ fontSize: 32 }}>Learn the app</div><div className="sub">Short, friendly walkthroughs with live examples</div>
+        <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">{tr("gd.title")}</div><div className="grow" /></div>
+        <div className="lbl">{tr("gd.howWorks")}</div><div className="big" style={{ fontSize: 32 }}>{tr("gd.learnApp")}</div><div className="sub">{tr("gd.learnSub")}</div>
       </div>
 
       <div className="gsap-card icard" onClick={() => onStartTour?.()} style={{ cursor: "pointer", background: "var(--acDim)", border: "none", marginBottom: 14 }}>
         <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: "var(--ac)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}><Ico name="sparkles" size={20} /></span>
-        <div><div className="nm">Take the quick tour</div><div className="mt">A quick walk through every part of the app</div></div>
+        <div><div className="nm">{tr("gd.takeTour")}</div><div className="mt">{tr("gd.takeTourSub")}</div></div>
         <Ico name="chev" size={18} color="var(--acText)" style={{ marginLeft: "auto" }} />
       </div>
 
       <label className="field" style={{ marginBottom: 18 }}>
         <span className="circ" style={{ width: 38, height: 38, borderRadius: 11, background: "var(--surface2)", color: "var(--muted)", display: "flex", alignItems: "center", justifyContent: "center" }}><Ico name="search" size={18} /></span>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search the guide" style={{ flex: 1, border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700 }} />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr("gd.searchGuide")} style={{ flex: 1, border: "none", background: "none", outline: "none", color: "var(--text)", font: "inherit", fontSize: 15, fontWeight: 700 }} />
       </label>
 
-      {groups.length === 0 ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px", fontWeight: 600 }}>Nothing matches that yet.</div>
+      {groups.length === 0 ? <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px", fontWeight: 600 }}>{tr("gd.nothingMatches")}</div>
         : groups.map((g) => (
           <div key={g.label}>
             <div className="over">{g.label}</div>
@@ -58,7 +60,7 @@ export default function Manual({ back, onOpenTopic, onStartTour }) {
 
       {!q && (
         <>
-          <div className="over" style={{ marginTop: 8 }}>Tips &amp; FAQ</div>
+          <div className="over" style={{ marginTop: 8 }}>{tr("gd.tipsFaq")}</div>
           {FAQ.map((f, i) => {
             const open = faq === i;
             return (

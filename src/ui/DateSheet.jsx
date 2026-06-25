@@ -2,11 +2,11 @@
 // Future days are disabled (max defaults to today); a "Today" chip jumps back.
 import { useState } from "react";
 import Ico from "./Ico.jsx";
-import { MONTHS, today } from "../lib/format.js";
+import { today, monthLabel } from "../lib/format.js";
+import { useT } from "../lib/i18n.js";
 
 const pad = (n) => String(n).padStart(2, "0");
 const lastDay = (y, m) => new Date(y, m, 0).getDate(); // m = 1..12
-const monthLabel = (ym) => { const [y, m] = ym.split("-"); return `${MONTHS[+m - 1]} ${y}`; };
 
 export default function DateSheet({ value, max = today(), onPick, onClose }) {
   const start = (value || today());
@@ -19,11 +19,12 @@ export default function DateSheet({ value, max = today(), onPick, onClose }) {
   const cells = [...Array(startDow).fill(null), ...Array.from({ length: ndays }, (_, i) => i + 1)];
   const shift = (delta) => { const d = new Date(cy, cmo - 1 + delta, 1); setCal(`${d.getFullYear()}-${pad(d.getMonth() + 1)}`); };
   const nextDisabled = cal >= max.slice(0, 7);
+  const tr = useT();
 
   return (
     <>
       <div className="dim" onClick={onClose} />
-      <div className="sheet" role="dialog" aria-label="Pick a date">
+      <div className="sheet" role="dialog" aria-label={tr("date.pickADate")}>
         <div className="grab" />
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <div className="hib" onClick={() => shift(-1)}><Ico name="back" size={18} /></div>
@@ -31,7 +32,7 @@ export default function DateSheet({ value, max = today(), onPick, onClose }) {
           <div className="hib" onClick={() => !nextDisabled && shift(1)} style={{ transform: "scaleX(-1)", opacity: nextDisabled ? .3 : 1, pointerEvents: nextDisabled ? "none" : "auto" }}><Ico name="back" size={18} /></div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginBottom: 6 }}>
-          {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <div key={i} style={{ textAlign: "center", fontSize: 11.5, fontWeight: 700, color: "var(--faint)", padding: "4px 0" }}>{d}</div>)}
+          {tr("date.dow").split(",").map((d, i) => <div key={i} style={{ textAlign: "center", fontSize: 11.5, fontWeight: 700, color: "var(--faint)", padding: "4px 0" }}>{d}</div>)}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }}>
           {cells.map((d, i) => {

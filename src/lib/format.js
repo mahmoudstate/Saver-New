@@ -46,9 +46,37 @@ export const fmtParts = (n, ov) => {
   } catch { return { cur, num: String(n) }; }
 };
 
+// Date language mirrors the UI language (set by i18n via setDateLang). Names
+// localise; NUMERALS ALWAYS STAY WESTERN — so dates are built manually, never
+// via toLocaleDateString("ar") which would switch to Arabic-Indic digits.
+let _lang = "en";
+export const setDateLang = (l) => { _lang = l === "ar" ? "ar" : "en"; };
+
 export const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const DAYS_AR = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 export const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-export const fmtDate = (d) => { const dt = new Date(d + "T12:00:00"); return `${DAYS[dt.getDay()]}: ${dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`; };
+const MONTHS_AR = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+
+export const monthName = (i) => (_lang === "ar" ? MONTHS_AR : MONTHS)[i];
+export const dayName = (i) => (_lang === "ar" ? DAYS_AR : DAYS)[i];
+const pad2 = (n) => String(n).padStart(2, "0");
+
+// "Wednesday: 24 Jun 2026" / "الأربعاء: 24 يونيو 2026" — digits Western.
+export const fmtDate = (d) => { const dt = new Date(d + "T12:00:00"); return `${dayName(dt.getDay())}: ${pad2(dt.getDate())} ${monthName(dt.getMonth())} ${dt.getFullYear()}`; };
+
+// "Jun 2026" / "يونيو 2026"
+export const monthLabel = (ym) => { const [y, m] = ym.split("-"); return `${monthName(+m - 1)} ${y}`; };
+
+// Day-range label for date pickers (manual; Western digits, localised months).
+export const dayRangeLabel = (from, to) => {
+  const f = new Date(from + "T12:00:00"), t = new Date((to || from) + "T12:00:00");
+  const full = (x) => `${x.getDate()} ${monthName(x.getMonth())} ${x.getFullYear()}`;
+  if (!to || from === to) return full(f);
+  const sameMonth = from.slice(0, 7) === to.slice(0, 7);
+  const sameYear = from.slice(0, 4) === to.slice(0, 4);
+  const fL = sameMonth ? `${f.getDate()}` : sameYear ? `${f.getDate()} ${monthName(f.getMonth())}` : full(f);
+  return `${fL} – ${full(t)}`;
+};
 
 const getLocalTime = () => {
   const d = new Date();

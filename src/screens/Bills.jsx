@@ -7,10 +7,9 @@ import ServiceLogo from "../ui/ServiceLogo.jsx";
 import CatTile from "../ui/CatTile.jsx";
 import SegToggle from "../ui/SegToggle.jsx";
 import Money from "../ui/Money.jsx";
-import { fmt, currentMonth, MONTHS } from "../lib/format.js";
+import { fmt, currentMonth, monthLabel } from "../lib/format.js";
 import { getBillType, BILL_TYPES } from "../lib/services.js";
-
-const monthLabel = (m) => `${MONTHS[+m.split("-")[1] - 1]} ${m.split("-")[0]}`;
+import { useT } from "../lib/i18n.js";
 const guessCat = (t = "") => /phone|iphone|mobile|tablet|ipad/i.test(t) ? "phone" : /car|loan|auto|vehicle/i.test(t) ? "transport" : /laptop|pc|mac/i.test(t) ? "phone" : null;
 
 // Small status dot (drawn, not an emoji) — same size as the Active dot.
@@ -23,13 +22,14 @@ function BillLogo({ bill, size = 44 }) {
 }
 
 function SubCard({ bill, onOpen }) {
+  const tr = useT();
   return (
     <div className="icard" onClick={() => onOpen?.(bill)} style={{ cursor: "pointer" }}>
       <BillLogo bill={bill} />
       <div style={{ minWidth: 0 }}>
         <div className="nm">{bill.name}</div>
         <div className="mt" style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-          <span>{bill.note ? bill.note + " · " : ""}monthly{bill.dueDay ? " · day " + bill.dueDay : ""} ·</span>
+          <span>{bill.note ? bill.note + " · " : ""}{tr("bills.monthly")}{bill.dueDay ? " · " + tr("bills.dayN", { n: bill.dueDay }) : ""} ·</span>
           <Dot color={bill.statusColor} size={7} /><span>{bill.status}</span>
         </div>
       </div>
@@ -40,6 +40,7 @@ function SubCard({ bill, onOpen }) {
 
 export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg }) {
   const { bills = [], installments = [] } = store;
+  const tr = useT();
   const resolveType = (id) => BILL_TYPES.find((t) => t.id === id) || getBillType(id);
   const [seg, setSeg] = useState(initialSeg || "subs");
   const [subView, setSubView] = useState("active"); // active | history
@@ -50,13 +51,13 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
   const statusOf = (b) => {
     const isPaid = b.payments?.some((p) => p.month === cm);
     const dueIn = b.dueDay ? b.dueDay - day : null;
-    let status = "Paid", color = "var(--success)";
+    let status = tr("bills.paid"), color = "var(--success)";
     if (!isPaid) {
-      if (dueIn == null) { status = "Due"; color = "var(--yellow)"; }
-      else if (dueIn < 0) { status = `Overdue ${Math.abs(dueIn)}d`; color = "var(--red)"; }
-      else if (dueIn === 0) { status = "Due today"; color = "var(--orange)"; }
-      else if (dueIn === 1) { status = "Tomorrow"; color = "var(--yellow)"; }
-      else { status = `Due in ${dueIn}d`; color = dueIn <= 3 ? "var(--yellow)" : "var(--muted)"; }
+      if (dueIn == null) { status = tr("bills.due"); color = "var(--yellow)"; }
+      else if (dueIn < 0) { status = tr("bills.overdueD", { n: Math.abs(dueIn) }); color = "var(--red)"; }
+      else if (dueIn === 0) { status = tr("bills.dueToday"); color = "var(--orange)"; }
+      else if (dueIn === 1) { status = tr("bills.tomorrow"); color = "var(--yellow)"; }
+      else { status = tr("bills.dueInD", { n: dueIn }); color = dueIn <= 3 ? "var(--yellow)" : "var(--muted)"; }
     }
     return { ...b, isPaid, status, statusColor: color, dueIn };
   };
@@ -120,8 +121,8 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
 
   const InstCard = (i) => (
     <div className="bcard" key={i.id} onClick={() => onOpenInst?.(i)} style={{ cursor: "pointer", opacity: i.stopped ? .7 : 1 }}>
-      <div className="top"><CatTile cat={i.glyph || guessCat(i.itemType || i.company)} name={i.itemType || i.company} color={i.color} size={40} /><div className="nm">{i.itemType || i.company}</div><div className="rt tnum">{fmt(i.installmentAmount)}/mo</div></div>
-      <div className="nums"><div className="a tnum" style={{ fontSize: 14, fontWeight: 700, color: "var(--muted)" }}>{i.stopped ? "Stopped · " : ""}{i.paid} of {i.totalInstallments} paid</div><div className="b tnum">{i.done ? "Done" : fmt(i.remaining) + " left"}</div></div>
+      <div className="top"><CatTile cat={i.glyph || guessCat(i.itemType || i.company)} name={i.itemType || i.company} color={i.color} size={40} /><div className="nm">{i.itemType || i.company}</div><div className="rt tnum">{fmt(i.installmentAmount)}{tr("bills.perMo")}</div></div>
+      <div className="nums"><div className="a tnum" style={{ fontSize: 14, fontWeight: 700, color: "var(--muted)" }}>{i.stopped ? tr("bills.stoppedPrefix") : ""}{tr("bills.paidOf", { paid: i.paid, total: i.totalInstallments })}</div><div className="b tnum">{i.done ? tr("bills.done") : tr("bills.leftAmt", { amt: fmt(i.remaining) })}</div></div>
       <div className="pbar bar"><i style={{ width: `${Math.min(100, i.pct)}%`, background: i.done ? "var(--success)" : "var(--ac)" }} /></div>
     </div>
   );
@@ -129,34 +130,34 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
   return (
     <div className="content padnav">
       <div className="hero">
-        <div className="toprow"><div className="ttl">{isSubs ? "Bills" : "Installments"}</div><div className="grow" /><div className="hib" onClick={() => onAdd?.(seg)}><Ico name="plus" size={20} /></div></div>
+        <div className="toprow"><div className="ttl">{isSubs ? tr("bills.titleSubs") : tr("bills.titleInst")}</div><div className="grow" /><div className="hib" onClick={() => onAdd?.(seg)}><Ico name="plus" size={20} /></div></div>
         {isSubs
-          ? <><div className="lbl">Total bills this month</div><Money className="big tnum" v={subs.total} />
+          ? <><div className="lbl">{tr("bills.totalThisMonth")}</div><Money className="big tnum" v={subs.total} />
             <div className="sub" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <Dot color={subs.overdue > 0 ? "var(--red)" : subs.due > 0 ? "var(--yellow)" : "var(--success)"} />
-              <span>{subs.due > 0 && <>{fmt(subs.due)} {subs.overdue > 0 ? "overdue" : "due"} &nbsp;·&nbsp; </>}{subs.paidCount} of {subs.active} paid &nbsp;·&nbsp; {fmt(subs.yearly)}/yr</span>
+              <span>{subs.due > 0 && <>{fmt(subs.due)} {subs.overdue > 0 ? tr("bills.overdue") : tr("bills.dueWord")} &nbsp;·&nbsp; </>}{tr("bills.paidOf", { paid: subs.paidCount, total: subs.active })} &nbsp;·&nbsp; {tr("bills.perYear", { amt: fmt(subs.yearly) })}</span>
             </div></>
-          : <><div className="lbl">Remaining</div><Money className="big tnum" v={inst.remaining} />
+          : <><div className="lbl">{tr("bills.remaining")}</div><Money className="big tnum" v={inst.remaining} />
             <div className="sub" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <Dot color={inst.dueAmt > 0 ? "var(--yellow)" : "var(--success)"} />
-              <span>{inst.dueAmt > 0 && <>{fmt(inst.dueAmt)} due &nbsp;·&nbsp; </>}{inst.total > 0 ? Math.round((inst.paidAmt / inst.total) * 100) : 0}% paid &nbsp;·&nbsp; {inst.plans} plans</span>
+              <span>{inst.dueAmt > 0 && <>{fmt(inst.dueAmt)} {tr("bills.dueWord")} &nbsp;·&nbsp; </>}{tr("bills.pctPaid", { pct: inst.total > 0 ? Math.round((inst.paidAmt / inst.total) * 100) : 0 })} &nbsp;·&nbsp; {tr("bills.plans", { n: inst.plans })}</span>
             </div></>}
       </div>
 
-      <SegToggle style={{ marginBottom: 14 }} value={seg} onChange={setSeg} options={[{ id: "subs", label: "Subscriptions" }, { id: "inst", label: "Installments" }]} />
+      <SegToggle style={{ marginBottom: 14 }} value={seg} onChange={setSeg} options={[{ id: "subs", label: tr("bills.subscriptions") }, { id: "inst", label: tr("bills.installments") }]} />
 
       {isSubs ? (
         <>
-          <SegToggle style={{ marginBottom: 16 }} value={subView} onChange={setSubView} options={[{ id: "active", label: "Active" }, { id: "history", label: "History" }]} />
+          <SegToggle style={{ marginBottom: 16 }} value={subView} onChange={setSubView} options={[{ id: "active", label: tr("bills.active") }, { id: "history", label: tr("bills.history") }]} />
 
-          {subView === "active" && (catGroups.length === 0 ? <Empty msg="No subscriptions yet." /> : catGroups.map((g) => (
+          {subView === "active" && (catGroups.length === 0 ? <Empty msg={tr("bills.noSubs")} /> : catGroups.map((g) => (
             <div key={g.type.id} style={{ marginBottom: 10 }}>
-              <div className="over">{g.type.name} &nbsp;·&nbsp; {fmt(g.items.reduce((s, b) => s + b.amount, 0))}/mo</div>
+              <div className="over">{tr("billtype." + g.type.id)} &nbsp;·&nbsp; {fmt(g.items.reduce((s, b) => s + b.amount, 0))}{tr("bills.perMo")}</div>
               {g.items.map((b) => <SubCard key={b.id} bill={b} onOpen={onOpenSub} />)}
             </div>
           )))}
 
-          {subView === "history" && (histGroups.length === 0 ? <Empty msg="No payments yet." /> : histGroups.map((g) => (
+          {subView === "history" && (histGroups.length === 0 ? <Empty msg={tr("bills.noPayments")} /> : histGroups.map((g) => (
             <div key={g.month} style={{ marginBottom: 10 }}>
               <div className="over">{monthLabel(g.month)} &nbsp;·&nbsp; {fmt(g.total)}</div>
               {g.items.map(({ bill, p }) => (
@@ -165,7 +166,7 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
                   <div style={{ minWidth: 0 }}>
                     <div className="nm">{bill.name}</div>
                     <div className="mt" style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-                      <Dot color="var(--success)" size={7} /><span>Paid{p.date ? " · " + p.date : ""}</span>
+                      <Dot color="var(--success)" size={7} /><span>{tr("bills.paid")}{p.date ? " · " + p.date : ""}</span>
                     </div>
                   </div>
                   <b className="tnum" style={{ marginLeft: "auto", flexShrink: 0, fontSize: 18, fontWeight: 800, letterSpacing: "-.3px" }}>{fmt(bill.amount)}</b>
@@ -176,8 +177,8 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
         </>
       ) : (
         <>
-          <SegToggle style={{ marginBottom: 16 }} value={instView} onChange={setInstView} options={[{ id: "active", label: "Active" }, { id: "done", label: "Completed" }]} />
-          {instRows.length === 0 ? <Empty msg={instView === "active" ? "No active plans." : "Nothing completed yet."} /> : instRows.map(InstCard)}
+          <SegToggle style={{ marginBottom: 16 }} value={instView} onChange={setInstView} options={[{ id: "active", label: tr("bills.active") }, { id: "done", label: tr("bills.completed") }]} />
+          {instRows.length === 0 ? <Empty msg={instView === "active" ? tr("bills.noActivePlans") : tr("bills.nothingCompleted")} /> : instRows.map(InstCard)}
         </>
       )}
     </div>
