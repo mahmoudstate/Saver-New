@@ -29,6 +29,7 @@ export default function BudgetEditor({ store, budget, initialKind, onClose }) {
   // monthly: recurring (repeats from a start month) or a single past/specific month.
   const [recurring, setRecurring] = useState(budget?.month ? false : true);
   const [month, setMonth] = useState(budget?.startMonth || budget?.month || currentMonth());
+  const [cycleStartDay, setCycleStartDay] = useState(budget?.cycleStartDay || 1);
   const [sheet, setSheet] = useState(false);
   const isProject = kind === "project";
   const canSave = name.trim().length > 0 && (isProject || amount > 0); // project amount is optional
@@ -40,9 +41,9 @@ export default function BudgetEditor({ store, budget, initialKind, onClose }) {
   const save = () => {
     if (!canSave) return;
     const base = { name: name.trim(), amount, cats, color, glyph };
-    const extra = isProject ? { kind: "project", startMonth: month, month: undefined }
-      : recurring ? { kind: undefined, startMonth: month, month: undefined }
-        : { kind: undefined, startMonth: undefined, month };
+    const extra = isProject ? { kind: "project", startMonth: month, month: undefined, cycleStartDay: undefined }
+      : recurring ? { kind: undefined, startMonth: month, month: undefined, cycleStartDay }
+        : { kind: undefined, startMonth: undefined, month, cycleStartDay };
     if (editing) store.set("budgets", (list) => list.map((b) => (b.id === budget.id ? { ...b, ...base, ...extra } : b)));
     else store.set("budgets", (list) => [...list, { id: Date.now().toString(), ...base, ...extra }]);
     store.flash({ title: editing ? tr("edit.saved") : isProject ? tr("editor.projectCreated") : tr("editor.budgetCreated"), sub: name.trim(), color: "var(--purple)", icon: "check" });
@@ -77,6 +78,15 @@ export default function BudgetEditor({ store, budget, initialKind, onClose }) {
           <div className="hib" onClick={() => stepMonth(1)} style={{ transform: "scaleX(-1)", opacity: month >= currentMonth() ? .3 : 1 }}><Ico name="back" size={16} /></div>
         </div>
       </div>
+
+      {!isProject && <div className="field" style={{ marginTop: 12 }}>
+        <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: "var(--purpleDim)", color: "var(--purple)" }}><Ico name="cal" size={19} /></span>
+        <div style={{ flex: 1 }}><div className="fl">{tr("editor.cycleStartDay")}</div><div className="fv tnum">{tr("editor.dayOfMonth", { day: cycleStartDay })}</div></div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <div className="hib" onClick={() => setCycleStartDay((d) => Math.max(1, d - 1))}><Ico name="back" size={16} /></div>
+          <div className="hib" onClick={() => setCycleStartDay((d) => Math.min(28, d + 1))} style={{ transform: "scaleX(-1)" }}><Ico name="back" size={16} /></div>
+        </div>
+      </div>}
 
       <ColorField value={color} onChange={setColor} style={{ margin: "13px 0" }} />
       <div style={{ marginBottom: 4 }}><IconField glyph={glyph} color={color} onPick={setGlyph} /></div>

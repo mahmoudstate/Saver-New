@@ -390,6 +390,8 @@ export default {
     starts: "يبدأ",
     month: "الشهر",
     repeats: " · يتكرر",
+    cycleStartDay: "تبدأ الدورة من يوم",
+    dayOfMonth: "يوم {day}",
     categoriesCovered: "الفئات المشمولة",
     saveShort: "حفظ",
     createBudget: "إنشاء الميزانية",

@@ -391,6 +391,8 @@ export default {
     starts: "Starts",
     month: "Month",
     repeats: " · repeats",
+    cycleStartDay: "Cycle starts on",
+    dayOfMonth: "Day {day}",
     categoriesCovered: "Categories covered",
     saveShort: "Save",
     createBudget: "Create budget",

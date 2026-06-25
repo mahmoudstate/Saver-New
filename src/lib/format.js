@@ -94,6 +94,28 @@ export const today = () => getLocalTime().today;
 export const currentMonth = () => getLocalTime().month;
 export const prevMonthOf = (m) => { const [y, mo] = m.split("-"); const d = new Date(+y, +mo - 2, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
 
+// A budget's spend period for a given anchor `month` (YYYY-MM). Day 1 (default/unset)
+// == the calendar month, unchanged. Otherwise the period runs from `cycleStartDay` of
+// `month` to the day before `cycleStartDay` next month — clamped to each month's real
+// length (e.g. day 30 in Feb), via Date's own day-rollover instead of manual math.
+export const cyclePeriod = (month, cycleStartDay) => {
+  const day = cycleStartDay > 1 ? cycleStartDay : 1;
+  const [y, m] = month.split("-").map(Number);
+  const fromD = new Date(y, m - 1, Math.min(day, new Date(y, m, 0).getDate()));
+  const toD = new Date(y, m, day - 1);
+  const iso = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  return { from: iso(fromD), to: iso(toD) };
+};
+
+// Which calendar month a cycle should be anchored to so that `todayISO` falls inside
+// it — e.g. cycleStartDay=25: on the 10th that's still last month's cycle (25→24).
+export const currentCycleAnchor = (todayISO, cycleStartDay) => {
+  if (!(cycleStartDay > 1)) return todayISO.slice(0, 7);
+  const [y, m, d] = todayISO.split("-").map(Number);
+  const month = `${y}-${pad2(m)}`;
+  return d >= cycleStartDay ? month : prevMonthOf(month);
+};
+
 // colour helpers for brand cards
 export const _lum = (hex) => { try { const c = hex.replace("#", ""); const r = parseInt(c.slice(0, 2), 16) / 255, g = parseInt(c.slice(2, 4), 16) / 255, b = parseInt(c.slice(4, 6), 16) / 255; return 0.2126 * r + 0.7152 * g + 0.0722 * b; } catch { return 0.5; } };
 export const darken = (hex, f = 0.5) => { try { let c = String(hex).replace("#", ""); if (c.length === 3) c = c.split("").map((ch) => ch + ch).join(""); if (c.length !== 6) return hex; const x = (i) => Math.round(parseInt(c.slice(i, i + 2), 16) * (1 - f)).toString(16).padStart(2, "0"); return `#${x(0)}${x(2)}${x(4)}`; } catch { return hex; } };

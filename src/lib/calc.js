@@ -1,5 +1,6 @@
 // Saver — core money math. PORTED VERBATIM from legacy App.jsx. **DO NOT change the maths.**
 // See saver-site/APP-LOGIC.md (locked). Transaction types: income|expense|saving|goal_withdraw|goal_return|transfer.
+import { cyclePeriod } from "./format.js";
 
 export function calcBankBalance(bankId, txns) {
   return txns.reduce((acc, t) => {
@@ -56,11 +57,14 @@ export const totalFrozen = (banks, txns, savings) => banks.reduce((s, b) => s + 
 // ── Budgets & Projects (spend = expense + goal_withdraw in the budget's categories) ──
 // Monthly budgets reset each month; projects accumulate from startMonth across all months.
 const inBudget = (t, cats) => (t.type === "expense" || t.type === "goal_withdraw") && cats?.includes(t.catId);
-export const budgetTxns = (budget, txns, month) =>
-  budget.kind === "project"
-    ? txns.filter((t) => inBudget(t, budget.cats) && (!budget.startMonth || (t.date || "").slice(0, 7) >= budget.startMonth))
-    : txns.filter((t) => inBudget(t, budget.cats) && (t.date || "").startsWith(month));
-export const budgetSpentMonth = (budget, txns, month) => txns.filter((t) => inBudget(t, budget.cats) && (t.date || "").startsWith(month)).reduce((a, t) => a + t.amount, 0);
+// Monthly budgets are scoped to their cycle period (calendar month by default, or a
+// custom cycleStartDay e.g. salary-day-25-to-25) rather than a hard "YYYY-MM" prefix.
+export const budgetTxns = (budget, txns, month) => {
+  if (budget.kind === "project") return txns.filter((t) => inBudget(t, budget.cats) && (!budget.startMonth || (t.date || "").slice(0, 7) >= budget.startMonth));
+  const { from, to } = cyclePeriod(month, budget.cycleStartDay);
+  return txns.filter((t) => inBudget(t, budget.cats) && (t.date || "") >= from && (t.date || "") <= to);
+};
+export const budgetSpentMonth = (budget, txns, month) => budgetTxns(budget, txns, month).reduce((a, t) => a + t.amount, 0);
 export const projectSpent = (project, txns) => txns.filter((t) => inBudget(t, project.cats) && (!project.startMonth || (t.date || "").slice(0, 7) >= project.startMonth)).reduce((a, t) => a + t.amount, 0);
 
 // ── Daily pacing (new helpers — no locked maths touched) ──
@@ -70,6 +74,12 @@ export const daysLeftInMonth = (month, todayISO) => {
   const total = daysInMonth(month);
   if (!todayISO || todayISO.slice(0, 7) !== month) return total;
   return Math.max(1, total - Number(todayISO.slice(8, 10)) + 1);
+};
+// Days still ahead in a budget's cycle (incl. today), given the cycle's end date —
+// unlike daysLeftInMonth this works even when the cycle spans two calendar months.
+export const daysLeftInCycle = (cycleEnd, todayISO) => {
+  const end = new Date(cycleEnd + "T12:00:00"), t = new Date(todayISO + "T12:00:00");
+  return Math.max(1, Math.round((end - t) / 86400000) + 1);
 };
 // Average actually-spent per day, over only the days that had spending (rows = txns).
 export const spentPerActiveDay = (rows) => {

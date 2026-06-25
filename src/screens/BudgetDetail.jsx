@@ -4,8 +4,8 @@ import Ico from "../ui/Ico.jsx";
 import TxnRow from "../ui/TxnRow.jsx";
 import MenuSheet from "../ui/MenuSheet.jsx";
 import Money from "../ui/Money.jsx";
-import { fmt, currentMonth, today, monthName } from "../lib/format.js";
-import { budgetSpentMonth, budgetTxns, daysLeftInMonth, spentPerActiveDay } from "../lib/calc.js";
+import { fmt, currentCycleAnchor, cyclePeriod, today, monthName } from "../lib/format.js";
+import { budgetSpentMonth, budgetTxns, daysLeftInCycle, spentPerActiveDay } from "../lib/calc.js";
 import { useT } from "../lib/i18n.js";
 
 export default function BudgetDetail({ store, budgetId, back, onEdit, onEditTxn }) {
@@ -21,7 +21,7 @@ export default function BudgetDetail({ store, budgetId, back, onEdit, onEditTxn 
     danger: true, confirmText: tr("budget.deleteBudget"), icon: "trash",
     onConfirm: () => { store.set("budgets", (list) => list.filter((b) => b.id !== budgetId)); store.flash({ title: tr("budget.budgetDeleted"), sub: budget.name, color: "var(--muted)" }); back(); },
   });
-  const cm = currentMonth();
+  const cm = currentCycleAnchor(today(), budget.cycleStartDay);
   const spent = budgetSpentMonth(budget, txns, cm);
   const limit = budget.amount || 0;
   const pct = limit > 0 ? Math.min(100, (spent / limit) * 100) : 0;
@@ -29,7 +29,7 @@ export default function BudgetDetail({ store, budgetId, back, onEdit, onEditTxn 
   const left = limit - spent;
   const rows = budgetTxns(budget, txns, cm).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   const bankName = (id) => banks.find((b) => b.id === id)?.name || "—";
-  const daysLeft = daysLeftInMonth(cm, today());
+  const daysLeft = daysLeftInCycle(cyclePeriod(cm, budget.cycleStartDay).to, today());
   const safePerDay = limit > 0 ? Math.max(0, left) / daysLeft : null;
   const spentPerDay = spentPerActiveDay(rows);
 
