@@ -58,7 +58,7 @@ export default function Add({ store, initial, onSaved, onClose }) {
       return;
     }
     let txn;
-    if (type === "saving") txn = { type: "saving", amount, date, bankId, bankName: bank?.name, goalId, catName: goal?.name, catIcon: "saving", note };
+    if (type === "saving") txn = { type: "saving", amount, date, bankId, bankName: bank?.name, goalId, goalName: goal?.name, catName: goal?.name, catIcon: "saving", note };
     else if (type === "expense" && srcGoal) txn = { type: "goal_withdraw", amount, date, goalId: srcGoal, goalName: vaultGoal?.name, catId: cat.id, catName: cat.name, catGlyph: cat.glyph, catColor: cat.color, note };
     else txn = { type, amount, date, bankId, bankName: bank?.name, catId: cat.id, catName: cat.name, catGlyph: cat.glyph, catColor: cat.color, note };
     const id = store.addTxn(txn);

@@ -1,6 +1,9 @@
 // Saver — pick a day of the month (1–28) from a calendar-style grid. Clearer than
 // a number keypad for a day. Tap a day to confirm. Used for billing / due day.
+import { useT } from "../lib/i18n.js";
+
 export default function DayGridSheet({ title = "Day of month", sub = "Pick the day the payment lands.", value, onConfirm, onClose }) {
+  const tr = useT();
   return (
     <>
       <div className="dim" onClick={onClose} />
@@ -16,7 +19,7 @@ export default function DayGridSheet({ title = "Day of month", sub = "Pick the d
             );
           })}
         </div>
-        <div className="caption" style={{ textAlign: "center", marginTop: 14 }}>Days 1–28 so every month has it.</div>
+        <div className="caption" style={{ textAlign: "center", marginTop: 14 }}>{tr("common.daysFootnote")}</div>
       </div>
     </>
   );

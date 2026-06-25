@@ -105,6 +105,7 @@ export default {
     themeSystem: "النظام",
     themeLight: "فاتح",
     themeDark: "داكن",
+    daysFootnote: "الأيام 1–28 عشان كل شهر يكون فيه اليوم ده.",
   },
   profile: {
     title: "الملف الشخصي",

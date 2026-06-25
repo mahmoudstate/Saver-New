@@ -106,6 +106,7 @@ export default {
     themeSystem: "System",
     themeLight: "Light",
     themeDark: "Dark",
+    daysFootnote: "Days 1–28 so every month has it.",
   },
   profile: {
     title: "Profile",
