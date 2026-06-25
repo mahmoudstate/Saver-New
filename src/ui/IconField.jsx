@@ -19,17 +19,18 @@ function Glyph({ g, selected, color, onPick }) {
 }
 
 export function IconSheet({ icons = ALL_ICONS, glyph, color, onPick, onClose }) {
+  const tr = useT();
   return (
     <>
       <div className="dim" onClick={onClose} />
       <div className="sheet">
         <div className="grab" />
-        <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: -.3 }}>Choose an icon</div>
-        <div style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, margin: "3px 0 16px" }}>Tap an icon to use it.</div>
+        <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: -.3 }}>{tr("editor.chooseIcon")}</div>
+        <div style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, margin: "3px 0 16px" }}>{tr("editor.tapIcon")}</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 10, maxHeight: "46vh", overflowY: "auto", paddingBottom: 4 }}>
           {icons.map((g) => <Glyph key={g} g={g} selected={glyph === g} color={color} onPick={(x) => { onPick(x); onClose(); }} />)}
         </div>
-        <div style={{ marginTop: 16 }}><div className="btn btn-secondary btn-full" onClick={onClose}>Done</div></div>
+        <div style={{ marginTop: 16 }}><div className="btn btn-secondary btn-full" onClick={onClose}>{tr("editor.done")}</div></div>
       </div>
     </>
   );

@@ -36,7 +36,7 @@ export default function GoalDetail({ store, goalId, back, onReached, onEdit, onE
 
   const addMoney = (amount, bankId) => {
     const bank = bankOf(bankId);
-    const id = store.addTxn({ type: "saving", amount, date: today(), bankId, bankName: bank?.name, goalId, catName: goal.name, catIcon: "saving", note: "" });
+    const id = store.addTxn({ type: "saving", amount, date: today(), bankId, bankName: bank?.name, goalId, goalName: goal.name, catName: goal.name, catIcon: "saving", note: "" });
     if (id === false) return;
     setSheet(null);
     if (saved + amount >= target && target > 0 && onReached) onReached(goal, saved + amount);
@@ -127,21 +127,22 @@ export default function GoalDetail({ store, goalId, back, onReached, onEdit, onE
       <div className="over" style={{ marginTop: 14 }}>{tr("goal.contributions")}</div>
       {contributions.length === 0 ? <div style={{ color: "var(--muted)", fontWeight: 600, padding: "8px 2px" }}>{tr("goal.noContributions")}</div>
         : contributions.map((t) => {
-          const positive = t.type === "saving";
+          const positive = t.type === "saving" || t.type === "goal_return";
           const labels = { saving: tr("goal.lblAddedToGoal"), goal_withdraw: tr("goal.lblSpentFromGoal"), goal_return: tr("goal.lblReturnedToBank") };
+          const title = t.type === "goal_withdraw" ? (t.catName || labels.goal_withdraw) : labels[t.type];
           return (
             <div className="icard" key={t.id} onClick={onEditTxn ? () => onEditTxn(t) : undefined} style={onEditTxn ? { cursor: "pointer" } : undefined}>
               <CatTile txn={t} cat={t.type === "saving" ? "deposit" : t.type === "goal_return" ? "goalReturn" : null} size={44} />
               <div style={{ minWidth: 0 }}>
-                <div className="nm">{labels[t.type] || t.catName}</div>
-                <div className="mt">{(bankOf(t.bankId)?.name || "—")} · {t.date ? fmtDate(t.date).split(":")[0] : ""}</div>
+                <div className="nm">{title}</div>
+                <div className="mt">{(bankOf(t.bankId)?.name || "—")} · {t.date ? fmtDate(t.date) : ""}</div>
                 {isLinked(t) && (
                   <div className="mt" style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 2 }}>
                     <LinkBadge groupId={t.splitGroupId} />
                   </div>
                 )}
               </div>
-              <div className="amtb"><b className="tnum" style={{ color: positive ? "var(--success)" : "var(--muted)" }}>{positive ? "+" : "−"}{fmt(t.amount)}</b></div>
+              <div className="amtb"><b className="tnum" style={{ color: positive ? "var(--success)" : "var(--red)" }}>{positive ? "+" : "−"}{fmt(t.amount)}</b></div>
             </div>
           );
         })}

@@ -21,3 +21,4 @@ shot.cjs
 *.png
 !icon.png
 dist/
+TASKS.md

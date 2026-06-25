@@ -299,7 +299,7 @@ header.lead{padding:48px 0 6px}
 @keyframes shimmer{0%{background-position:-260px 0}100%{background-position:260px 0}}
 .skel{border-radius:8px;background:linear-gradient(90deg,var(--track) 25%,color-mix(in srgb,var(--track) 55%,var(--surface)) 50%,var(--track) 75%);background-size:520px 100%;animation:shimmer 1.3s infinite linear}
 /* amount keypad */
-.kbd{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kbd{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;direction:ltr}
 .kbd button{height:54px;border:none;background:var(--surface2);border-radius:14px;font-family:inherit;font-size:20px;font-weight:700;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .kbd button:active{background:var(--acDim);color:var(--acText)}
 .stepbtn{width:54px;height:54px;border:none;border-radius:99px;background:var(--surface2);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center}
@@ -446,8 +446,8 @@ body{background:var(--bg)}
    logical margin-inline-start resolve against ITS OWN ltr direction instead of the
    page's — i.e. it'd always resolve to "left", breaking the RTL case. */
 .amt,.amtb{margin-left:0;margin-right:0}
-[dir="ltr"] .amt,[dir="ltr"] .amtb{margin-left:auto;text-align:right}
-[dir="rtl"] .amt,[dir="rtl"] .amtb{margin-right:auto;text-align:left}
+[dir="ltr"] .amt,[dir="ltr"] .amtb,[dir="ltr"] .bcard .rt,[dir="ltr"] .bcard .pct{margin-left:auto;text-align:right}
+[dir="rtl"] .amt,[dir="rtl"] .amtb,[dir="rtl"] .bcard .rt,[dir="rtl"] .bcard .pct{margin-right:auto;text-align:left}
 
 /* Stacked avatars overlap toward the inline-start side. */
 .avstack .avatar+.avatar{margin-left:0;margin-inline-start:-12px}

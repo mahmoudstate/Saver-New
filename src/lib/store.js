@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { setCurrency, currentMonth, HAPTICS, fmt } from "./format.js";
 import { makeCalc, goalBalancesPerBank } from "./calc.js";
+import { useT } from "./i18n.js";
 
 export const KEYS = {
   txns: "et_txns", banks: "et_banks", expCats: "et_expCats", incCats: "et_incCats",
@@ -57,16 +58,23 @@ const ENTITIES = {
 const SCALARS = { currency: "EGP", username: "", avatar: "", theme: "system", accent: "mint", dashboard: DASH_DEFAULT, seenWelcome: false, notifReadKeys: [], lang: "en" };
 
 // Validate a backup payload before restoring — never mutates state.
+// Accepts both the current envelope ({_app:"Saver", _version, ...}) and legacy
+// backups exported before that envelope existed (a flat object with entity keys
+// like txns/banks/savings directly at the top level, no _app/_version at all).
 const validateBackup = (p) => {
-  if (!p || typeof p !== "object" || Array.isArray(p)) return { ok: false, error: "That doesn't look like a Saver backup." };
-  if (p._app !== "Saver") return { ok: false, error: "This file isn't a Saver backup." };
-  if (typeof p._version !== "number" || p._version < 1) return { ok: false, error: "This backup file looks corrupted." };
-  for (const k in ENTITIES) if (p[k] != null && !Array.isArray(p[k])) return { ok: false, error: "This backup file looks corrupted." };
+  if (!p || typeof p !== "object" || Array.isArray(p)) return { ok: false, error: "errNotObject" };
+  const hasEnvelope = p._app != null || p._version != null;
+  if (hasEnvelope && p._app !== "Saver") return { ok: false, error: "errNotApp" };
+  if (hasEnvelope && (typeof p._version !== "number" || p._version < 1)) return { ok: false, error: "errCorrupted" };
+  const knownKeys = [...Object.keys(ENTITIES), ...Object.keys(SCALARS)];
+  if (!hasEnvelope && !knownKeys.some((k) => p[k] != null)) return { ok: false, error: "errNotApp" };
+  for (const k in ENTITIES) if (p[k] != null && !Array.isArray(p[k])) return { ok: false, error: "errCorrupted" };
   return { ok: true };
 };
 
 // Single store hook: loads everything, exposes data + persisted setters + locked actions.
 export function useStore() {
+  const tr = useT();
   const [data, setData] = useState(() => {
     const d = {};
     for (const k in ENTITIES) d[k] = loadKey(KEYS[k], ENTITIES[k]);
@@ -258,7 +266,7 @@ export function useStore() {
   // restore a full backup payload (maps backup keys → store) — validated first.
   const restore = useCallback((payload) => {
     const check = validateBackup(payload);
-    if (!check.ok) { HAPTICS.warning(); setAlert({ title: "Couldn't restore", message: check.error, color: "var(--red)" }); return false; }
+    if (!check.ok) { HAPTICS.warning(); setAlert({ title: tr("privacy.cantRestore"), message: tr(`privacy.${check.error}`), color: "var(--red)" }); return false; }
     setData((prev) => {
       const next = { ...prev };
       for (const k in ENTITIES) if (payload[k]) { next[k] = payload[k]; saveKey(KEYS[k], payload[k]); }
@@ -267,7 +275,7 @@ export function useStore() {
     });
     if (typeof window !== "undefined") window.dispatchEvent(new Event("saver:langsync"));
     return true;
-  }, []);
+  }, [tr]);
 
   // Factory reset — wipe every stored key and return to the fresh-install state
   // (empty data + default settings + onboarding). Irreversible by design.

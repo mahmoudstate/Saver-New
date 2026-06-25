@@ -26,7 +26,7 @@ export default function Notifications({ store, back, onOpen }) {
           <div className="icard" key={n.key} onClick={() => open(n)} style={{ opacity: n.unread ? 1 : .7, cursor: n.nav ? "pointer" : "default" }}>
             <span className="circ" style={{ width: 40, height: 40, borderRadius: 12, background: n.bg, color: n.col }}><Ico name={n.icon} size={19} /></span>
             <div><div className="nm">{n.nm}</div><div className="mt">{n.mt}</div></div>
-            <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="amtb" style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {n.unread && <span style={{ width: 9, height: 9, borderRadius: "50%", background: "var(--ac)" }} />}
               {n.nav && <Ico name="chev" size={18} color="var(--faint)" />}
             </span>
