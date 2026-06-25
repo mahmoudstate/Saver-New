@@ -3,7 +3,7 @@ import { useState, useRef, useMemo, useLayoutEffect, useEffect, Fragment } from 
 import Ico from "../ui/Ico.jsx";
 import Money from "../ui/Money.jsx";
 import ActivationCard from "../ui/ActivationCard.jsx";
-import { fmt, currentMonth, MONTHS, cardGradient } from "../lib/format.js";
+import { fmt, currentMonth, monthName, cardGradient } from "../lib/format.js";
 import { calcBankBalance, calcGoalSaved, calcFrozenForBank, totalBalance, totalSafe, totalFrozen, monthTxns, sumIncome, sumExpense, projectSpent, budgetSpentMonth } from "../lib/calc.js";
 import { DASH_SECTIONS, DASH_DEFAULT } from "../lib/store.js";
 import { unreadCount } from "../lib/notifications.js";
@@ -79,7 +79,7 @@ export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onA
   const [projOpen, setProjOpen] = useState(false); // projects card expand
   const pagerRef = useRef(null);
   const cm = currentMonth();
-  const mName = MONTHS[+cm.split("-")[1] - 1];
+  const mName = monthName(+cm.split("-")[1] - 1);
 
   const d = useMemo(() => {
     const tb = totalBalance(banks, txns), ts = totalSafe(banks, txns, savings), tf = totalFrozen(banks, txns, savings);
@@ -156,14 +156,14 @@ export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onA
       const dash = { order, hidden: saved.hidden || [] };
       const SEC = {};
       SEC.accounts = (<Fragment key="accounts">
-      <div className="sectit"><div className="t">Accounts</div></div>
+      <div className="sectit"><div className="t">{t("account.title")}</div></div>
       <div className="hscroll" style={{ display: "flex", gap: 13, overflowX: "auto", marginBottom: 4, paddingBottom: 30, paddingTop: 4, marginLeft: -20, marginRight: -20, paddingLeft: 20, paddingRight: 20 }}>
         {banks.filter((b) => !b.archived).map((b) => {
           const bal = calcBankBalance(b.id, txns), frozen = Math.max(0, calcFrozenForBank(b.id, savings, txns)), avail = bal - frozen;
           const low = b.lowBalanceThreshold && avail <= b.lowBalanceThreshold && avail >= 0;
           return <BankCard key={b.id} bank={b} available={avail} frozen={frozen} low={low} money={money} masked={hide} onClick={() => onOpenBank?.(b)} />;
         })}
-        <div style={{ minWidth: 84, background: "var(--surface2)", border: "var(--cardBorder)", borderRadius: 22, padding: 14, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, color: "var(--acText)" }} onClick={() => onOpenAllAccounts?.()}><Ico name="layers" size={20} /><div style={{ fontSize: 11, fontWeight: 800, textAlign: "center" }}>All</div></div>
+        <div style={{ minWidth: 84, background: "var(--surface2)", border: "var(--cardBorder)", borderRadius: 22, padding: 14, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, color: "var(--acText)" }} onClick={() => onOpenAllAccounts?.()}><Ico name="layers" size={20} /><div style={{ fontSize: 11, fontWeight: 800, textAlign: "center" }}>{t("editor.all")}</div></div>
       </div>
 
       </Fragment>);
@@ -193,11 +193,11 @@ export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onA
                   <span className="circ" style={{ width: 40, height: 40, borderRadius: 12, background: b.color || "var(--blue)", color: "#fff", fontWeight: 800, fontSize: 14, flexShrink: 0 }}>{(b.name || "?").trim().slice(0, 1).toUpperCase()}</span>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: 13.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</div>
-                    <div style={{ fontSize: 11.5, color: "var(--muted)", fontWeight: 600, marginTop: 1 }}>{b.note ? b.note + " · " : ""}monthly{b.dueDay ? " · day " + b.dueDay : ""}</div>
+                    <div style={{ fontSize: 11.5, color: "var(--muted)", fontWeight: 600, marginTop: 1 }}>{b.note ? b.note + " · " : ""}{t("bills.monthly")}{b.dueDay ? " · " + t("bills.dayN", { n: b.dueDay }) : ""}</div>
                   </div>
                   <div style={{ textAlign: "right", flexShrink: 0 }}>
                     <div className="tnum" style={{ fontSize: 14.5, fontWeight: 800 }}>{money(b.amount)}</div>
-                    <div style={{ fontSize: 11, fontWeight: 700, marginTop: 2, color: b.paid ? "var(--success)" : "var(--yellow)" }}>{b.paid ? "Paid" : "Due"}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, marginTop: 2, color: b.paid ? "var(--success)" : "var(--yellow)" }}>{b.paid ? t("bills.paid") : t("bills.dueWord")}</div>
                   </div>
                 </div>
               ))}

@@ -18,7 +18,7 @@ function CurrencySheet({ value, onPick, onClose }) {
           {CURRENCIES.map((cur) => (
             <div key={cur.code} className="icard" onClick={() => { onPick(cur.code); onClose(); }} style={{ cursor: "pointer", border: value === cur.code ? "1.5px solid var(--ac)" : "1px solid var(--catTileBorder)" }}>
               <span className="circ" style={{ width: 38, height: 38, borderRadius: 11, background: "var(--surface2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, lineHeight: 1 }}>{cur.flag}</span>
-              <div className="nm">{cur.code}</div>
+              <div style={{ flex: 1 }}><div className="nm">{cur.code}</div><div className="mt">{tr("currencies." + cur.code)}</div></div>
               {value === cur.code && <span className="amtb"><Ico name="check" size={18} color="var(--ac)" /></span>}
             </div>
           ))}

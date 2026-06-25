@@ -6,6 +6,7 @@ import CatTile from "./CatTile.jsx";
 import ColorSheet, { loadColors } from "./ColorSheet.jsx";
 import { IconSheet } from "./IconField.jsx";
 import { CATS } from "./cats.js";
+import { useT } from "../lib/i18n.js";
 
 const QUICK = ["subscription", "creditcard", "bill", "phone", "wifi", "movie", "music", "gaming", "fitness", "shopping", "home", "gift"];
 
@@ -18,6 +19,7 @@ function Glyph({ g, selected, color, onPick }) {
 }
 
 export default function CustomIconSheet({ title = "Custom icon", withName = false, name: name0 = "", glyph: g0 = "subscription", color: c0, doneLabel = "Done", onDone, onClose }) {
+  const tr = useT();
   const [glyph, setGlyph] = useState(g0 || "subscription");
   const [color, setColor] = useState(c0 || loadColors()[0]);
   const [name, setName] = useState(name0);
@@ -46,7 +48,7 @@ export default function CustomIconSheet({ title = "Custom icon", withName = fals
           </label>
         )}
 
-        <div className="over" style={{ marginTop: 0 }}>Colour</div>
+        <div className="over" style={{ marginTop: 0 }}>{tr("editor.colour")}</div>
         <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 9, marginBottom: 16 }}>
           {swatches.map((c) => <span key={c} onClick={() => setColor(c)} style={{ width: 30, height: 30, borderRadius: "50%", background: c, cursor: "pointer", boxShadow: color === c ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "none" }} />)}
           <span onClick={() => setSub("color")} className="circ" style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--muted)", cursor: "pointer" }}><Ico name="plus" size={15} /></span>

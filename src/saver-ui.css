@@ -94,7 +94,7 @@ body{background:var(--stage);color:var(--text);font-family:'Inter','Cairo',syste
 .wrap{max-width:1120px;margin:0 auto;padding:0 22px}
 a{color:inherit}
 /* Arabic / RTL — locale font token (Latin/numbers = Inter, Arabic = Cairo) */
-:lang(ar),[dir="rtl"]{font-family:'Inter','Cairo',system-ui,sans-serif;line-height:1.8}
+:lang(ar),[dir="rtl"]{font-family:'Inter','Cairo',system-ui,sans-serif;line-height:1.8;letter-spacing:0 !important}
 [dir="rtl"]{text-align:right}
 
 /* ---------- 3. TYPOGRAPHY ---------- */
@@ -142,6 +142,7 @@ header.lead{padding:48px 0 6px}
 .sectit .t{font-size:14px;font-weight:800;letter-spacing:-.2px}
 .sectit .m{font-size:12.5px;font-weight:700;color:var(--acText)}
 .over{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--faint);margin:2px 2px 11px}
+[dir="rtl"] .over{letter-spacing:0}
 
 /* ---------- 6. BUTTONS / CHIPS / PILLS ---------- */
 .btn{height:52px;padding:0 22px;border:none;border-radius:var(--r-md);font-family:inherit;font-weight:800;font-size:15px;
@@ -214,7 +215,7 @@ header.lead{padding:48px 0 6px}
   border-radius:var(--r-md);padding:14px 16px;margin-bottom:12px}
 .field .fl{font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--faint)}
 .field .fv{font-size:15px;font-weight:700;margin-top:2px}
-.field .chev{margin-left:auto;color:var(--faint)}
+.field .chev{margin-inline-start:auto;color:var(--faint)}
 .field.note{color:var(--muted);font-weight:500;font-size:14.5px}
 
 /* ---------- 12. BANNERS ---------- */
@@ -348,6 +349,7 @@ header.lead{padding:48px 0 6px}
 .tip{display:inline-block;background:var(--text);color:var(--bg);font-size:12.5px;font-weight:700;padding:8px 12px;border-radius:10px}
 /* list section header + divider */
 .lsh{display:flex;align-items:center;justify-content:space-between;padding:6px 2px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--faint)}
+[dir="rtl"] .lsh{letter-spacing:0;text-transform:none}
 .divider{height:1px;background:var(--border);margin:10px 0}
 
 /* ---------- 17. MOTION KEYFRAMES ---------- */
@@ -398,7 +400,7 @@ body{background:var(--bg)}
 .app .toast .ic{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff}
 
 /* Customize-home pill (Home footer action) */
-.app .customize-cta{display:flex;align-items:center;gap:9px;width:max-content;margin:18px auto 2px;height:46px;padding:0 22px 0 14px;
+.app .customize-cta{display:flex;align-items:center;gap:9px;width:max-content;margin:18px auto 2px;height:46px;padding-inline:14px 22px;
   background:var(--acDim);color:var(--acText);border-radius:var(--r-pill);font-weight:800;font-size:13.5px;letter-spacing:-.1px;
   cursor:pointer;transition:transform var(--t-micro),background var(--t-micro)}
 .app .customize-cta:active{transform:scale(.96)}

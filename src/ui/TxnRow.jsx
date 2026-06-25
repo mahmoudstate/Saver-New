@@ -3,11 +3,11 @@
 // budget / project detail). Change the rule here and every page follows.
 import CatTile from "./CatTile.jsx";
 import LinkBadge from "./LinkBadge.jsx";
-import { fmt } from "../lib/format.js";
+import { fmt, fmtDate } from "../lib/format.js";
 import { useT } from "../lib/i18n.js";
 
 // per-row date, light — e.g. "Tue, 23 Jun 2026"
-const rowDate = (d) => d ? new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "";
+const rowDate = (d) => d ? fmtDate(d) : "";
 
 // Compute a row's fields from a transaction. `bankNameOf(id)` resolves a bank id
 // → name. Returns: icon key (`cat`, null = derive from category), big `title`,

@@ -3,8 +3,10 @@
 import { useState } from "react";
 import Ico from "./Ico.jsx";
 import ColorSheet, { loadColors } from "./ColorSheet.jsx";
+import { useT } from "../lib/i18n.js";
 
 export default function ColorField({ value, onChange, style }) {
+  const tr = useT();
   const [open, setOpen] = useState(false);
   // Stable order: show your saved colours in place so the SELECT ring moves to the
   // swatch you tap — instead of the tapped colour jumping to the front. If the current
@@ -16,7 +18,7 @@ export default function ColorField({ value, onChange, style }) {
   return (
     <>
       <div className="tile" style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, ...style }}>
-        <div className="fl">Colour</div>
+        <div className="fl">{tr("editor.colour")}</div>
         <div style={{ flex: 1, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 9 }}>
           {outside.map((c) => (
             <span key={c} onClick={() => onChange(c)} style={{ width: 24, height: 24, borderRadius: "50%", background: c, cursor: "pointer", boxShadow: value === c ? "0 0 0 2px var(--surface),0 0 0 4px var(--ac)" : "none" }} />

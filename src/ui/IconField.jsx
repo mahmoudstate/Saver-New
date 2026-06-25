@@ -4,6 +4,7 @@
 import { useState } from "react";
 import Ico from "./Ico.jsx";
 import { CATS } from "./cats.js";
+import { useT } from "../lib/i18n.js";
 
 // Sensible general-purpose set (subset of CATS) for installments / custom bills.
 const ALL_ICONS = ["phone", "electronics", "car", "transport", "fuel", "home", "furniture", "shopping", "clothing", "jewelry", "bill", "utilities", "electricity", "water", "wifi", "health", "pharmacy", "fitness", "sports", "education", "books", "entertainment", "movie", "music", "gaming", "kids", "pet", "travel", "hotel", "gift", "beauty", "creditcard", "bank", "insurance", "subscription", "repairs", "garden", "laundry", "food", "groceries"];
@@ -34,16 +35,18 @@ export function IconSheet({ icons = ALL_ICONS, glyph, color, onPick, onClose }) 
   );
 }
 
-export default function IconField({ glyph, color, onPick, icons = ALL_ICONS, quick = QUICK, label = "Icon" }) {
+export default function IconField({ glyph, color, onPick, icons = ALL_ICONS, quick = QUICK, label }) {
+  const tr = useT();
+  const resolvedLabel = label ?? tr("editor.icon");
   const [open, setOpen] = useState(false);
   const inline = quick.includes(glyph) ? quick : [glyph, ...quick.slice(0, quick.length - 1)];
   return (
     <>
-      <div className="over">{label}</div>
+      <div className="over">{resolvedLabel}</div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 10, marginBottom: 18 }}>
         {inline.filter((g) => CATS[g]).map((g) => <Glyph key={g} g={g} selected={glyph === g} color={color} onPick={onPick} />)}
         <span onClick={() => setOpen(true)} className="circ" style={{ aspectRatio: "1", borderRadius: 14, background: "var(--surface2)", border: "1px dashed var(--border)", cursor: "pointer", flexDirection: "column", gap: 1, color: "var(--muted)" }}>
-          <Ico name="layers" size={17} /><span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: ".02em" }}>All</span>
+          <Ico name="layers" size={17} /><span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: ".02em" }}>{tr("editor.all")}</span>
         </span>
       </div>
       {open && <IconSheet icons={icons} glyph={glyph} color={color} onPick={onPick} onClose={() => setOpen(false)} />}

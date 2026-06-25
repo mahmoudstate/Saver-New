@@ -6,6 +6,7 @@
 import { useState, useRef } from "react";
 import Ico from "./Ico.jsx";
 import { loadKey, saveKey } from "../lib/store.js";
+import { useT } from "../lib/i18n.js";
 
 const KEY = "et_customColors";              // shared across all sections
 const SEED = ["#0E9F6E", "#2563EB", "#7C3AED", "#D97706", "#E5544E", "#EC4899"]; // 6 calm starters; all removable
@@ -42,6 +43,7 @@ function hexToHsv(hex) {
 }
 
 export default function ColorSheet({ value, onChange, onClose }) {
+  const tr = useT();
   const [saved, setSaved] = useState(loadColors);
   const init = hexToHsv(value || "#5FE3C0");
   const [hue, setHue] = useState(init.h);
@@ -77,7 +79,7 @@ export default function ColorSheet({ value, onChange, onClose }) {
       <div className="dim" onClick={onClose} />
       <div className="sheet">
         <div className="grab" />
-        <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: -.3 }}>Colour</div>
+        <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: -.3 }}>{tr("editor.colour")}</div>
         <div style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, margin: "3px 0 16px" }}>Tap one of yours, or make a new colour below.</div>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 15 }}>

@@ -19,7 +19,7 @@ function SortRow({ id, hidden, onToggle }) {
       <span ref={undefined} {...attributes} {...listeners} style={{ color: "var(--faint)", cursor: "grab", touchAction: "none", display: "flex" }}><Ico name="grip" size={19} /></span>
       <span className="circ" style={{ width: 34, height: 34, borderRadius: 10, background: hidden ? "var(--surface2)" : s.bg, color: hidden ? "var(--faint)" : s.color }}><Ico name={s.icon} size={17} /></span>
       <div className="nm">{tr("dash.sec_" + id)}</div>
-      <span style={{ marginLeft: "auto", color: hidden ? "var(--faint)" : "var(--ac)", cursor: "pointer" }} onClick={() => onToggle(id)}><Ico name={hidden ? "eyeOff" : "eye"} size={19} /></span>
+      <span style={{ marginInlineStart: "auto", color: hidden ? "var(--faint)" : "var(--ac)", cursor: "pointer" }} onClick={() => onToggle(id)}><Ico name={hidden ? "eyeOff" : "eye"} size={19} /></span>
     </div>
   );
 }

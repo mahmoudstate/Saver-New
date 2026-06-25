@@ -72,10 +72,10 @@ export default function Budgets({ store, back, onAdd, onOpenBudget, onOpenProjec
           <div className="tile" style={{ display: "flex", alignItems: "center", gap: 18, padding: 16, marginBottom: 16 }}>
             <BudgetRing spent={mSpent} total={mLimit} size={120} />
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 11 }}>
-              <div><div className="over" style={{ margin: 0 }}>Spent</div><div className="title tnum" style={{ fontSize: 21 }}>{fmt(mSpent)}</div></div>
-              <div><div className="over" style={{ margin: 0 }}>of budget</div><div className="title tnum" style={{ fontSize: 16, color: "var(--muted)" }}>{fmt(mLimit)}</div></div>
+              <div><div className="over" style={{ margin: 0 }}>{tr("budget.spent")}</div><div className="title tnum" style={{ fontSize: 21 }}>{fmt(mSpent)}</div></div>
+              <div><div className="over" style={{ margin: 0 }}>{tr("budget.ofBudgetLabel")}</div><div className="title tnum" style={{ fontSize: 16, color: "var(--muted)" }}>{fmt(mLimit)}</div></div>
               <span className={`pill${overCount ? " pill-red" : ""}`} style={{ alignSelf: "flex-start", fontSize: 11.5 }}>
-                <Ico name={overCount ? "bell" : "check"} size={13} />{overCount ? `${overCount} over` : "On track"}
+                <Ico name={overCount ? "bell" : "check"} size={13} />{overCount ? tr("budget.overCount", { n: overCount }) : tr("budget.onTrack")}
               </span>
             </div>
           </div>
@@ -83,19 +83,19 @@ export default function Budgets({ store, back, onAdd, onOpenBudget, onOpenProjec
           {/* daily pacing: safe-to-spend per remaining day + actual average per spending day */}
           <div className="tile" style={{ display: "flex", padding: 14, marginBottom: 16 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="over" style={{ margin: 0 }}>Safe / day</div>
+              <div className="over" style={{ margin: 0 }}>{tr("budget.safePerDay")}</div>
               <div className="title tnum" style={{ fontSize: 18, marginTop: 4 }}>{safePerDay != null ? fmt(safePerDay) : "—"}</div>
-              <div className="caption" style={{ marginTop: 2 }}>{safePerDay != null ? `${daysLeft} day${daysLeft === 1 ? "" : "s"} left` : "Past month"}</div>
+              <div className="caption" style={{ marginTop: 2 }}>{safePerDay != null ? tr(daysLeft === 1 ? "budget.daysLeftOne" : "budget.daysLeftMany", { n: daysLeft }) : tr("budget.pastMonth")}</div>
             </div>
             <div style={{ width: 1, background: "var(--border)", margin: "2px 14px" }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="over" style={{ margin: 0 }}>Spent / day</div>
+              <div className="over" style={{ margin: 0 }}>{tr("budget.spentPerDay")}</div>
               <div className="title tnum" style={{ fontSize: 18, marginTop: 4 }}>{fmt(spentPerDay)}</div>
-              <div className="caption" style={{ marginTop: 2 }}>avg on days you spent</div>
+              <div className="caption" style={{ marginTop: 2 }}>{tr("budget.avgDays")}</div>
             </div>
           </div>
 
-          <div className="over">Categories · most used first</div>
+          <div className="over">{tr("budget.categoriesMostUsed")}</div>
           {monthly.map((b) => (
             <div className="bcard" key={b.id} onClick={() => onOpenBudget?.(b)} style={{ cursor: "pointer" }}>
               <div className="top"><CatTile cat={budgetCat(b)} color={b.color} name={b.name} size={38} /><div className="nm">{b.name}</div><div className="rt tnum" style={b.over ? { color: "var(--red)" } : {}}>{fmt(b.spent)} / {fmt(b.amount)}</div></div>

@@ -2,7 +2,7 @@
 // month). Future months past `max` are disabled. Used for the Budgets month filter.
 import { useState } from "react";
 import Ico from "./Ico.jsx";
-import { MONTHS, currentMonth } from "../lib/format.js";
+import { monthName, currentMonth } from "../lib/format.js";
 
 const pad = (n) => String(n).padStart(2, "0");
 
@@ -22,11 +22,11 @@ export default function MonthSheet({ value, max = currentMonth(), onPick, onClos
           <div className="hib" onClick={() => year < maxYear && setYear((y) => y + 1)} style={{ transform: "scaleX(-1)", opacity: year >= maxYear ? .3 : 1 }}><Ico name="back" size={18} /></div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 9 }}>
-          {MONTHS.map((m, i) => {
+          {Array.from({ length: 12 }, (_, i) => {
             const ym = `${year}-${pad(i + 1)}`;
             const on = ym === sel, future = ym > max;
             return (
-              <div key={m} onClick={() => !future && onPick(ym)} style={{ textAlign: "center", padding: "14px 0", borderRadius: 13, cursor: future ? "default" : "pointer", fontWeight: on ? 800 : 700, fontSize: 14, ...(on ? { background: "var(--ac)", color: "var(--onacc)" } : future ? { background: "var(--surface2)", color: "var(--faint)", opacity: .5 } : { background: "var(--surface2)", color: "var(--text)" }) }}>{m}</div>
+              <div key={ym} onClick={() => !future && onPick(ym)} style={{ textAlign: "center", padding: "14px 0", borderRadius: 13, cursor: future ? "default" : "pointer", fontWeight: on ? 800 : 700, fontSize: 14, ...(on ? { background: "var(--ac)", color: "var(--onacc)" } : future ? { background: "var(--surface2)", color: "var(--faint)", opacity: .5 } : { background: "var(--surface2)", color: "var(--text)" }) }}>{monthName(i)}</div>
             );
           })}
         </div>
