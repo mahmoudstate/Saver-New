@@ -8,7 +8,7 @@ function Row({ icon, bg, color, label, value, onClick }) {
     <div className="icard" onClick={onClick} style={{ cursor: "pointer" }}>
       <span className="circ" style={{ width: 36, height: 36, borderRadius: 11, background: bg, color, display: "flex", alignItems: "center", justifyContent: "center" }}><Ico name={icon} size={19} /></span>
       <div className="nm">{label}</div>
-      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, color: "var(--faint)" }}>
+      <div style={{ marginInlineStart: "auto", display: "flex", alignItems: "center", gap: 8, color: "var(--faint)" }}>
         {value != null && <span style={{ fontSize: 12.5, color: "var(--muted)", fontWeight: 700 }}>{value}</span>}
         <Ico name="chev" size={18} />
       </div>

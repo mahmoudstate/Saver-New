@@ -49,8 +49,10 @@ export default function Goals({ store, back, onAdd, onOpenGoal }) {
       })}
 
       {view === "active" && goals.length > 0 && (
-        <div className="frozen" style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, background: "var(--acDim)", color: "var(--acText)", borderRadius: 14, padding: "12px 14px", fontWeight: 700, fontSize: 13 }}>
-          <Ico name="lock" size={15} color="var(--ac)" />{tr("goal.frozenAndSafe")} — <b>{fmt(frozen)}</b> {tr("goal.setAside")}
+        <div className="frozen" style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 10, background: "var(--acDim)", color: "var(--acText)", borderRadius: 14, padding: "12px 14px" }}>
+          <Ico name="lock" size={15} color="var(--ac)" />
+          <span style={{ fontWeight: 700, fontSize: 13 }}>{tr("goal.frozenAndSafe")}</span>
+          <b className="tnum" style={{ marginInlineStart: "auto", fontSize: 14 }}>{fmt(frozen)}</b>
         </div>
       )}
     </div>

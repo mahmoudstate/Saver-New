@@ -241,7 +241,7 @@ export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onA
       SEC.goals = (<Fragment key="goals">{d.goals.length > 0 && (
         <div className="tile" style={{ marginBottom: 13 }}>
           <div onClick={() => onOpenGoals?.()} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}><span style={circ(42, 13, "var(--acDim)", "var(--acText)")}><Ico name="target" size={21} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Goals · {d.goals.length} active</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.goalsSaved)} {d.goalsTarget > 0 && <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 700 }}>of {fmt(d.goalsTarget)}</span>}</div></div></div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}><span style={circ(42, 13, "var(--acDim)", "var(--acText)")}><Ico name="target" size={21} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>{t("home.goalsActive", { n: d.goals.length })}</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.goalsSaved)} {d.goalsTarget > 0 && <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 700 }}>{t("home.ofTotal", { amt: fmt(d.goalsTarget) })}</span>}</div></div></div>
             <Ico name="chev" size={18} color="var(--faint)" />
           </div>
           {goalsOpen ? (
@@ -256,7 +256,7 @@ export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onA
                       <span className="tnum" style={{ fontSize: 12.5, fontWeight: 800, color: "var(--acText)", flexShrink: 0 }}>{Math.min(100, pct)}%</span>
                     </div>
                     <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)" }}><i style={{ display: "block", width: `${Math.min(100, pct)}%`, height: "100%", borderRadius: 4, background: "var(--ac)" }} /></div>
-                    <div className="tnum" style={{ fontSize: 11.5, fontWeight: 600, color: "var(--muted)" }}>{money(g.saved)} saved · {reached ? <span style={{ color: "var(--acText)", fontWeight: 700 }}>Reached</span> : `${money(g.goal - g.saved)} left`} · of {fmt(g.goal)}</div>
+                    <div className="tnum" style={{ fontSize: 11.5, fontWeight: 600, color: "var(--muted)" }}>{t("home.savedLabel", { amt: money(g.saved) })} · {reached ? <span style={{ color: "var(--acText)", fontWeight: 700 }}>{t("goal.reachedWord")}</span> : t("home.left", { amt: money(g.goal - g.saved) })} · {t("home.ofTotal", { amt: fmt(g.goal) })}</div>
                   </div>
                 );
               })}
@@ -265,7 +265,7 @@ export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onA
             <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)", marginTop: 13 }}><i style={{ display: "block", width: `${d.goalsTarget > 0 ? Math.min(100, (d.goalsSaved / d.goalsTarget) * 100) : 0}%`, height: "100%", borderRadius: 4, background: "var(--ac)" }} /></div>
           )}
           <div onClick={() => setGoalsOpen((o) => !o)} role="button" aria-label="toggle goals" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 14, paddingTop: 13, borderTop: "1px solid var(--line)", cursor: "pointer", color: "var(--acText)", fontSize: 12.5, fontWeight: 800 }}>
-            {goalsOpen ? "Show less" : `Show all ${d.goals.length}`}
+            {goalsOpen ? t("home.showLess") : t("home.showAll", { n: d.goals.length })}
             <Ico name="chev" size={14} color="var(--acText)" style={{ transform: goalsOpen ? "rotate(-90deg)" : "rotate(90deg)", transition: "transform .2s" }} />
           </div>
         </div>
@@ -274,7 +274,7 @@ export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onA
       SEC.budgets = (<Fragment key="budgets">{d.limit > 0 && (
         <div className="tile" style={{ marginBottom: 13 }}>
           <div onClick={() => onOpenBudgets?.()} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}><span style={circ(42, 13, "var(--purpleDim)", "var(--purple)")}><Ico name="layers" size={20} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Budgets · {mName}</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.spent)} <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 700 }}>of {fmt(d.limit)}</span></div></div></div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}><span style={circ(42, 13, "var(--purpleDim)", "var(--purple)")}><Ico name="layers" size={20} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>{t("home.budgetsMonth", { month: mName })}</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.spent)} <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 700 }}>{t("home.ofTotal", { amt: fmt(d.limit) })}</span></div></div></div>
             <Ico name="chev" size={18} color="var(--faint)" />
           </div>
           {budgetsOpen ? (
@@ -289,7 +289,7 @@ export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onA
                       <span className="tnum" style={{ fontSize: 12.5, fontWeight: 800, color: over ? "var(--red)" : "var(--purple)", flexShrink: 0 }}>{pct}%</span>
                     </div>
                     <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)" }}><i style={{ display: "block", width: `${Math.min(100, pct)}%`, height: "100%", borderRadius: 4, background: over ? "var(--red)" : "var(--purple)" }} /></div>
-                    <div className="tnum" style={{ fontSize: 11.5, fontWeight: 600, color: "var(--muted)" }}>{money(b.spent)} spent · <span style={{ color: over ? "var(--red)" : "inherit", fontWeight: over ? 700 : 600 }}>{over ? `${money(-left)} over` : `${money(left)} left`}</span> · of {fmt(b.amount)}</div>
+                    <div className="tnum" style={{ fontSize: 11.5, fontWeight: 600, color: "var(--muted)" }}>{t("home.spentLabel", { amt: money(b.spent) })} · <span style={{ color: over ? "var(--red)" : "inherit", fontWeight: over ? 700 : 600 }}>{over ? t("home.over", { amt: money(-left) }) : t("home.left", { amt: money(left) })}</span> · {t("home.ofTotal", { amt: fmt(b.amount) })}</div>
                   </div>
                 );
               })}
@@ -298,7 +298,7 @@ export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onA
             <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)", marginTop: 13 }}><i style={{ display: "block", width: `${d.limit > 0 ? Math.min(100, (d.spent / d.limit) * 100) : 0}%`, height: "100%", borderRadius: 4, background: "var(--purple)" }} /></div>
           )}
           <div onClick={() => setBudgetsOpen((o) => !o)} role="button" aria-label="toggle budgets" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 14, paddingTop: 13, borderTop: "1px solid var(--line)", cursor: "pointer", color: "var(--acText)", fontSize: 12.5, fontWeight: 800 }}>
-            {budgetsOpen ? "Show less" : `Show all ${d.budgetsList.length}`}
+            {budgetsOpen ? t("home.showLess") : t("home.showAll", { n: d.budgetsList.length })}
             <Ico name="chev" size={14} color="var(--acText)" style={{ transform: budgetsOpen ? "rotate(-90deg)" : "rotate(90deg)", transition: "transform .2s" }} />
           </div>
         </div>

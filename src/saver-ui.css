@@ -440,9 +440,14 @@ body{background:var(--bg)}
    – Next buttons (wrapper already scaleX(-1)) → wrapper × icon flip → net correct. */
 [dir="rtl"] .dirico{transform:scaleX(-1)}
 
-/* Amounts hug the inline-END side and align to text END — auto-flips per direction
-   (LTR: right · RTL: left), replacing the physical margin-left:auto / text-align:right. */
-.amt,.amtb{margin-left:0;margin-inline-start:auto;text-align:end}
+/* Amounts hug the END side and align to text END — flips per direction (LTR: right ·
+   RTL: left). Uses physical left/right (not logical) scoped to the ancestor's [dir],
+   because .tnum below sets direction:ltr on this same element, which would make
+   logical margin-inline-start resolve against ITS OWN ltr direction instead of the
+   page's — i.e. it'd always resolve to "left", breaking the RTL case. */
+.amt,.amtb{margin-left:0;margin-right:0}
+[dir="ltr"] .amt,[dir="ltr"] .amtb{margin-left:auto;text-align:right}
+[dir="rtl"] .amt,[dir="rtl"] .amtb{margin-right:auto;text-align:left}
 
 /* Stacked avatars overlap toward the inline-start side. */
 .avstack .avatar+.avatar{margin-left:0;margin-inline-start:-12px}

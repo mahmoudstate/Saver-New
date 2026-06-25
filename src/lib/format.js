@@ -20,6 +20,12 @@ const CUR_SYMBOL = {};
 
 const intl = (r, cur) => new Intl.NumberFormat("en-US", { style: "currency", currency: cur, minimumFractionDigits: r % 1 === 0 ? 0 : 1, maximumFractionDigits: 2 });
 
+// Wrapped in bidi isolate marks (invisible, no-op in LTR) so a formatted amount
+// stays one atomic left-to-right unit when it lands inside an Arabic sentence —
+// otherwise the bidi algorithm can reorder pieces of it (e.g. "£5,000" → "5,000£")
+// next to other amounts/punctuation on the same line.
+const isolate = (s) => `⁦${s}⁩`;
+
 export const fmt = (n, ov) => {
   const cur = ov || _currency;
   try {
@@ -27,8 +33,8 @@ export const fmt = (n, ov) => {
     let s = intl(r, cur).format(r);
     const sym = CUR_SYMBOL[cur];
     if (sym) s = s.replace(cur + " ", sym).replace(cur, sym);
-    return s;
-  } catch { return `${cur} ${n}`; }
+    return isolate(s);
+  } catch { return isolate(`${cur} ${n}`); }
 };
 
 // Split a formatted amount into its currency part and its number part so big
