@@ -80,7 +80,7 @@ export default function ColorSheet({ value, onChange, onClose }) {
       <div className="sheet">
         <div className="grab" />
         <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: -.3 }}>{tr("editor.colour")}</div>
-        <div style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, margin: "3px 0 16px" }}>Tap one of yours, or make a new colour below.</div>
+        <div style={{ color: "var(--muted)", fontSize: 13, fontWeight: 600, margin: "3px 0 16px" }}>{tr("editor.tapColour")}</div>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 15 }}>
           {saved.map((c) => (
@@ -103,12 +103,12 @@ export default function ColorSheet({ value, onChange, onClose }) {
             style={{ WebkitAppearance: "none", appearance: "none", width: "100%", height: 14, borderRadius: 999, outline: "none", cursor: "pointer", background: brightGrad }} />
           <div style={{ display: "flex", alignItems: "center", gap: 13, marginTop: 14 }}>
             <span style={{ width: 40, height: 40, borderRadius: 13, background: draft, flexShrink: 0, boxShadow: "inset 0 0 0 2px rgba(255,255,255,.4)" }} />
-            <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 700, fontSize: 13 }}>New colour</div><div className="tnum" style={{ color: "var(--muted)", fontSize: 12.5, fontWeight: 600, textTransform: "uppercase" }}>{draft}</div></div>
-            <button className="btn btn-primary" style={{ height: 42, padding: "0 18px" }} onClick={addDraft}><Ico name="plus" size={16} />Add</button>
+            <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 700, fontSize: 13 }}>{tr("editor.newColour")}</div><div className="tnum" style={{ color: "var(--muted)", fontSize: 12.5, fontWeight: 600, textTransform: "uppercase" }}>{draft}</div></div>
+            <button className="btn btn-primary" style={{ height: 42, padding: "0 18px" }} onClick={addDraft}><Ico name="plus" size={16} />{tr("editor.add")}</button>
           </div>
         </div>
 
-        <div style={{ marginTop: 18 }}><div className="btn btn-secondary btn-full" onClick={onClose}>Done</div></div>
+        <div style={{ marginTop: 18 }}><div className="btn btn-secondary btn-full" onClick={onClose}>{tr("editor.done")}</div></div>
       </div>
     </>
   );

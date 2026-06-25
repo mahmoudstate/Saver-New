@@ -33,7 +33,7 @@ function SubCard({ bill, onOpen }) {
           <Dot color={bill.statusColor} size={7} /><span>{bill.status}</span>
         </div>
       </div>
-      <b className="tnum" style={{ marginLeft: "auto", flexShrink: 0, fontSize: 18, fontWeight: 800, letterSpacing: "-.3px" }}>{fmt(bill.amount)}</b>
+      <b className="amt tnum" style={{ flexShrink: 0, fontSize: 18, fontWeight: 800, letterSpacing: "-.3px" }}>{fmt(bill.amount)}</b>
     </div>
   );
 }
@@ -169,7 +169,7 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
                       <Dot color="var(--success)" size={7} /><span>{tr("bills.paid")}{p.date ? " · " + p.date : ""}</span>
                     </div>
                   </div>
-                  <b className="tnum" style={{ marginLeft: "auto", flexShrink: 0, fontSize: 18, fontWeight: 800, letterSpacing: "-.3px" }}>{fmt(bill.amount)}</b>
+                  <b className="amt tnum" style={{ flexShrink: 0, fontSize: 18, fontWeight: 800, letterSpacing: "-.3px" }}>{fmt(bill.amount)}</b>
                 </div>
               ))}
             </div>

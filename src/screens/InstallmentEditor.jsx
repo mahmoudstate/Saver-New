@@ -87,7 +87,7 @@ export default function InstallmentEditor({ store, plan, onClose }) {
     for (let k = 0; k < initN; k++) { const m = paidMonths[k]; const txnId = wantPaid ? ids[cur++] : null; payments.push({ month: m, date: wantPaid ? `${m}-01` : null, txnId, num: k + 1 }); }
 
     store.set("installments", (list) => [...list, { id: Date.now().toString(), ...base, payments, paidInstallments: payments.length, downPaymentTxnId: dpTxnId, status: payments.length >= count ? "completed" : "active" }]);
-    store.flash({ title: "Installment added", sub: `${title} · ${count}×${fmt(monthly)}`, color: "var(--acText)", icon: "check" });
+    store.flash({ title: tr("inst.installmentAdded"), sub: `${title} · ${count}×${fmt(monthly)}`, color: "var(--acText)", icon: "check" });
     onClose();
   };
 
@@ -96,7 +96,7 @@ export default function InstallmentEditor({ store, plan, onClose }) {
 
   const Toggle = ({ on, set, onText, offText }) => (
     <div className="tile" onClick={() => set(!on)} style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, marginTop: 10, cursor: "pointer" }}>
-      <div style={{ flex: 1 }}><div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--text)" }}>Deduct from account now</div><div className="caption" style={{ marginTop: 2 }}>{on ? onText : offText}</div></div>
+      <div style={{ flex: 1 }}><div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--text)" }}>{tr("inst.deductNow")}</div><div className="caption" style={{ marginTop: 2 }}>{on ? onText : offText}</div></div>
       <div style={{ width: 46, height: 27, borderRadius: 99, background: on ? "var(--ac)" : "var(--border)", position: "relative", flexShrink: 0, transition: "background .2s" }}><div style={{ position: "absolute", top: 3, left: on ? 22 : 3, width: 21, height: 21, borderRadius: 99, background: "#fff", transition: "left .2s", boxShadow: "0 1px 3px rgba(0,0,0,.3)" }} /></div>
     </div>
   );
@@ -109,8 +109,8 @@ export default function InstallmentEditor({ store, plan, onClose }) {
   );
 
   const heroBig = step === 1
-    ? <><div className="lbl">The numbers</div><div className="big tnum">{fmt(effTotal)}</div><div className="sub">{count > 0 && monthly > 0 ? `total · ${count} × ${fmt(monthly)}` : "total"}</div></>
-    : <><div className="lbl">{step === 0 ? "What & who" : "Account & schedule"}</div><div className="big" style={{ fontSize: 27 }}>{step === 0 ? "The basics" : "Almost done"}</div><div className="sub">{title || "Name the item"}</div></>;
+    ? <><div className="lbl">{tr("inst.theNumbers")}</div><div className="big tnum">{fmt(effTotal)}</div><div className="sub">{count > 0 && monthly > 0 ? `${tr("inst.totalLabel")} · ${count} × ${fmt(monthly)}` : tr("inst.totalLabel")}</div></>
+    : <><div className="lbl">{step === 0 ? tr("inst.whatWho") : tr("inst.accountSchedule")}</div><div className="big" style={{ fontSize: 27 }}>{step === 0 ? tr("inst.theBasics") : tr("inst.almostDone")}</div><div className="sub">{title || tr("inst.nameTheItem")}</div></>;
 
   return (
     <div className="content padnav">

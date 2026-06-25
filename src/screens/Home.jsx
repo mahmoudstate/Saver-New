@@ -32,7 +32,7 @@ export function BankCard({ bank, available, frozen, low, money, masked, onClick,
       <div style={{ position: "relative", zIndex: 2, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span style={{ fontWeight: 800, fontSize: grid ? 13.5 : 14.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bank.name}</span>
         {available < 0 ? <span style={{ width: 9, height: 9, borderRadius: 99, background: "#fff", flexShrink: 0 }} />
-          : low ? <span style={{ display: "flex", alignItems: "center", gap: 3, background: "#F8B53D", color: "#3A2400", fontWeight: 800, fontSize: 10.5, letterSpacing: ".02em", padding: "4px 8px 4px 6px", borderRadius: 8, flexShrink: 0 }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3A2400" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M19 12l-7 7-7-7" /></svg>LOW</span>
+          : low ? <span style={{ display: "flex", alignItems: "center", gap: 3, background: "#F8B53D", color: "#3A2400", fontWeight: 800, fontSize: 10.5, letterSpacing: ".02em", padding: "4px 8px 4px 6px", borderRadius: 8, flexShrink: 0 }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3A2400" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M19 12l-7 7-7-7" /></svg>{t("home.lowBadge")}</span>
             : <Contactless />}
       </div>
       <div style={{ position: "relative", zIndex: 2 }}>
@@ -213,7 +213,7 @@ export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onA
         const paid = d.instList.reduce((s, i) => s + i.paid, 0), total = d.instList.reduce((s, i) => s + i.totalAmount, 0);
         return (
         <div className="tile" style={{ marginBottom: 13 }}>
-          <div onClick={() => onOpenInstallments?.()} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}><div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}><span style={circ(42, 13, "var(--orangeDim)", "var(--orange)")}><Ico name="card" size={20} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>Installments · {d.instCount} active</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.instRemaining)} <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 700 }}>left</span></div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
+          <div onClick={() => onOpenInstallments?.()} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}><div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}><span style={circ(42, 13, "var(--orangeDim)", "var(--orange)")}><Ico name="card" size={20} /></span><div><div style={{ fontSize: 10.5, color: "var(--muted)", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em" }}>{t("home.installmentsActive", { n: d.instCount })}</div><div className="tnum" style={{ fontSize: 21, fontWeight: 800 }}>{money(d.instRemaining)} <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 700 }}>{t("home.leftLabel")}</span></div></div></div><Ico name="chev" size={18} color="var(--faint)" /></div>
           {instOpen ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 15, marginTop: 14 }}>
               {d.instList.map((i) => {
@@ -225,7 +225,7 @@ export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onA
                       <span className="tnum" style={{ fontSize: 12, fontWeight: 800, color: "var(--orange)", flexShrink: 0 }}>{i.paidCount}/{i.total}</span>
                     </div>
                     <div style={{ height: 6, borderRadius: 4, background: "var(--surface2)" }}><i style={{ display: "block", width: `${Math.min(100, pct)}%`, height: "100%", borderRadius: 4, background: "var(--orange)" }} /></div>
-                    <div className="tnum" style={{ fontSize: 11.5, fontWeight: 600, color: "var(--muted)" }}>{money(i.paid)} paid · {money(i.remaining)} left · of {fmt(i.totalAmount)}</div>
+                    <div className="tnum" style={{ fontSize: 11.5, fontWeight: 600, color: "var(--muted)" }}>{t("home.instProgress", { paid: money(i.paid), remaining: money(i.remaining), total: fmt(i.totalAmount) })}</div>
                   </div>
                 );
               })}
