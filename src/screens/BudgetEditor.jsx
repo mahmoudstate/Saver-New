@@ -5,6 +5,7 @@ import { useState } from "react";
 import Ico from "../ui/Ico.jsx";
 import CatTile from "../ui/CatTile.jsx";
 import AmountSheet from "../ui/AmountSheet.jsx";
+import DayGridSheet from "../ui/DayGridSheet.jsx";
 import SegToggle from "../ui/SegToggle.jsx";
 import ColorField from "../ui/ColorField.jsx";
 import IconField from "../ui/IconField.jsx";
@@ -30,7 +31,7 @@ export default function BudgetEditor({ store, budget, initialKind, onClose }) {
   const [recurring, setRecurring] = useState(budget?.month ? false : true);
   const [month, setMonth] = useState(budget?.startMonth || budget?.month || currentMonth());
   const [cycleStartDay, setCycleStartDay] = useState(budget?.cycleStartDay || 1);
-  const [sheet, setSheet] = useState(false);
+  const [sheet, setSheet] = useState(null);
   const isProject = kind === "project";
   const canSave = name.trim().length > 0 && (isProject || amount > 0); // project amount is optional
   const toggle = (id) => setCats((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
@@ -55,7 +56,7 @@ export default function BudgetEditor({ store, budget, initialKind, onClose }) {
       <div className="hero">
         <div className="toprow"><div className="ttl">{editing ? (isProject ? tr("editor.editProject") : tr("editor.editBudget")) : isProject ? tr("editor.newProject") : tr("editor.newBudget")}</div><div className="grow" /><div className="hib" onClick={onClose}><Ico name="close" size={20} /></div></div>
         <div className="lbl">{isProject ? tr("editor.totalBudgetOptional") : tr("editor.monthlyLimit")}</div>
-        <div className="big tnum" onClick={() => setSheet(true)} style={{ cursor: "pointer" }}>{amount > 0 ? fmt(amount) : <span style={{ opacity: .6 }}>{isProject ? tr("editor.optional") : fmt(0)}</span>}</div>
+        <div className="big tnum" onClick={() => setSheet("amount")} style={{ cursor: "pointer" }}>{amount > 0 ? fmt(amount) : <span style={{ opacity: .6 }}>{isProject ? tr("editor.optional") : fmt(0)}</span>}</div>
         <div className="sub">{name.trim() || (isProject ? tr("editor.nameYourProject") : tr("editor.nameYourBudget"))}</div>
       </div>
 
@@ -79,13 +80,10 @@ export default function BudgetEditor({ store, budget, initialKind, onClose }) {
         </div>
       </div>
 
-      {!isProject && <div className="field" style={{ marginTop: 12 }}>
+      {!isProject && <div className="field" style={{ marginTop: 12, cursor: "pointer" }} onClick={() => setSheet("cycleDay")}>
         <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: "var(--purpleDim)", color: "var(--purple)" }}><Ico name="cal" size={19} /></span>
         <div style={{ flex: 1 }}><div className="fl">{tr("editor.cycleStartDay")}</div><div className="fv tnum">{tr("editor.dayOfMonth", { day: cycleStartDay })}</div></div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <div className="hib" onClick={() => setCycleStartDay((d) => Math.max(1, d - 1))}><Ico name="back" size={16} /></div>
-          <div className="hib" onClick={() => setCycleStartDay((d) => Math.min(28, d + 1))} style={{ transform: "scaleX(-1)" }}><Ico name="back" size={16} /></div>
-        </div>
+        <span className="chev"><Ico name="chev" size={17} /></span>
       </div>}
 
       <ColorField value={color} onChange={setColor} style={{ margin: "13px 0" }} />
@@ -105,7 +103,8 @@ export default function BudgetEditor({ store, budget, initialKind, onClose }) {
 
       <div className="cta"><div className="btn btn-primary btn-full" style={{ opacity: canSave ? 1 : .5 }} onClick={save}><Ico name="check" size={18} />{editing ? tr("editor.saveShort") : isProject ? tr("editor.createProject") : tr("editor.createBudget")}</div></div>
 
-      {sheet && <AmountSheet title={isProject ? tr("editor.totalBudget") : tr("editor.monthlyLimit")} confirmLabel={isProject ? tr("editor.setTotal") : tr("editor.setLimit")} onConfirm={(v) => { setAmount(v); setSheet(false); }} onClose={() => setSheet(false)} />}
+      {sheet === "amount" && <AmountSheet title={isProject ? tr("editor.totalBudget") : tr("editor.monthlyLimit")} confirmLabel={isProject ? tr("editor.setTotal") : tr("editor.setLimit")} onConfirm={(v) => { setAmount(v); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "cycleDay" && <DayGridSheet title={tr("editor.cycleStartDay")} sub={tr("editor.cycleStartDaySub")} value={cycleStartDay} onConfirm={(v) => { setCycleStartDay(v); setSheet(null); }} onClose={() => setSheet(null)} />}
     </div>
   );
 }

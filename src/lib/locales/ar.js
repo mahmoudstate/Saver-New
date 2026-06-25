@@ -391,6 +391,7 @@ export default {
     month: "الشهر",
     repeats: " · يتكرر",
     cycleStartDay: "تبدأ الدورة من يوم",
+    cycleStartDaySub: "يوم بداية الدورة الشهرية للبادجت.",
     dayOfMonth: "يوم {day}",
     categoriesCovered: "الفئات المشمولة",
     saveShort: "حفظ",

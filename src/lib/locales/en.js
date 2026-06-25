@@ -392,6 +392,7 @@ export default {
     month: "Month",
     repeats: " · repeats",
     cycleStartDay: "Cycle starts on",
+    cycleStartDaySub: "Which day each month the budget resets.",
     dayOfMonth: "Day {day}",
     categoriesCovered: "Categories covered",
     saveShort: "Save",
