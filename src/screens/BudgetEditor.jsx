@@ -12,6 +12,7 @@ import IconField from "../ui/IconField.jsx";
 import { resolveCat } from "../ui/cats.js";
 import { loadColors } from "../ui/ColorSheet.jsx";
 import { fmt, currentMonth, monthLabel } from "../lib/format.js";
+import { BILL_TYPES } from "../lib/services.js";
 import { useT } from "../lib/i18n.js";
 
 const catKeyOf = (c) => resolveCat({ catId: c.id, catGlyph: c.glyph, catName: c.name }) || null;
@@ -89,13 +90,27 @@ export default function BudgetEditor({ store, budget, initialKind, onClose }) {
       <ColorField value={color} onChange={setColor} style={{ margin: "13px 0" }} />
       <div style={{ marginBottom: 4 }}><IconField glyph={glyph} color={color} onPick={setGlyph} /></div>
 
-      <div className="over" style={{ marginTop: 14 }}>{tr("editor.categoriesCovered")}</div>
+      <div className="over" style={{ marginTop: 14 }}>{tr("editor.spendingCategories")}</div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {expCats.map((c) => {
           const on = cats.includes(c.id);
           return (
             <button key={c.id} onClick={() => toggle(c.id)} className="chip" style={on ? { background: "var(--acDim)", color: "var(--acText)", borderColor: "transparent" } : {}}>
               <CatTile cat={catKeyOf(c)} name={c.name} size={20} style={{ borderRadius: 7 }} />{c.name}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="over" style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 7 }}><Ico name="bills" size={14} />{tr("editor.billCategories")}</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {BILL_TYPES.map((t) => {
+          const id = `bill_${t.id}`;
+          const on = cats.includes(id);
+          const label = tr("billtype." + t.id);
+          return (
+            <button key={id} onClick={() => toggle(id)} className="chip" style={on ? { background: "var(--blueDim)", color: "var(--blue)", borderColor: "transparent" } : {}}>
+              <CatTile cat={t.glyph} color="var(--blue)" name={label} size={20} style={{ borderRadius: 7 }} />{label}
             </button>
           );
         })}

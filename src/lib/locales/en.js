@@ -405,6 +405,8 @@ export default {
     cycleStartDaySub: "Which day each month the budget resets.",
     dayOfMonth: "Day {day}",
     categoriesCovered: "Categories covered",
+    spendingCategories: "Spending categories",
+    billCategories: "Bill categories",
     saveShort: "Save",
     createBudget: "Create budget",
     createProject: "Create project",

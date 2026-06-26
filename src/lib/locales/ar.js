@@ -404,6 +404,8 @@ export default {
     cycleStartDaySub: "يوم بداية الدورة الشهرية للبادجت.",
     dayOfMonth: "يوم {day}",
     categoriesCovered: "الفئات المشمولة",
+    spendingCategories: "فئات الصرف",
+    billCategories: "فئات الفواتير",
     saveShort: "حفظ",
     createBudget: "إنشاء الميزانية",
     createProject: "إنشاء المشروع",
