@@ -12,11 +12,13 @@ import ServicePicker from "../ui/ServicePicker.jsx";
 import ServiceLogo from "../ui/ServiceLogo.jsx";
 import CustomIconSheet from "../ui/CustomIconSheet.jsx";
 import { loadColors } from "../ui/ColorSheet.jsx";
-import { fmt, currentMonth, cardGradient } from "../lib/format.js";
+import { fmt, currentMonth, cardGradient, dayName } from "../lib/format.js";
 import { SERVICE_CAT_TO_TYPE, BILL_TYPES } from "../lib/services.js";
+import { FREQS } from "../lib/billfreq.js";
 import { useT } from "../lib/i18n.js";
 
 const clampDay = (d) => Math.min(28, Math.max(1, d || 1));
+const clampDow = (d) => Math.min(6, Math.max(0, d | 0));
 
 // Brand tile: bundled logo for a preset service, else a custom icon, else monogram.
 function Brand({ domain, glyph, name, color, size = 42 }) {
@@ -31,6 +33,7 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
   const editing = !!bill;
   const [name, setName] = useState(bill?.name || "");
   const [amount, setAmount] = useState(bill?.amount || 0);
+  const [frequency, setFrequency] = useState(bill?.frequency || "monthly");
   const [dueDay, setDueDay] = useState(bill?.dueDay || 1);
   const [reminderDays, setReminderDays] = useState(bill?.reminderDays ?? 2);
   const [bankId, setBankId] = useState(bill?.bankId || banks[0]?.id || null);
@@ -50,7 +53,8 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
 
   const save = () => {
     if (!canSave) return;
-    const base = { name: name.trim(), amount, dueDay: clampDay(dueDay), reminderDays: Math.min(7, Math.max(0, reminderDays | 0)), bankId, color, domain: custom ? "" : domain, glyph: custom ? glyph : "", typeId };
+    const dueClamped = frequency === "weekly" ? clampDow(dueDay) : clampDay(dueDay);
+    const base = { name: name.trim(), amount, frequency, dueDay: dueClamped, reminderDays: Math.min(7, Math.max(0, reminderDays | 0)), bankId, color, domain: custom ? "" : domain, glyph: custom ? glyph : "", typeId };
     if (editing) store.set("bills", (list) => list.map((b) => (b.id === bill.id ? { ...b, ...base } : b)));
     else store.set("bills", (list) => [...list, { id: Date.now().toString(), ...base, payments: [], startMonth: currentMonth() }]);
     store.flash({ title: editing ? tr("sub.subscriptionSaved") : tr("sub.subscriptionAdded"), sub: name.trim(), color: "var(--success)", icon: "check" });
@@ -96,8 +100,11 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
       <div className="field" onClick={() => setSheet("amount")} style={{ cursor: "pointer" }}>
         <div style={{ flex: 1 }}><div className="fl">{tr("sub.monthlyAmount")}</div><div className="fv tnum">{amount > 0 ? fmt(amount) : tr("editor.setGeneric")}</div></div><span className="chev"><Ico name="pencil" size={17} /></span>
       </div>
-      <div className="field" onClick={() => setSheet("day")} style={{ cursor: "pointer", marginTop: 10 }}>
-        <div style={{ flex: 1 }}><div className="fl">{tr("sub.billingDay")}</div><div className="fv tnum">{tr("sub.dayN", { n: clampDay(dueDay) })}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
+      <div className="field" onClick={() => setSheet("freq")} style={{ cursor: "pointer", marginTop: 10 }}>
+        <div style={{ flex: 1 }}><div className="fl">{tr("sub.repeats")}</div><div className="fv">{tr("freq." + frequency)}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
+      </div>
+      <div className="field" onClick={() => setSheet(frequency === "weekly" ? "weekday" : "day")} style={{ cursor: "pointer", marginTop: 10 }}>
+        <div style={{ flex: 1 }}><div className="fl">{frequency === "weekly" ? tr("sub.billingWeekday") : tr("sub.billingDay")}</div><div className="fv tnum">{frequency === "weekly" ? dayName(clampDow(dueDay)) : tr("sub.dayN", { n: clampDay(dueDay) })}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
       </div>
       <div className="field" onClick={() => setSheet("remind")} style={{ cursor: "pointer", marginTop: 10 }}>
         <div style={{ flex: 1 }}><div className="fl">{tr("sub.remindMe")}</div><div className="fv tnum">{reminderDays === 0 ? tr("sub.off") : tr(reminderDays === 1 ? "sub.dayBefore" : "sub.daysBefore", { n: reminderDays })}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
@@ -136,7 +143,9 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
       )}
       {sheet === "custom" && <CustomIconSheet title={tr("sub.customIcon")} glyph={glyph || "subscription"} color={color} onDone={({ glyph, color }) => { setGlyph(glyph); setColor(color); setDomain(""); setCustom(true); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "amount" && <AmountSheet title={tr("sub.monthlyAmount")} confirmLabel={tr("editor.setGeneric")} onConfirm={(v) => { setAmount(v); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "freq" && <OptionSheet title={tr("sub.repeats")} sub={tr("sub.repeatsSub")} value={frequency} onPick={(v) => { if (v !== frequency) setDueDay(v === "weekly" ? 0 : 1); setFrequency(v); setSheet(null); }} onClose={() => setSheet(null)} options={FREQS.map((f) => ({ value: f, label: tr("freq." + f) }))} />}
       {sheet === "day" && <DayGridSheet title={tr("sub.billingDay")} sub={tr("sub.billingDaySub")} value={clampDay(dueDay)} onConfirm={(v) => { setDueDay(v); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "weekday" && <OptionSheet title={tr("sub.billingWeekday")} sub={tr("sub.billingWeekdaySub")} value={clampDow(dueDay)} onPick={(v) => { setDueDay(v); setSheet(null); }} onClose={() => setSheet(null)} options={[0, 1, 2, 3, 4, 5, 6].map((d) => ({ value: d, label: dayName(d) }))} />}
       {sheet === "remind" && <OptionSheet title={tr("sub.remindMe")} sub={tr("sub.beforeDue")} value={reminderDays} onPick={(v) => { setReminderDays(v); setSheet(null); }} onClose={() => setSheet(null)} options={[{ value: 0, label: tr("sub.off") }, { value: 1, label: tr("sub.remind1") }, { value: 2, label: tr("sub.remind2") }, { value: 3, label: tr("sub.remind3") }, { value: 7, label: tr("sub.remind7") }]} />}
       {sheet === "account" && <PickerSheet title={tr("sub.paysFrom")} selectedId={bankId} onPick={setBankId} onClose={() => setSheet(null)} options={banks.filter((b) => !b.archived).map((b) => ({ id: b.id, label: b.name, bankColor: b.color }))} />}
     </div>

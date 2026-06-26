@@ -3,8 +3,9 @@ import { useState, useRef, useMemo, useLayoutEffect, useEffect, Fragment } from 
 import Ico from "../ui/Ico.jsx";
 import Money from "../ui/Money.jsx";
 import ActivationCard from "../ui/ActivationCard.jsx";
-import { fmt, currentMonth, monthName, cardGradient } from "../lib/format.js";
+import { fmt, currentMonth, monthName, cardGradient, today, dayName } from "../lib/format.js";
 import { calcBankBalance, calcGoalSaved, calcFrozenForBank, totalBalance, totalSafe, totalFrozen, monthTxns, sumIncome, sumExpense, projectSpent, budgetSpentMonth } from "../lib/calc.js";
+import { freqOf, billPeriod, isBillPaidForKey } from "../lib/billfreq.js";
 import { DASH_SECTIONS, DASH_DEFAULT } from "../lib/store.js";
 import { unreadCount } from "../lib/notifications.js";
 import { useT } from "../lib/i18n.js";
@@ -87,7 +88,7 @@ export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onA
     const goals = savings.filter((s) => s.status !== "archived").map((s) => ({ ...s, saved: Math.max(0, calcGoalSaved(s.id, txns)) }));
     const goalsSaved = goals.reduce((a, g) => a + g.saved, 0);
     const billActive = (b) => (!b.startMonth || cm >= b.startMonth) && (!b.stoppedMonth || cm < b.stoppedMonth);
-    const billPaid = (b) => b.payments?.some((p) => p.month === cm);
+    const billPaid = (b) => isBillPaidForKey(b, billPeriod(b, today()).key);
     const mBills = bills.filter((b) => billActive(b) || billPaid(b));
     const unpaid = mBills.filter((b) => !billPaid(b));
     const mb = budgets.filter((b) => b.kind !== "project");
@@ -106,7 +107,7 @@ export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onA
     const budgetsList = mb.map((b) => ({ id: b.id, name: b.name, amount: b.amount || 0, spent: budgetSpentMonth(b, txns, cm) }));
     const goalsTarget = goals.reduce((a, g) => a + (g.goal || 0), 0);
     const instList = activeInst.map((i) => { const paidCount = paidOf(i), paid = paidCount * i.installmentAmount; return { id: i.id, name: i.name || i.company || i.itemType || t("home.planFallback"), paidCount, total: i.totalInstallments, paid, remaining: Math.max(0, i.totalAmount - paid), totalAmount: i.totalAmount }; });
-    const billsList = mBills.map((b) => ({ id: b.id, name: b.name, amount: b.amount, paid: billPaid(b), dueDay: b.dueDay, color: b.color, note: b.note })).sort((a, b) => (a.paid === b.paid ? 0 : a.paid ? 1 : -1));
+    const billsList = mBills.map((b) => ({ id: b.id, name: b.name, amount: b.amount, paid: billPaid(b), dueDay: b.dueDay, frequency: freqOf(b), color: b.color, note: b.note })).sort((a, b) => (a.paid === b.paid ? 0 : a.paid ? 1 : -1));
     const projList = activeProj.map((p) => ({ id: p.id, name: p.name, amount: p.amount || 0, spent: projectSpent(p, txns) }));
     return { tb, ts, tf, inc, exp, net: inc - exp, goals, goalsSaved, goalsTarget, billsDue: unpaid.reduce((s, b) => s + b.amount, 0), unpaid: unpaid.length, paid: mBills.length - unpaid.length, limit, spent, budgetsList, instCount: activeInst.length, instRemaining, instDue, instList, billsList, projCount: activeProj.length, projSpent, projLimit, projList };
   }, [banks, txns, savings, bills, budgets, installments, cm]);
@@ -193,7 +194,7 @@ export default function Home({ store, onTab, onAdd, onAddAccount, onAddBill, onA
                   <span className="circ" style={{ width: 40, height: 40, borderRadius: 12, background: b.color || "var(--blue)", color: "#fff", fontWeight: 800, fontSize: 14, flexShrink: 0 }}>{(b.name || "?").trim().slice(0, 1).toUpperCase()}</span>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: 13.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</div>
-                    <div style={{ fontSize: 11.5, color: "var(--muted)", fontWeight: 600, marginTop: 1 }}>{b.note ? b.note + " · " : ""}{t("bills.monthly")}{b.dueDay ? " · " + t("bills.dayN", { n: b.dueDay }) : ""}</div>
+                    <div style={{ fontSize: 11.5, color: "var(--muted)", fontWeight: 600, marginTop: 1 }}>{b.note ? b.note + " · " : ""}{t("freq." + b.frequency)}{b.dueDay ? " · " + (b.frequency === "weekly" ? dayName(Math.min(6, Math.max(0, b.dueDay | 0))) : t("bills.dayN", { n: b.dueDay })) : ""}</div>
                   </div>
                   <div style={{ textAlign: "right", flexShrink: 0 }}>
                     <div className="tnum" style={{ fontSize: 14.5, fontWeight: 800 }}>{money(b.amount)}</div>

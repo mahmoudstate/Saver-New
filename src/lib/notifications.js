@@ -2,21 +2,23 @@
 // Notifications screen (full list) and the Home bell (unread badge). Items are
 // derived live from bills, installments, goals, budgets & accounts; read state
 // persists per stable item key in store.notifReadKeys.
-import { fmt, currentMonth } from "./format.js";
+import { fmt, currentMonth, today } from "./format.js";
 import { calcBankBalance, calcFrozenForBank, calcGoalSaved, budgetSpentMonth } from "./calc.js";
+import { billPeriod, isBillPaidForKey } from "./billfreq.js";
 
 export function buildNotifications(store, tr = (k, vars, fallback) => fallback) {
   const { bills = [], installments = [], budgets = [], savings = [], banks = [], txns = [], notifReadKeys = [] } = store;
   const cm = currentMonth();
   const day = new Date().getDate();
+  const todayISO = today();
   const items = [];
 
-  // bills due soon (unpaid, within 3 days)
+  // bills due soon (unpaid, within 3 days) — period-aware for every frequency
   bills.forEach((b) => {
-    if (b.payments?.some((p) => p.month === cm)) return;
-    if (b.dueDay == null) return;
-    const dueIn = b.dueDay - day;
-    if (dueIn >= 0 && dueIn <= 3) items.push({ key: `bill-${b.id}-${cm}`, icon: "bell", bg: "var(--yellowDim)", col: "var(--yellow)", nm: dueIn === 0 ? tr("notif.billDueToday", { name: b.name }, `${b.name}’s knocking — due today`) : dueIn === 1 ? tr("notif.billDueTomorrow", { name: b.name }, `${b.name}’s knocking — due tomorrow`) : tr("notif.billDueDays", { name: b.name, n: dueIn }, `${b.name}’s knocking — due in ${dueIn} days`), mt: tr("notif.catBills", null, "Bills"), nav: { type: "sub", bill: b } });
+    const { key, dueIn } = billPeriod(b, todayISO);
+    if (isBillPaidForKey(b, key)) return;
+    if (dueIn == null) return;
+    if (dueIn >= 0 && dueIn <= 3) items.push({ key: `bill-${b.id}-${key}`, icon: "bell", bg: "var(--yellowDim)", col: "var(--yellow)", nm: dueIn === 0 ? tr("notif.billDueToday", { name: b.name }, `${b.name}’s knocking — due today`) : dueIn === 1 ? tr("notif.billDueTomorrow", { name: b.name }, `${b.name}’s knocking — due tomorrow`) : tr("notif.billDueDays", { name: b.name, n: dueIn }, `${b.name}’s knocking — due in ${dueIn} days`), mt: tr("notif.catBills", null, "Bills"), nav: { type: "sub", bill: b } });
   });
   // installment payments due this month (active plan, not yet paid)
   installments.forEach((i) => {

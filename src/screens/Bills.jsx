@@ -7,8 +7,9 @@ import ServiceLogo from "../ui/ServiceLogo.jsx";
 import CatTile from "../ui/CatTile.jsx";
 import SegToggle from "../ui/SegToggle.jsx";
 import Money from "../ui/Money.jsx";
-import { fmt, currentMonth, monthLabel } from "../lib/format.js";
+import { fmt, currentMonth, monthLabel, today, dayName } from "../lib/format.js";
 import { getBillType, BILL_TYPES } from "../lib/services.js";
+import { freqOf, billPeriod, isBillPaidForKey, monthlyEquiv, yearlyMult } from "../lib/billfreq.js";
 import { useT } from "../lib/i18n.js";
 const guessCat = (t = "") => /phone|iphone|mobile|tablet|ipad/i.test(t) ? "phone" : /car|loan|auto|vehicle/i.test(t) ? "transport" : /laptop|pc|mac/i.test(t) ? "phone" : null;
 
@@ -21,6 +22,15 @@ function BillLogo({ bill, size = 44 }) {
   return <span className="circ" style={{ width: size, height: size, borderRadius: size * 0.3, background: bill.color || "var(--surface2)", color: "#fff", fontWeight: 800, fontSize: size * 0.34, flexShrink: 0 }}>{(bill.name || "?").slice(0, 1).toUpperCase()}</span>;
 }
 
+// "monthly · day 5" / "weekly · Mon" / "quarterly" — frequency + when it's due.
+function dueSummary(bill, tr) {
+  const f = freqOf(bill);
+  const freqLabel = tr("freq." + f);
+  if (!bill.dueDay && f === "monthly") return freqLabel;
+  const when = f === "weekly" ? dayName(Math.min(6, Math.max(0, bill.dueDay | 0))) : tr("bills.dayN", { n: bill.dueDay });
+  return `${freqLabel} · ${when}`;
+}
+
 function SubCard({ bill, onOpen }) {
   const tr = useT();
   return (
@@ -29,7 +39,7 @@ function SubCard({ bill, onOpen }) {
       <div style={{ minWidth: 0 }}>
         <div className="nm">{bill.name}</div>
         <div className="mt" style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-          <span>{bill.note ? bill.note + " · " : ""}{tr("bills.monthly")}{bill.dueDay ? " · " + tr("bills.dayN", { n: bill.dueDay }) : ""} ·</span>
+          <span>{bill.note ? bill.note + " · " : ""}{dueSummary(bill, tr)} ·</span>
           <Dot color={bill.statusColor} size={7} /><span>{bill.status}</span>
         </div>
       </div>
@@ -48,9 +58,10 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
   const cm = currentMonth();
   const day = new Date().getDate();
 
+  const todayISO = today();
   const statusOf = (b) => {
-    const isPaid = b.payments?.some((p) => p.month === cm);
-    const dueIn = b.dueDay ? b.dueDay - day : null;
+    const { key, dueIn } = billPeriod(b, todayISO);
+    const isPaid = isBillPaidForKey(b, key);
     let status = tr("bills.paid"), color = "var(--success)";
     if (!isPaid) {
       if (dueIn == null) { status = tr("bills.due"); color = "var(--yellow)"; }
@@ -64,17 +75,17 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
 
   const subs = useMemo(() => {
     const active = (b) => (!b.startMonth || cm >= b.startMonth) && (!b.stoppedMonth || cm < b.stoppedMonth);
-    const paid = (b) => b.payments?.some((p) => p.month === cm);
+    const paid = (b) => isBillPaidForKey(b, billPeriod(b, todayISO).key);
     const rows = bills.filter((b) => active(b) || paid(b)).map(statusOf);
     const unpaid = rows.filter((r) => !r.isPaid);
     const paidRows = rows.filter((r) => r.isPaid);
-    const total = rows.reduce((s, r) => s + r.amount, 0);
+    const total = rows.reduce((s, r) => s + monthlyEquiv(r.amount, freqOf(r)), 0);
     return {
       rows, active: rows.length,
       due: unpaid.reduce((s, r) => s + r.amount, 0),
       soon: unpaid.filter((r) => r.dueIn != null && r.dueIn >= 0 && r.dueIn <= 3).length,
       overdue: unpaid.filter((r) => r.dueIn != null && r.dueIn < 0).length,
-      total, yearly: total * 12,
+      total, yearly: rows.reduce((s, r) => s + r.amount * yearlyMult(freqOf(r)), 0),
       paidCount: paidRows.length, paidAmt: paidRows.reduce((s, r) => s + r.amount, 0),
       unpaidCount: unpaid.length,
     };
