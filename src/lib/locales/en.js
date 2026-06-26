@@ -274,6 +274,7 @@ export default {
     spentPerDay: "Spent / day",
     daysLeftOne: "{n} day left",
     daysLeftMany: "{n} days left",
+    cycleRange: "Cycle · {range}",
     avgDays: "avg on days you spent",
     ofBudgetLabel: "of budget",
     categoriesMostUsed: "Categories · most used first",

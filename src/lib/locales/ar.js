@@ -273,6 +273,7 @@ export default {
     spentPerDay: "مصروف / يوم",
     daysLeftOne: "{n} يوم متبقّي",
     daysLeftMany: "{n} يوم متبقّي",
+    cycleRange: "الدورة · {range}",
     avgDays: "متوسط أيام الصرف",
     ofBudgetLabel: "من الميزانية",
     categoriesMostUsed: "الفئات · الأعلى إنفاقاً",

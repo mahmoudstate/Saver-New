@@ -12,8 +12,8 @@ import BudgetRing from "../ui/BudgetRing.jsx";
 import MonthSheet from "../ui/MonthSheet.jsx";
 import { resolveCat } from "../ui/cats.js";
 import Money from "../ui/Money.jsx";
-import { fmt, currentMonth, currentCycleAnchor, today, MONTHS } from "../lib/format.js";
-import { budgetSpentMonth, projectSpent, budgetTxns, daysLeftInMonth, spentPerActiveDay } from "../lib/calc.js";
+import { fmt, currentMonth, currentCycleAnchor, cyclePeriod, dayRangeLabel, today, MONTHS } from "../lib/format.js";
+import { budgetSpentMonth, projectSpent, budgetTxns, daysLeftInMonth, daysLeftInCycle, spentPerActiveDay } from "../lib/calc.js";
 import { useT } from "../lib/i18n.js";
 
 const budgetCat = (b) => b.glyph || resolveCat({ catId: b.cats?.[0], catName: b.name }) || "income";
@@ -104,10 +104,22 @@ export default function Budgets({ store, back, onAdd, onOpenBudget, onOpenProjec
   const overCount = monthly.filter((b) => b.over).length;
   const pSpent = active.reduce((a, p) => a + p.spent, 0);
 
-  // Daily pacing for the viewed month: how much is safe to spend per remaining day,
+  // The page's spending cycle. Most users set every budget to the same custom
+  // "salary day" (e.g. 25th) — so derive one page-level cycle day (the most common
+  // among the shown budgets) and pace the daily card + period range against it
+  // instead of the calendar month. Day-1 budgets keep the plain calendar behaviour.
+  const cycleDayCount = {};
+  monthly.forEach((b) => { const d = b.cycleStartDay > 1 ? b.cycleStartDay : 1; cycleDayCount[d] = (cycleDayCount[d] || 0) + 1; });
+  const topDay = Object.keys(cycleDayCount).sort((a, b) => cycleDayCount[b] - cycleDayCount[a])[0];
+  const pageCycleDay = topDay ? +topDay : 1;
+  const cycleAnchor = vm === cm ? currentCycleAnchor(today(), pageCycleDay) : vm;
+  const cyclePer = cyclePeriod(cycleAnchor, pageCycleDay);
+  const cycleRange = pageCycleDay > 1 ? dayRangeLabel(cyclePer.from, cyclePer.to) : null;
+
+  // Daily pacing for the viewed period: how much is safe to spend per remaining day,
   // and how much was actually spent per day (averaged over days that had spending).
   const mTxns = (() => { const seen = new Set(), rows = []; monthly.forEach((b) => budgetTxns(b, txns, b._anchor).forEach((t) => { if (!seen.has(t.id)) { seen.add(t.id); rows.push(t); } })); return rows; })();
-  const daysLeft = daysLeftInMonth(vm, today());
+  const daysLeft = pageCycleDay > 1 && vm === cm ? daysLeftInCycle(cyclePer.to, today()) : daysLeftInMonth(vm, today());
   const safePerDay = vm === cm && mLimit > 0 ? Math.max(0, (mLimit - mSpent)) / daysLeft : null;
   const spentPerDay = spentPerActiveDay(mTxns);
 
@@ -116,7 +128,7 @@ export default function Budgets({ store, back, onAdd, onOpenBudget, onOpenProjec
       <div className="hero">
         <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">{isMonthly ? tr("budget.titleMonthly") : tr("budget.projects")}</div><div className="grow" />{isMonthly && <div className="hchip" onClick={() => setMonthSheet(true)} style={{ cursor: "pointer", marginRight: 8 }}><Ico name="cal" size={14} />{monthChip(vm, cm, tr)}</div>}<div className="hib" onClick={() => onAdd?.(seg)}><Ico name="plus" size={20} /></div></div>
         {isMonthly ? <>
-          <div className="lbl">{tr("budget.spent")}</div><Money className="big tnum" v={mSpent} /><div className="sub">{tr("budget.ofBudget", { amt: fmt(mLimit) })} &nbsp;·&nbsp; {tr("budget.pctUsed", { pct: mLimit > 0 ? Math.round((mSpent / mLimit) * 100) : 0 })}</div>
+          <div className="lbl">{tr("budget.spent")}</div><Money className="big tnum" v={mSpent} /><div className="sub">{tr("budget.ofBudget", { amt: fmt(mLimit) })} &nbsp;·&nbsp; {tr("budget.pctUsed", { pct: mLimit > 0 ? Math.round((mSpent / mLimit) * 100) : 0 })}</div>{cycleRange && <div className="sub" style={{ marginTop: 2, opacity: .85, display: "flex", alignItems: "center", gap: 6 }}><Ico name="cal" size={13} />{tr("budget.cycleRange", { range: cycleRange })}</div>}
         </> : <>
           <div className="lbl">{tr("budget.projSpentSoFar")}</div><Money className="big tnum" v={pSpent} /><div className="sub">{tr("budget.activeCount", { n: active.length })}{completed.length ? ` · ${tr("budget.completedCount", { n: completed.length })}` : ""}</div>
         </>}
