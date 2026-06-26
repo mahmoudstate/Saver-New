@@ -163,7 +163,7 @@ export default function Bills({ store, onAdd, onOpenSub, onOpenInst, initialSeg 
 
           {subView === "active" && (catGroups.length === 0 ? <Empty msg={tr("bills.noSubs")} /> : catGroups.map((g) => (
             <div key={g.type.id} style={{ marginBottom: 10 }}>
-              <div className="over">{tr("billtype." + g.type.id)} &nbsp;·&nbsp; {fmt(g.items.reduce((s, b) => s + b.amount, 0))}{tr("bills.perMo")}</div>
+              <div className="over">{tr("billtype." + g.type.id)} &nbsp;·&nbsp; {fmt(g.items.reduce((s, b) => s + monthlyEquiv(b.amount, freqOf(b)), 0))}{tr("bills.perMo")}</div>
               {g.items.map((b) => <SubCard key={b.id} bill={b} onOpen={onOpenSub} />)}
             </div>
           )))}

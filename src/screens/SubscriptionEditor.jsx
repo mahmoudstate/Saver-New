@@ -46,6 +46,7 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
 
   const bank = banks.find((b) => b.id === bankId);
   const canSave = name.trim() && amount > 0;
+  const amtLabel = tr("sub.amt" + frequency.charAt(0).toUpperCase() + frequency.slice(1));
   const allTypes = BILL_TYPES;
   const selType = allTypes.find((t) => t.id === typeId) || allTypes.find((t) => t.id === "other");
   // Picking a brand: set name to the brand + brand colour (locked) + auto category.
@@ -71,7 +72,7 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
           </span>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 800, fontSize: 19, letterSpacing: -.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name.trim() || tr("sub.nameTheService")}</div>
-            <div className="lbl" style={{ color: "rgba(255,255,255,.82)", marginTop: 2 }}>{tr("sub.monthlyCurrency", { cur: store.currency })}</div>
+            <div className="lbl" style={{ color: "rgba(255,255,255,.82)", marginTop: 2 }}>{tr("freq." + frequency)} · {store.currency}</div>
           </div>
         </div>
         <div className="big tnum" onClick={() => setSheet("amount")} style={{ cursor: "pointer", color: "#fff", marginTop: 12 }}><span style={{ opacity: amount > 0 ? 1 : .6 }}>{fmt(amount)}</span></div>
@@ -98,7 +99,7 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
       {/* ── Plan ── */}
       <div className="over" style={{ marginTop: 20 }}>{tr("sub.plan")}</div>
       <div className="field" onClick={() => setSheet("amount")} style={{ cursor: "pointer" }}>
-        <div style={{ flex: 1 }}><div className="fl">{tr("sub.monthlyAmount")}</div><div className="fv tnum">{amount > 0 ? fmt(amount) : tr("editor.setGeneric")}</div></div><span className="chev"><Ico name="pencil" size={17} /></span>
+        <div style={{ flex: 1 }}><div className="fl">{amtLabel}</div><div className="fv tnum">{amount > 0 ? fmt(amount) : tr("editor.setGeneric")}</div></div><span className="chev"><Ico name="pencil" size={17} /></span>
       </div>
       <div className="field" onClick={() => setSheet("freq")} style={{ cursor: "pointer", marginTop: 10 }}>
         <div style={{ flex: 1 }}><div className="fl">{tr("sub.repeats")}</div><div className="fv">{tr("freq." + frequency)}</div></div><span className="chev"><Ico name="chev" size={18} /></span>
@@ -142,7 +143,7 @@ export default function SubscriptionEditor({ store, bill, onClose }) {
         </>
       )}
       {sheet === "custom" && <CustomIconSheet title={tr("sub.customIcon")} glyph={glyph || "subscription"} color={color} onDone={({ glyph, color }) => { setGlyph(glyph); setColor(color); setDomain(""); setCustom(true); setSheet(null); }} onClose={() => setSheet(null)} />}
-      {sheet === "amount" && <AmountSheet title={tr("sub.monthlyAmount")} confirmLabel={tr("editor.setGeneric")} onConfirm={(v) => { setAmount(v); setSheet(null); }} onClose={() => setSheet(null)} />}
+      {sheet === "amount" && <AmountSheet title={amtLabel} confirmLabel={tr("editor.setGeneric")} onConfirm={(v) => { setAmount(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "freq" && <OptionSheet title={tr("sub.repeats")} sub={tr("sub.repeatsSub")} value={frequency} onPick={(v) => { if (v !== frequency) setDueDay(v === "weekly" ? 0 : 1); setFrequency(v); setSheet(null); }} onClose={() => setSheet(null)} options={FREQS.map((f) => ({ value: f, label: tr("freq." + f) }))} />}
       {sheet === "day" && <DayGridSheet title={tr("sub.billingDay")} sub={tr("sub.billingDaySub")} value={clampDay(dueDay)} onConfirm={(v) => { setDueDay(v); setSheet(null); }} onClose={() => setSheet(null)} />}
       {sheet === "weekday" && <OptionSheet title={tr("sub.billingWeekday")} sub={tr("sub.billingWeekdaySub")} value={clampDow(dueDay)} onPick={(v) => { setDueDay(v); setSheet(null); }} onClose={() => setSheet(null)} options={[0, 1, 2, 3, 4, 5, 6].map((d) => ({ value: d, label: dayName(d) }))} />}
