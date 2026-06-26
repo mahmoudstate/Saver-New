@@ -7,7 +7,7 @@ import { useGSAP } from "@gsap/react";
 import Ico from "../ui/Ico.jsx";
 import GuideDemo from "../ui/GuideDemo.jsx";
 import GuideSteps from "../ui/GuideSteps.jsx";
-import { findTopic } from "../lib/guide.js";
+import { useTopic } from "../lib/guide.js";
 import { useT } from "../lib/i18n.js";
 
 const REDUCED = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -15,7 +15,7 @@ const REDUCED = typeof window !== "undefined" && window.matchMedia?.("(prefers-r
 export default function GuideTopic({ topicId, back }) {
   const scope = useRef(null);
   const tr = useT();
-  const topic = findTopic(topicId);
+  const topic = useTopic(topicId);
 
   useGSAP(() => {
     if (!topic || REDUCED) return;

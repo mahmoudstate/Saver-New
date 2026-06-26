@@ -5,6 +5,9 @@ import { today } from "../lib/format.js";
 import { KEYS, loadKey } from "../lib/store.js";
 import { useT } from "../lib/i18n.js";
 
+// TODO: swap for the live marketing-site privacy page once it is ready.
+const PRIVACY_URL = "https://savertrack.app/privacy";
+
 export default function PrivacyBackup({ store, back }) {
   const fileRef = useRef(null);
   const tr = useT();
@@ -71,6 +74,9 @@ export default function PrivacyBackup({ store, back }) {
       <Row icon="download" bg="var(--purpleDim)" color="var(--purple)" nm={tr("privacy.downloadBackup")} mt="Saver_Backup.json" right={<Ico name="chev" size={18} color="var(--faint)" />} onClick={download} />
       <Row icon="download" bg="var(--blueDim)" color="var(--blue)" nm={tr("privacy.restoreFromFile")} mt={tr("privacy.overwrites")} right={<Ico name="chev" size={18} color="var(--faint)" />} onClick={() => fileRef.current?.click()} />
       <Row icon="trash" bg="var(--redDim)" color="var(--red)" nm={tr("privacy.resetAllData")} mt={tr("privacy.resetSub")} right={<Ico name="chev" size={18} color="var(--faint)" />} onClick={reset} />
+
+      <div className="over" style={{ marginTop: 16 }}>{tr("privacy.legal")}</div>
+      <Row icon="shield" bg="var(--blueDim)" color="var(--blue)" nm={tr("privacy.policy")} mt={tr("privacy.policySub")} right={<Ico name="link" size={18} color="var(--faint)" />} onClick={() => window.open(PRIVACY_URL, "_blank", "noopener,noreferrer")} />
       <input ref={fileRef} type="file" accept="application/json,.json" onChange={onFile} style={{ display: "none" }} />
     </div>
   );

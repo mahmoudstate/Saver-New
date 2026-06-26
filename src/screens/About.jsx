@@ -2,6 +2,8 @@
 // Opened from Profile → About us.
 import Ico from "../ui/Ico.jsx";
 import logo from "../../icon.png";
+import { useT } from "../lib/i18n.js";
+import { APP_VERSION } from "../lib/format.js";
 
 const MAIL = "hello@savertrack.app";
 const MAILTO = `mailto:${MAIL}?subject=An idea for Saver&body=Hi Saver team,%0A%0AHere is my idea:%0A`;
@@ -11,7 +13,7 @@ function Step({ icon, title, text, last }) {
   return (
     <div style={{ display: "flex", gap: 14 }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <span style={{ width: 42, height: 42, borderRadius: 14, background: "var(--ac)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 4px 10px -3px var(--ac)" }}><Ico name={icon} size={20} color="#fff" /></span>
+        <span style={{ width: 42, height: 42, borderRadius: 14, background: "color-mix(in srgb, var(--ac) 14%, transparent)", color: "var(--ac)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Ico name={icon} size={20} /></span>
         {!last && <span style={{ flex: 1, width: 2, background: "var(--line)", marginTop: 4, minHeight: 20 }} />}
       </div>
       <div style={{ paddingBottom: last ? 0 : 20 }}>
@@ -48,57 +50,59 @@ function Badge({ icon, label }) {
 const Title = ({ children }) => <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -.3, marginTop: 28, marginBottom: 14 }}>{children}</div>;
 
 export default function About({ back }) {
+  const tr = useT();
   return (
     <div className="content padnav">
       <div className="hero">
-        <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">About us</div><div className="grow" /></div>
+        <div className="toprow"><div className="hib" onClick={back}><Ico name="back" size={20} /></div><div className="ttl">{tr("about.title")}</div><div className="grow" /></div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, position: "relative", zIndex: 1, paddingTop: 4, paddingBottom: 6 }}>
           <img src={logo} alt="Saver" style={{ width: 78, height: 78, borderRadius: 20, boxShadow: "0 10px 24px rgba(0,0,0,.28)" }} />
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: -.5 }}>Saver</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--heroSub)", marginTop: 2 }}>Spend clearly and save calmly</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--heroSub)", marginTop: 2 }}>{tr("about.tagline")}</div>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--faint)", marginTop: 6 }}>{tr("about.version", { v: APP_VERSION })}</div>
           </div>
         </div>
       </div>
 
       <p style={{ fontSize: 15.5, lineHeight: 1.7, fontWeight: 700, letterSpacing: -.2, margin: "22px 0 0", textWrap: "pretty" }}>
-        Most money apps made us feel like we were doing something wrong. We wanted the opposite.
+        {tr("about.intro1")}
       </p>
       <p style={{ fontSize: 14, lineHeight: 1.75, color: "var(--muted)", fontWeight: 600, margin: "10px 0 0", textWrap: "pretty" }}>
-        So we built Saver to feel like a calm friend who has your back. It shows you what your money is really doing, in plain words, and helps you save without the guilt. We made it for ourselves first. Now it is yours too.
+        {tr("about.intro2")}
       </p>
 
-      <Title>How Saver helps you</Title>
-      <Step icon="eye" title="See it clearly" text="Open the app and know what is safe to spend today. No mental maths." />
-      <Step icon="layers" title="Keep it in one place" text="Your bills, budgets and goals all live together, so nothing catches you off guard." />
-      <Step icon="target" title="Save your way" text="Set a goal, add a little when you can, and watch it grow at your own pace." last />
+      <Title>{tr("about.helpsTitle")}</Title>
+      <Step icon="eye" title={tr("about.help1nm")} text={tr("about.help1mt")} />
+      <Step icon="layers" title={tr("about.help2nm")} text={tr("about.help2mt")} />
+      <Step icon="target" title={tr("about.help3nm")} text={tr("about.help3mt")} last />
 
-      <Title>What you get</Title>
-      <Perk icon="eye" color="var(--blue)" title="You always know where you stand" text="A real safe to spend number, not just a balance." />
-      <Perk icon="bills" color="var(--purple)" title="Nothing slips through" text="Bills and payments stay on your radar before they hit." />
-      <Perk icon="target" color="var(--ac)" title="Saving feels good, not painful" text="Small steps that actually add up to something." />
-      <Perk icon="lock" color="var(--orange)" title="It stays between you and your phone" text="Your numbers never leave your device." />
+      <Title>{tr("about.getTitle")}</Title>
+      <Perk icon="eye" color="var(--blue)" title={tr("about.perk1nm")} text={tr("about.perk1mt")} />
+      <Perk icon="bills" color="var(--purple)" title={tr("about.perk2nm")} text={tr("about.perk2mt")} />
+      <Perk icon="target" color="var(--ac)" title={tr("about.perk3nm")} text={tr("about.perk3mt")} />
+      <Perk icon="lock" color="var(--orange)" title={tr("about.perk4nm")} text={tr("about.perk4mt")} />
 
-      <Title>Yours, and only yours</Title>
+      <Title>{tr("about.yoursTitle")}</Title>
       <div style={{ display: "flex", gap: 10 }}>
-        <Badge icon="lock" label="On your phone" />
-        <Badge icon="close" label="No ads" />
-        <Badge icon="eyeOff" label="No tracking" />
+        <Badge icon="lock" label={tr("about.trustPhone")} />
+        <Badge icon="close" label={tr("about.trustNoAds")} />
+        <Badge icon="eyeOff" label={tr("about.trustNoTracking")} />
       </div>
 
       <div className="card" style={{ marginTop: 28, padding: 18, background: "var(--acDim)", boxShadow: "none", border: "none" }}>
-        <div style={{ fontSize: 17, fontWeight: 800, letterSpacing: -.3 }}>Build it with us</div>
+        <div style={{ fontSize: 17, fontWeight: 800, letterSpacing: -.3 }}>{tr("about.buildTitle")}</div>
         <p style={{ fontSize: 14, lineHeight: 1.7, color: "var(--muted)", fontWeight: 600, margin: "8px 0 0", textWrap: "pretty" }}>
-          Saver keeps getting better because of people like you. If something is missing or something bugs you, just tell us. We read every message, and we build it with you, not only for you.
+          {tr("about.buildText")}
         </p>
         <a href={MAILTO} style={{ textDecoration: "none" }}>
-          <div className="btn btn-primary btn-full" style={{ marginTop: 14 }}><Ico name="sparkles" size={17} />Share an idea</div>
+          <div className="btn btn-primary btn-full" style={{ marginTop: 14 }}><Ico name="sparkles" size={17} />{tr("about.shareIdea")}</div>
         </a>
         <a href={`mailto:${MAIL}`} style={{ textDecoration: "none" }}>
           <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 11, padding: "12px 14px", borderRadius: 14, background: "var(--surface)", border: "1px solid var(--line)" }}>
             <span style={{ width: 34, height: 34, borderRadius: 10, background: "var(--acDim)", color: "var(--ac)", display: "flex", alignItems: "center", justifyContent: "center" }}><Ico name="mail" size={18} /></span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)" }}>Email us</div>
+              <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--muted)" }}>{tr("about.emailUs")}</div>
               <div style={{ fontSize: 13.5, fontWeight: 800, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{MAIL}</div>
             </div>
             <Ico name="chev" size={18} color="var(--faint)" />
@@ -106,7 +110,7 @@ export default function About({ back }) {
         </a>
       </div>
 
-      <div style={{ textAlign: "center", color: "var(--faint)", fontSize: 11.5, fontWeight: 700, margin: "24px 0 4px", lineHeight: 1.6 }}>Made with care for people who want a little more calm with their money.</div>
+      <div style={{ textAlign: "center", color: "var(--faint)", fontSize: 11.5, fontWeight: 700, margin: "24px 0 4px", lineHeight: 1.6 }}>{tr("about.footer")}</div>
     </div>
   );
 }

@@ -5,10 +5,12 @@
 // whole card disappears once every step is done or skipped.
 import { useState } from "react";
 import Ico from "./Ico.jsx";
+import { useT } from "../lib/i18n.js";
 
 const SKIP_KEY = "et_setupSkipped";
 
 export default function ActivationCard({ store, onAdd, onAddAccount, onAddBill, onAddGoal }) {
+  const tr = useT();
   const { txns = [], banks = [], bills = [], savings = [] } = store;
   const [skipped, setSkipped] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem(SKIP_KEY) || "[]")); } catch { return new Set(); }
@@ -20,13 +22,13 @@ export default function ActivationCard({ store, onAdd, onAddAccount, onAddBill, 
   });
 
   const phases = [
-    { id: 1, title: "Your money", steps: [
-      { id: "account", label: "Add your account", icon: "wallet", done: banks.length > 0, action: onAddAccount },
-      { id: "txn", label: "Add your first transaction", icon: "plus", done: txns.length > 0, action: onAdd },
+    { id: 1, title: tr("setup.phaseMoney"), steps: [
+      { id: "account", label: tr("setup.account"), icon: "wallet", done: banks.length > 0, action: onAddAccount },
+      { id: "txn", label: tr("setup.txn"), icon: "plus", done: txns.length > 0, action: onAdd },
     ] },
-    { id: 2, title: "Stay on track", steps: [
-      { id: "bill", label: "Add a bill", icon: "bills", done: bills.length > 0, action: onAddBill },
-      { id: "goal", label: "Add a goal", icon: "target", done: savings.some((s) => s.status !== "archived"), action: onAddGoal },
+    { id: 2, title: tr("setup.phaseTrack"), steps: [
+      { id: "bill", label: tr("setup.bill"), icon: "bills", done: bills.length > 0, action: onAddBill },
+      { id: "goal", label: tr("setup.goal"), icon: "target", done: savings.some((s) => s.status !== "archived"), action: onAddGoal },
     ] },
   ];
   const resolved = (s) => s.done || skipped.has(s.id);
@@ -41,8 +43,8 @@ export default function ActivationCard({ store, onAdd, onAddAccount, onAddBill, 
           <Ico name="sparkles" size={20} />
         </span>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: -0.2 }}>Let's set you up</div>
-          <div style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600, marginTop: 2 }}>Step {phase.id} of 2 · {phase.title}</div>
+          <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: -0.2 }}>{tr("setup.title")}</div>
+          <div style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600, marginTop: 2 }}>{tr("setup.step", { n: phase.id, phase: phase.title })}</div>
         </div>
       </div>
 
@@ -60,12 +62,12 @@ export default function ActivationCard({ store, onAdd, onAddAccount, onAddBill, 
             <div className={`btn ${primary ? "btn-primary" : ""} btn-full`} onClick={s.action} style={{ flex: 1, display: "flex", gap: 8, alignItems: "center", justifyContent: "center", ...(primary ? {} : { background: "var(--surface2)", color: "var(--acText)" }) }}>
               <Ico name={s.icon} size={18} /> {s.label}
             </div>
-            <div role="button" aria-label={`skip ${s.label}`} onClick={() => skip(s.id)} style={{ fontSize: 12.5, fontWeight: 700, color: "var(--muted)", cursor: "pointer", padding: "0 6px", flexShrink: 0 }}>Skip</div>
+            <div role="button" aria-label={`${tr("setup.skip")} ${s.label}`} onClick={() => skip(s.id)} style={{ fontSize: 12.5, fontWeight: 700, color: "var(--muted)", cursor: "pointer", padding: "0 6px", flexShrink: 0 }}>{tr("setup.skip")}</div>
           </div>
         );
       })}
 
-      <div role="button" onClick={() => skip(...phase.steps.map((s) => s.id))} style={{ textAlign: "center", fontSize: 12.5, fontWeight: 700, color: "var(--faint)", cursor: "pointer" }}>Skip for now</div>
+      <div role="button" onClick={() => skip(...phase.steps.map((s) => s.id))} style={{ textAlign: "center", fontSize: 12.5, fontWeight: 700, color: "var(--faint)", cursor: "pointer" }}>{tr("setup.skipForNow")}</div>
     </div>
   );
 }

@@ -1,6 +1,5 @@
 // Saver — Profile/Settings: ported 1:1 from showcase 23. Wired to store.
 import Ico from "../ui/Ico.jsx";
-import { APP_VERSION } from "../lib/format.js";
 import { useT } from "../lib/i18n.js";
 
 function Row({ icon, bg, color, label, value, onClick }) {
@@ -41,13 +40,13 @@ export default function Profile({ store, go }) {
       <Row icon="zap" bg="var(--yellowDim)" color="var(--yellow)" label={tr("profile.quickActions")} onClick={() => go?.("quickactions")} />
 
       <div className="over">{tr("profile.app")}</div>
+      <Row icon="palette" bg="var(--acDim)" color="var(--ac)" label={tr("profile.appearance")} value={themeLabel} onClick={() => go?.("appearance")} />
       <Row icon="book" bg="var(--acDim)" color="var(--ac)" label={tr("profile.guideTour")} onClick={() => go?.("manual")} />
       <Row icon="crown" bg="var(--purpleDim)" color="var(--purple)" label={tr("profile.plan")} value={tr("profile.planFree")} onClick={() => go?.("plan")} />
-      <Row icon="palette" bg="var(--acDim)" color="var(--ac)" label={tr("profile.appearance")} value={themeLabel} onClick={() => go?.("appearance")} />
       <Row icon="shield" bg="var(--blueDim)" color="var(--blue)" label={tr("profile.privacyBackup")} onClick={() => go?.("privacy")} />
       <Row icon="info" bg="var(--acDim)" color="var(--ac)" label={tr("profile.aboutUs")} onClick={() => go?.("about")} />
 
-      <div style={{ textAlign: "center", color: "var(--faint)", fontSize: 11, fontWeight: 700, letterSpacing: ".04em", marginTop: 22 }}>{tr("profile.footer", { v: APP_VERSION })}</div>
+      <div style={{ textAlign: "center", color: "var(--faint)", fontSize: 11, fontWeight: 700, letterSpacing: ".04em", marginTop: 22 }}>{tr("profile.footer", { y: new Date().getFullYear() })}</div>
     </div>
   );
 }

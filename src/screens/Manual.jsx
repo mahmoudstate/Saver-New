@@ -4,7 +4,7 @@ import { useRef, useState, useMemo } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import Ico from "../ui/Ico.jsx";
-import { GUIDE, FAQ } from "../lib/guide.js";
+import { useGuide, useFaq } from "../lib/guide.js";
 import { useT } from "../lib/i18n.js";
 
 const REDUCED = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -14,12 +14,14 @@ export default function Manual({ back, onOpenTopic, onStartTour }) {
   const [q, setQ] = useState("");
   const [faq, setFaq] = useState(-1);
   const tr = useT();
+  const guide = useGuide();
+  const FAQ = useFaq();
 
   const groups = useMemo(() => {
     const term = q.trim().toLowerCase();
-    if (!term) return GUIDE;
-    return GUIDE.map((g) => ({ ...g, topics: g.topics.filter((t) => (t.title + " " + t.blurb).toLowerCase().includes(term)) })).filter((g) => g.topics.length);
-  }, [q]);
+    if (!term) return guide;
+    return guide.map((g) => ({ ...g, topics: g.topics.filter((t) => (t.title + " " + t.blurb).toLowerCase().includes(term)) })).filter((g) => g.topics.length);
+  }, [q, guide]);
 
   useGSAP(() => {
     if (REDUCED) return;
@@ -36,7 +38,7 @@ export default function Manual({ back, onOpenTopic, onStartTour }) {
       <div className="gsap-card icard" onClick={() => onStartTour?.()} style={{ cursor: "pointer", background: "var(--acDim)", border: "none", marginBottom: 14 }}>
         <span className="circ" style={{ width: 42, height: 42, borderRadius: 13, background: "var(--ac)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}><Ico name="sparkles" size={20} /></span>
         <div><div className="nm">{tr("gd.takeTour")}</div><div className="mt">{tr("gd.takeTourSub")}</div></div>
-        <Ico name="chev" size={18} color="var(--acText)" style={{ marginLeft: "auto" }} />
+        <Ico name="chev" size={18} color="var(--acText)" style={{ marginInlineStart: "auto" }} />
       </div>
 
       <label className="field" style={{ marginBottom: 18 }}>
@@ -52,7 +54,7 @@ export default function Manual({ back, onOpenTopic, onStartTour }) {
               <div className="icard gsap-card" key={t.id} onClick={() => onOpenTopic?.(t.id)} style={{ cursor: "pointer" }}>
                 <span className="circ" style={{ width: 40, height: 40, borderRadius: 12, background: `color-mix(in srgb, ${t.color} 16%, transparent)`, color: t.color, display: "flex", alignItems: "center", justifyContent: "center" }}><Ico name={t.icon} size={20} /></span>
                 <div><div className="nm">{t.title}</div><div className="mt">{t.blurb}</div></div>
-                <Ico name="chev" size={18} color="var(--faint)" style={{ marginLeft: "auto" }} />
+                <Ico name="chev" size={18} color="var(--faint)" style={{ marginInlineStart: "auto" }} />
               </div>
             ))}
           </div>
@@ -67,7 +69,7 @@ export default function Manual({ back, onOpenTopic, onStartTour }) {
               <div className="icard" key={i} onClick={() => setFaq(open ? -1 : i)} style={{ cursor: "pointer", flexDirection: "column", alignItems: "stretch" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div className="nm" style={{ flex: 1 }}>{f.q}</div>
-                  <Ico name="chev" size={18} color="var(--faint)" style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform .2s" }} />
+                  <Ico name="chev" size={18} color="var(--faint)" style={{ transform: open ? "rotate(270deg)" : "rotate(90deg)", transition: "transform .2s" }} />
                 </div>
                 {open && <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--muted)", fontWeight: 600, marginTop: 10 }}>{f.a}</div>}
               </div>

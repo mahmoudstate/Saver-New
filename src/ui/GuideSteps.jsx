@@ -8,7 +8,7 @@ export default function GuideSteps({ steps = [], color = "var(--ac)" }) {
       {steps.map((s, i) => (
         <div className="gsap-step" key={i} style={{ display: "flex", gap: 14 }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <span style={{ width: 40, height: 40, borderRadius: 13, background: color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: `0 4px 10px -3px ${color}` }}><Ico name={s.icon} size={19} color="#fff" /></span>
+            <span style={{ width: 40, height: 40, borderRadius: 13, background: `color-mix(in srgb, ${color} 14%, transparent)`, color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Ico name={s.icon} size={19} /></span>
             {i < steps.length - 1 && <span style={{ flex: 1, width: 2, background: "var(--line)", marginTop: 4, minHeight: 16 }} />}
           </div>
           <div style={{ paddingBottom: i < steps.length - 1 ? 18 : 0 }}>
